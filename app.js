@@ -1398,20 +1398,27 @@
                 if (!confirm(`${rows.length}명의 회원을 신규 등록하시겠습니까?`)) return;
 
                 let successCount = 0;
-                rows.forEach(row => {
-                    // 데이터 매핑 (한글 헤더 지원 고도화)
-                    const name = row['이름'] || row['name'];
-                    const id = String(row['아이디'] || row['id'] || '');
-                    const pw = String(row['비밀번호'] || row['password'] || '1234');
-                    const role = row['역할'] || row['role'] || 'Basic';
-                    const duration = String(row['기간'] || row['duration'] || '1');
+                let failReason = "";
 
-                    // 추가 정보 (상세 정보 팝업용)
-                    const phone = row['연락처'] || row['phone'] || '';
+                rows.forEach((row, index) => {
+                    // --- [유연한 헤더 매핑 로직] ---
+                    // 1. 이름 찾기
+                    const name = row['이름'] || row['성함'] || row['name'] || row['Name'] || row['user_name'];
+                    // 2. 아이디 찾기
+                    const id = String(row['아이디'] || row['ID'] || row['Id'] || row['id'] || row['user_id'] || '');
+                    // 3. 비밀번호
+                    const pw = String(row['비밀번호'] || row['비번'] || row['password'] || row['pw'] || '1234');
+                    // 4. 역할/등급
+                    const role = row['역할'] || row['등급'] || row['role'] || row['grade'] || 'Basic';
+                    // 5. 기간
+                    const duration = String(row['기간'] || row['개월'] || row['duration'] || row['months'] || '1');
+
+                    // 추가 정보
+                    const phone = row['연락처'] || row['전화번호'] || row['phone'] || row['tel'] || '';
                     const address = row['주소'] || row['address'] || '';
-                    const memo = row['비고'] || row['memo'] || '';
+                    const memo = row['비고'] || row['메모'] || row['memo'] || '';
 
-                    // 스탯 정보 (능력치 차트용)
+                    // 스탯 정보
                     const stats = [
                         parseInt(row['스피드'] || row['speed'] || 30),
                         parseInt(row['유연성'] || row['flexibility'] || 30),
@@ -1420,7 +1427,13 @@
                         parseInt(row['반응속도'] || row['reaction'] || 30)
                     ];
 
-                    if (!name || !id) return; // 필수 정보 누락 스킵
+                    if (!name || !id) {
+                        if (index === 0) {
+                            const keys = Object.keys(row).join(', ');
+                            failReason = `첫 번째 행 분석 결과: '이름'이나 '아이디' 헤더를 찾을 수 없습니다.\n(현재 파일의 헤더: ${keys})`;
+                        }
+                        return;
+                    }
 
                     const newUser = {
                         id,
@@ -1456,8 +1469,13 @@
                 });
 
                 // 최종 저장 및 알림
-                localStorage.setItem('soccer_users', JSON.stringify(state.users));
-                alert(`${successCount}명의 회원 등록이 완료되었습니다.`);
+                if (successCount > 0) {
+                    localStorage.setItem('soccer_users', JSON.stringify(state.users));
+                    alert(`${successCount}명의 회원 등록이 완료되었습니다.`);
+                    renderAdminTab('admin-users'); // 화면 갱신
+                } else {
+                    alert(`회원 등록에 실패했습니다.\n\n${failReason}\n\n엑셀 파일의 첫 번째 줄(제목)이 '이름', '아이디' 등으로 되어 있는지 확인해주세요.`);
+                }
                 renderAdminTab('admin-users'); // 화면 갱신
 
             } catch (err) {
