@@ -1472,9 +1472,8 @@
                 if (successCount > 0) {
                     localStorage.setItem('soccer_users', JSON.stringify(state.users));
                     alert(`${successCount}명의 회원 등록이 완료되었습니다.`);
-                    renderAdminTab('admin-users'); // 화면 갱신
                 } else {
-                    alert(`회원 등록에 실패했습니다.\n\n${failReason}\n\n엑셀 파일의 첫 번째 줄(제목)이 '이름', '아이디' 등으로 되어 있는지 확인해주세요.`);
+                    alert(`회원 등록에 실패했습니다.\n\n${failReason}\n\n엑셀 파일의 첫 번째 줄(제목)이 '이름', '아이디' 등을 확인해주세요.`);
                 }
                 renderAdminTab('admin-users'); // 화면 갱신
 
@@ -1484,6 +1483,29 @@
             }
         };
         reader.readAsArrayBuffer(file);
+    };
+
+    window.adminResetUsers = () => {
+        if (!confirm("주의: 모든 회원 데이터를 삭제하고 관리자 계정만 남깁니다. 계속하시겠습니까?")) return;
+
+        state.users = [
+            { id: 'admin', pw: 'admin', name: '관리자', role: 'admin', avatar: 'fa-user-shield' }
+        ];
+
+        // Firebase 삭제 (필요 시 개별 문서 삭제 로직 추가 가능하나 여기선 초기 관리자만 덮어씀)
+        if (db) {
+            db.collection("users").get().then((querySnapshot) => {
+                querySnapshot.forEach((doc) => {
+                    if (doc.id !== 'admin') {
+                        doc.ref.delete();
+                    }
+                });
+            });
+        }
+
+        localStorage.setItem('soccer_users', JSON.stringify(state.users));
+        alert("회원 데이터가 초기화되었습니다.");
+        renderAdminTab('admin-users');
     };
 
     window.showMemberDetail = (userId) => {
@@ -1625,7 +1647,12 @@
 
         let html = `
             <div class="fade-in">
-                <h3 style="color: var(--text-white); margin-bottom: 20px; font-size: 1.2rem;">👨‍💻 회원 관리 (CRM) <span style="font-size: 0.7rem; color: var(--primary); opacity: 0.7;">v2.2</span></h3>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 style="color: var(--text-white); font-size: 1.2rem; margin: 0;">👨‍💻 회원 관리 (CRM) <span style="font-size: 0.7rem; color: var(--primary); opacity: 0.7;">v2.3</span></h3>
+                    <button onclick="window.adminResetUsers()" style="background: rgba(255, 59, 48, 0.1); border: 1px solid #ff3b30; color: #ff3b30; font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; cursor: pointer;">
+                        <i class="fas fa-trash-alt"></i> 데이터 초기화
+                    </button>
+                </div>
                 
                 <!-- 엑셀 데이터 임포트 영역 (배경색 강조) -->
                 <div class="card" style="background: rgba(0, 210, 255, 0.05); border: 1px dashed var(--primary); padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; align-items: center; text-align: center;">
