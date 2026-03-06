@@ -1421,12 +1421,19 @@
                     return obj;
                 });
 
-                if (!confirm(`${rows.length}명의 회원을 신규 등록하시겠습니까?`)) return;
+                // 빈 줄(이름도 없고 아이디도 없는 줄) 제거
+                const validRows = rows.filter(row => {
+                    const n = row['이름'] || row['성함'] || row['name'] || row['Name'] || row['user_name'];
+                    const id = row['아이디'] || row['ID'] || row['Id'] || row['id'] || row['번호'] || row['No'];
+                    return (n && String(n).trim() !== '') || (id && String(id).trim() !== '');
+                });
+
+                if (!confirm(`${validRows.length}명의 회원을 신규 등록하시겠습니까?`)) return;
 
                 let successCount = 0;
                 let failReason = "";
 
-                rows.forEach((row, index) => {
+                validRows.forEach((row, index) => {
                     // --- [유연한 헤더 매핑 로직] ---
                     // 1. 이름 찾기
                     const name = row['이름'] || row['성함'] || row['name'] || row['Name'] || row['user_name'];
@@ -1982,7 +1989,14 @@
     };
 
     const renderAdminUsersTab = () => {
-        const sortedUsers = [...state.users].sort((a, b) => parseInt(b.id) - parseInt(a.id));
+        const sortedUsers = [...state.users].sort((a, b) => {
+            const numA = parseInt(a.id);
+            const numB = parseInt(b.id);
+            if (isNaN(numA) && isNaN(numB)) return String(a.id).localeCompare(String(b.id));
+            if (isNaN(numA)) return 1;
+            if (isNaN(numB)) return -1;
+            return numA - numB;
+        });
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
@@ -2032,7 +2046,7 @@
         let html = `
             <div class="fade-in">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h3 style="color: var(--text-white); font-size: 1.2rem; margin: 0;">👨‍💻 회원 관리 (CRM) <span style="font-size: 0.7rem; color: var(--primary); opacity: 0.7;">v2.7.0</span></h3>
+                    <h3 style="color: var(--text-white); font-size: 1.2rem; margin: 0;">👨‍💻 회원 관리 (CRM) <span style="font-size: 0.7rem; color: var(--primary); opacity: 0.7;">v2.7.2</span></h3>
                     <button onclick="window.adminResetUsers()" style="background: rgba(255, 59, 48, 0.1); border: 1px solid #ff3b30; color: #ff3b30; font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; cursor: pointer;">
                         <i class="fas fa-trash-alt"></i> 데이터 초기화
                     </button>
