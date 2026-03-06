@@ -1,4 +1,30 @@
 (() => {
+    // --- [Firebase Configuration] ---
+    // 사용자께서 실제 Firebase 콘솔에서 발급받은 설정으로 교체해주셔야 합니다.
+    // 아래는 프로토타입 동작을 위한 가상 설정 샘플입니다.
+    const firebaseConfig = {
+        apiKey: "demo-api-key",
+        authDomain: "gstar-soccer.firebaseapp.com",
+        projectId: "gstar-soccer", // 실제 프로젝트 ID로 교체 필요
+        storageBucket: "gstar-soccer.appspot.com",
+        messagingSenderId: "123456789",
+        appId: "1:123456789:web:abcdefghij"
+    };
+
+    // Firebase 초기화 (SDK가 존재할 때만)
+    let db = null;
+    if (typeof firebase !== 'undefined') {
+        try {
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+            db = firebase.firestore();
+            console.log("Firebase Firestore Connected!");
+        } catch (err) {
+            console.error("Firebase Init Error:", err);
+        }
+    }
+
     // === 상수 및 상태 관리 ===
     function getInitialUsers() {
         const today = new Date();
@@ -110,25 +136,72 @@
 
     // === 초기화 로직 ===
     function init() {
-        console.log("App initializing...");
+        console.log("App initializing with Firebase compatibility...");
 
-        // 스플래시 애니메이션 시뮬레이션
+        // 스플래시 애니메이션
         if (progressBar) {
             setTimeout(() => { progressBar.style.width = '100%'; }, 50);
+        }
+
+        // 실시간 데이터 리스너 설정 (Firebase가 연결된 경우)
+        if (db) {
+            // 1. 유저 데이터 실시간 동기화
+            db.collection("users").onSnapshot((snapshot) => {
+                const updatedUsers = [];
+                snapshot.forEach(doc => updatedUsers.push(doc.data()));
+                if (updatedUsers.length > 0) {
+                    state.users = updatedUsers;
+                    localStorage.setItem('soccer_users', JSON.stringify(state.users));
+                }
+            });
+
+            // 2. 포스트 데이터 실시간 동기화
+            db.collection("posts").orderBy("id", "desc").onSnapshot((snapshot) => {
+                const updatedPosts = [];
+                snapshot.forEach(doc => updatedPosts.push(doc.data()));
+                if (updatedPosts.length > 0) {
+                    state.posts = updatedPosts;
+                    localStorage.setItem('soccer_posts', JSON.stringify(state.posts));
+                    if (state.activeTab === 'social') renderTab('social');
+                }
+            });
+
+            // 3. 스케줄 데이터 실시간 동기화
+            db.collection("schedules").onSnapshot((snapshot) => {
+                const updatedSchedules = [];
+                snapshot.forEach(doc => updatedSchedules.push(doc.data()));
+                if (updatedSchedules.length > 0) {
+                    state.schedules = updatedSchedules;
+                    localStorage.setItem('soccer_schedules', JSON.stringify(state.schedules));
+                    if (state.activeTab === 'academy' || state.activeTab === 'schedule') renderTab('academy');
+                }
+            });
+
+            // [추가] 초기 데이터 마이그레이션 (Firestore가 비어있을 경우)
+            db.collection("users").get().then(snap => {
+                if (snap.empty && state.users.length > 0) {
+                    console.log("Migrating users to Firebase...");
+                    state.users.forEach(u => db.collection("users").doc(u.id).set(u));
+                }
+            });
+            db.collection("posts").get().then(snap => {
+                if (snap.empty && state.posts.length > 0) {
+                    console.log("Migrating posts to Firebase...");
+                    state.posts.forEach(p => db.collection("posts").doc(p.id.toString()).set(p));
+                }
+            });
+            db.collection("schedules").get().then(snap => {
+                if (snap.empty && state.schedules.length > 0) {
+                    console.log("Migrating schedules to Firebase...");
+                    state.schedules.forEach(s => db.collection("schedules").doc(s.id.toString()).set(s));
+                }
+            });
         }
 
         // 1.5초 후 메인 화면으로 전환
         setTimeout(() => {
             hideSplashAndStart();
         }, 1500);
-
-        // 만약 3초 뒤에도 스플래시가 있으면 강제 제거 (안전 장치)
-        setTimeout(() => {
-            if (splash && !splash.classList.contains('hidden')) {
-                console.warn("Forcing splash hide");
-                hideSplashAndStart();
-            }
-        }, 3000);
     }
 
     function hideSplashAndStart() {
@@ -237,6 +310,13 @@
             // 만료일 초기 계산
             recalculateMembershipEnd(newUser);
             state.users.push(newUser);
+
+            // Firebase 저장 (서버 연동)
+            if (db) {
+                db.collection("users").doc(id).set(newUser).then(() => {
+                    console.log("User saved to Firebase");
+                }).catch(e => console.error("Firebase Save Error:", e));
+            }
 
             try {
                 localStorage.setItem('soccer_users', JSON.stringify(state.users));
@@ -1250,6 +1330,11 @@
 
         // 로컬 데이터 및 영구 저장소 업데이트
         state.posts.push(newPost);
+
+        // Firebase 저장 (실시간 소셜 피드 공유)
+        if (db) {
+            db.collection("posts").doc(newPost.id.toString()).set(newPost).catch(e => console.error(e));
+        }
         try {
             localStorage.setItem('soccer_posts', JSON.stringify(state.posts));
         } catch (e) {
@@ -1270,6 +1355,87 @@
             localStorage.removeItem('soccer_session');
         } catch (e) { }
         location.reload();
+    };
+
+    // ==========================================
+    // 엑셀 데이터 임포트 로직
+    // ==========================================
+    window.triggerExcelImport = () => {
+        const input = document.getElementById('excel-import-input');
+        if (input) input.click();
+    };
+
+    window.handleExcelImport = (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+
+                // 로우 데이터를 JSON으로 변환
+                const rows = XLSX.utils.sheet_to_json(worksheet);
+                console.log("Parsed Excel rows:", rows);
+
+                if (rows.length === 0) return alert('엑셀 데이터가 비어있습니다.');
+
+                if (!confirm(`${rows.length}명의 회원을 신규 등록하시겠습니까?`)) return;
+
+                let successCount = 0;
+                rows.forEach(row => {
+                    // 데이터 매핑 (한글 헤더 지원)
+                    const name = row['이름'] || row['name'];
+                    const id = String(row['아이디'] || row['id'] || '');
+                    const pw = String(row['비밀번호'] || row['password'] || '1234');
+                    const role = row['역할'] || row['role'] || 'Basic';
+                    const duration = String(row['기간'] || row['duration'] || '1');
+
+                    if (!name || !id) return; // 필수 정보 누락 스킵
+
+                    const newUser = {
+                        id,
+                        pw,
+                        name,
+                        role,
+                        duration,
+                        avatar: 'fa-user',
+                        joinDate: new Date().toLocaleDateString(),
+                        membershipStart: new Date().toISOString().split('T')[0]
+                    };
+
+                    // 만료일 계산
+                    recalculateMembershipEnd(newUser);
+
+                    // Firebase 저장 (서버 연동)
+                    if (db) {
+                        db.collection("users").doc(id).set(newUser).catch(err => console.error("Excel Import Firebase Error:", err));
+                    }
+
+                    // 로컬 상태 업데이트 (중복 방지)
+                    const existingIdx = state.users.findIndex(u => u.id === id);
+                    if (existingIdx !== -1) {
+                        state.users[existingIdx] = newUser;
+                    } else {
+                        state.users.push(newUser);
+                    }
+                    successCount++;
+                });
+
+                // 최종 저장 및 알림
+                localStorage.setItem('soccer_users', JSON.stringify(state.users));
+                alert(`${successCount}명의 회원 등록이 완료되었습니다.`);
+                renderAdminTab('admin-users'); // 화면 갱신
+
+            } catch (err) {
+                console.error("Excel parsing error:", err);
+                alert("엑셀 파일 읽기에 실패했습니다. 파일 형식을 확인해주세요.");
+            }
+        };
+        reader.readAsArrayBuffer(file);
     };
 
     // ==========================================
@@ -1361,7 +1527,21 @@
 
         let html = `
             <div class="fade-in">
-                <h3 style="color: var(--text-white); margin-bottom: 20px; font-size: 1.2rem;">👨‍💻 회원 관리 (CRM)</h3>
+                <h3 style="color: var(--text-white); margin-bottom: 20px; font-size: 1.2rem;">👨‍💻 회원 관리 (CRM) <span style="font-size: 0.7rem; color: var(--primary); opacity: 0.7;">v2.1</span></h3>
+                
+                <!-- 엑셀 데이터 임포트 영역 (배경색 강조) -->
+                <div class="card" style="background: rgba(0, 210, 255, 0.05); border: 1px dashed var(--primary); padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; align-items: center; text-align: center;">
+                    <div style="font-size: 0.85rem; color: var(--text-white);">
+                        <i class="fas fa-file-excel" style="color: #217346; margin-right: 5px;"></i>
+                        엑셀/CSV 파일을 이용해 회원을 일괄 등록하세요.<br>
+                        <span style="font-size: 0.75rem; color: var(--text-gray);">(필수 헤더: 이름, 아이디, 비밀번호, 역할, 기간)</span>
+                    </div>
+                    <button class="btn-primary" onclick="window.triggerExcelImport()" style="font-size: 0.8rem; padding: 8px 15px; background: rgba(0, 210, 255, 0.2); border: 1px solid var(--primary); color: var(--primary);">
+                        <i class="fas fa-upload"></i> 파일 선택하기
+                    </button>
+                    <input type="file" id="excel-import-input" accept=".xlsx, .xls, .csv" style="display: none;" onchange="window.handleExcelImport(event)">
+                </div>
+
                 ${warningHtml}
                 <div style="display: flex; flex-direction: column; gap: 15px;">
         `;
@@ -1548,6 +1728,12 @@
             location: loc,
             description: desc
         };
+
+        // Firebase 저장 (모든 유저에게 일정 즉시 반영)
+        if (db) {
+            db.collection("schedules").doc(newSched.id.toString()).set(newSched).catch(e => console.error(e));
+        }
+
         state.schedules.push(newSched);
         try { localStorage.setItem('soccer_schedules', JSON.stringify(state.schedules)); } catch (e) { }
         alert('신규 일정이 등록되었습니다.');
