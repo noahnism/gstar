@@ -1368,16 +1368,24 @@
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
+                if (typeof XLSX === 'undefined') {
+                    alert("시스템 오류: 엑셀 처리 라이브러리(SheetJS)가 로드되지 않았습니다. index.html 파일도 깃허브에 함께 올리셨는지 확인해주세요.");
+                    return;
+                }
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
                 const firstSheetName = workbook.SheetNames[0];
+                if (!firstSheetName) {
+                    alert("엑셀 파일에 시트가 존재하지 않습니다.");
+                    return;
+                }
                 const worksheet = workbook.Sheets[firstSheetName];
 
                 // 로우 데이터를 JSON으로 변환
                 const rows = XLSX.utils.sheet_to_json(worksheet);
                 console.log("Parsed Excel rows:", rows);
 
-                if (rows.length === 0) return alert('엑셀 데이터가 비어있습니다.');
+                if (!rows || rows.length === 0) return alert('엑셀 데이터가 비어있거나 읽을 수 없습니다.');
 
                 if (!confirm(`${rows.length}명의 회원을 신규 등록하시겠습니까?`)) return;
 
@@ -1445,8 +1453,8 @@
                 renderAdminTab('admin-users'); // 화면 갱신
 
             } catch (err) {
-                console.error("Excel parsing error:", err);
-                alert("엑셀 파일 읽기에 실패했습니다. 파일 형식을 확인해주세요.");
+                console.error("Excel Read Error:", err);
+                alert('엑셀 파일 읽기에 실패했습니다. 오류 내용: ' + err.message);
             }
         };
         reader.readAsArrayBuffer(file);
