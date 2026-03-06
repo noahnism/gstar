@@ -1389,11 +1389,37 @@
                 }
                 const worksheet = workbook.Sheets[firstSheetName];
 
-                // 로우 데이터를 JSON으로 변환
-                const rows = XLSX.utils.sheet_to_json(worksheet);
-                console.log("Parsed Excel rows:", rows);
+                // 로우 데이터를 2D 배열로 먼저 읽기 (헤더 행을 찾기 위함)
+                const arrayOfArrays = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                console.log("Raw Excel Data:", arrayOfArrays);
 
-                if (!rows || rows.length === 0) return alert('엑셀 데이터가 비어있거나 읽을 수 없습니다.');
+                if (!arrayOfArrays || arrayOfArrays.length === 0) return alert('엑셀 데이터가 비어있거나 읽을 수 없습니다.');
+
+                // 진짜 헤더(제목)가 있는 행 찾기 (이름, 번호, 성함 등이 포함된 행)
+                let headerRowIndex = -1;
+                for (let i = 0; i < arrayOfArrays.length; i++) {
+                    const row = arrayOfArrays[i];
+                    if (row.some(cell => String(cell).includes('이름') || String(cell).includes('성함') || String(cell).includes('번호') || String(cell).includes('아이디'))) {
+                        headerRowIndex = i;
+                        break;
+                    }
+                }
+
+                if (headerRowIndex === -1) {
+                    const firstRow = arrayOfArrays[0] ? arrayOfArrays[0].join(', ') : '없음';
+                    alert(`회원 등록에 실패했습니다.\n\n엑셀 파일에서 '이름'이나 '번호' 제목이 있는 줄을 찾을 수 없습니다.\n(첫 번째 줄 감지 내용: ${firstRow})\n\n파일 구성을 확인해주세요.`);
+                    return;
+                }
+
+                // 헤더 행 이후의 데이터를 객체 배열로 변환
+                const headers = arrayOfArrays[headerRowIndex];
+                const rows = arrayOfArrays.slice(headerRowIndex + 1).map(row => {
+                    const obj = {};
+                    headers.forEach((h, i) => {
+                        if (h) obj[String(h).trim()] = row[i];
+                    });
+                    return obj;
+                });
 
                 if (!confirm(`${rows.length}명의 회원을 신규 등록하시겠습니까?`)) return;
 
@@ -1404,8 +1430,8 @@
                     // --- [유연한 헤더 매핑 로직] ---
                     // 1. 이름 찾기
                     const name = row['이름'] || row['성함'] || row['name'] || row['Name'] || row['user_name'];
-                    // 2. 아이디 찾기
-                    const id = String(row['아이디'] || row['ID'] || row['Id'] || row['id'] || row['user_id'] || '');
+                    // 2. 아이디 찾기 (아이디가 없으면 번호를 아이디로 사용)
+                    const id = String(row['아이디'] || row['ID'] || row['Id'] || row['id'] || row['번호'] || row['No'] || '');
                     // 3. 비밀번호
                     const pw = String(row['비밀번호'] || row['비번'] || row['password'] || row['pw'] || '1234');
                     // 4. 역할/등급
@@ -1414,7 +1440,7 @@
                     const duration = String(row['기간'] || row['개월'] || row['duration'] || row['months'] || '1');
 
                     // 추가 정보
-                    const phone = row['연락처'] || row['전화번호'] || row['phone'] || row['tel'] || '';
+                    const phone = row['연락처'] || row['전화번호'] || row['본인 연락처'] || row['phone'] || row['tel'] || '';
                     const address = row['주소'] || row['address'] || '';
                     const memo = row['비고'] || row['메모'] || row['memo'] || '';
 
@@ -1428,11 +1454,7 @@
                     ];
 
                     if (!name || !id) {
-                        if (index === 0) {
-                            const keys = Object.keys(row).join(', ');
-                            failReason = `첫 번째 행 분석 결과: '이름'이나 '아이디' 헤더를 찾을 수 없습니다.\n(현재 파일의 헤더: ${keys})`;
-                        }
-                        return;
+                        return; // 한 줄이라도 이름/ID(번호) 없으면 스킵
                     }
 
                     const newUser = {
@@ -1473,7 +1495,7 @@
                     localStorage.setItem('soccer_users', JSON.stringify(state.users));
                     alert(`${successCount}명의 회원 등록이 완료되었습니다.`);
                 } else {
-                    alert(`회원 등록에 실패했습니다.\n\n${failReason}\n\n엑셀 파일의 첫 번째 줄(제목)이 '이름', '아이디' 등을 확인해주세요.`);
+                    alert(`조건에 맞는 데이터를 찾지 못했습니다. 이름과 아이디(또는 번호) 항목이 있는지 확인해주세요.`);
                 }
                 renderAdminTab('admin-users'); // 화면 갱신
 
@@ -1648,7 +1670,7 @@
         let html = `
             <div class="fade-in">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h3 style="color: var(--text-white); font-size: 1.2rem; margin: 0;">👨‍💻 회원 관리 (CRM) <span style="font-size: 0.7rem; color: var(--primary); opacity: 0.7;">v2.3</span></h3>
+                    <h3 style="color: var(--text-white); font-size: 1.2rem; margin: 0;">👨‍💻 회원 관리 (CRM) <span style="font-size: 0.7rem; color: var(--primary); opacity: 0.7;">v2.4</span></h3>
                     <button onclick="window.adminResetUsers()" style="background: rgba(255, 59, 48, 0.1); border: 1px solid #ff3b30; color: #ff3b30; font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; cursor: pointer;">
                         <i class="fas fa-trash-alt"></i> 데이터 초기화
                     </button>
