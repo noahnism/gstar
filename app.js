@@ -1430,17 +1430,37 @@
                     // --- [유연한 헤더 매핑 로직] ---
                     // 1. 이름 찾기
                     const name = row['이름'] || row['성함'] || row['name'] || row['Name'] || row['user_name'];
-                    // 2. 아이디 찾기 (아이디가 없으면 번호를 아이디로 사용)
-                    const id = String(row['아이디'] || row['ID'] || row['Id'] || row['id'] || row['번호'] || row['No'] || '');
-                    // 3. 비밀번호
-                    const pw = String(row['비밀번호'] || row['비번'] || row['password'] || row['pw'] || '1234');
-                    // 4. 역할/등급
-                    const role = row['역할'] || row['등급'] || row['role'] || row['grade'] || 'Basic';
-                    // 5. 기간
-                    const duration = String(row['기간'] || row['개월'] || row['duration'] || row['months'] || '1');
+                    // 2. 기본 아이디 찾기
+                    let baseId = String(row['아이디'] || row['ID'] || row['Id'] || row['id'] || row['번호'] || row['No'] || '');
 
-                    // 추가 정보
-                    const phone = row['연락처'] || row['전화번호'] || row['본인 연락처'] || row['phone'] || row['tel'] || '';
+                    if (!name && !baseId) return; // 이름과 아이디 둘 다 없으면 스킵
+
+                    // 3. 비밀번호 등 기본 정보
+                    const pw = String(row['비밀번호'] || row['비번'] || row['password'] || row['pw'] || '1234');
+                    const role = row['역할'] || row['등급'] || row['role'] || row['grade'] || 'Basic';
+                    const duration = String(row['기간'] || row['개월 수'] || row['개월수'] || row['개월'] || row['duration'] || row['months'] || '1');
+
+                    // 신규 추가/확장 정보 (엑셀 내 개인정보 모두 흡수)
+                    const group = row['수업 그룹'] || row['그룹'] || '';
+                    const gender = row['성별'] || '';
+                    const gradeLevel = row['학년'] || '';
+                    const birthDate = row['생년월일'] || '';
+                    const school = row['학교/어린이집'] || row['어린이집'] || row['학교'] || '';
+                    const height = row['키'] || '';
+                    const weight = row['몸무게'] || '';
+                    const excelJoinDate = row['가입일'] || '';
+                    const startDate = row['시작일'] || '';
+                    const endDate = row['종료일'] || '';
+                    const frequency = row['횟수 (주당)'] || row['횟수'] || '';
+                    const fee = row['등록비'] || '';
+                    const uniformFee = row['유니폼 비'] || row['유니폼비'] || '';
+                    const shuttle = row['차량운행'] || row['차량'] || '';
+                    const motherName = row['모 성함'] || row['모성함'] || row['모'] || '';
+                    const fatherName = row['부 성함'] || row['부성함'] || row['부'] || '';
+                    const email = row['이메일 주소'] || row['이메일'] || row['email'] || '';
+                    const uniformInfo = row['유니폼'] || '';
+
+                    const phone = row['연락처'] || row['본인 연락처'] || row['전화번호'] || row['phone'] || row['tel'] || '';
                     const address = row['주소'] || row['address'] || '';
                     const memo = row['비고'] || row['메모'] || row['memo'] || '';
 
@@ -1453,35 +1473,94 @@
                         parseInt(row['반응속도'] || row['reaction'] || 30)
                     ];
 
-                    if (!name || !id) {
-                        return; // 한 줄이라도 이름/ID(번호) 없으면 스킵
+                    // 멤버십 상향 혜택 (유니폼 무료)
+                    let finalUniformInfo = uniformInfo;
+                    const durationMonths = parseInt(duration) || 0;
+                    if (durationMonths >= 6 || role.toLowerCase().includes('pro') || role.toLowerCase().includes('ultimate')) {
+                        if (!finalUniformInfo || finalUniformInfo.trim() === '') finalUniformInfo = "지원 대상 (FREE)";
+                    }
+
+                    // --- [지능형 아이디 연장 로직 (16-2, 16-3 등)] ---
+                    // baseId 형식이 원래부터 '16-2' 였을 수도 있으니 '-'앞의 진짜 baseId만 추출
+                    const pureBaseId = baseId ? baseId.split('-')[0] : '';
+                    let finalId = pureBaseId;
+
+                    // 동일한 baseId를 가지거나 이름이 같은 기존 회원이 있는지 검사
+                    let existingUsers = [];
+                    if (pureBaseId) {
+                        existingUsers = state.users.filter(u => u.id.split('-')[0] === pureBaseId || (u.name === name && u.name !== ''));
+                    } else if (name) {
+                        existingUsers = state.users.filter(u => u.name === name);
+                        if (existingUsers.length > 0) {
+                            finalId = existingUsers[0].id.split('-')[0]; // 이름으로 기존 회원 찾은 경우 그 baseId 사용
+                        } else {
+                            finalId = 'new_' + Date.now().toString().slice(-6); // 아이디도 번호도 아예 없으면 임시 발급
+                        }
+                    }
+
+                    if (existingUsers.length > 0) {
+                        // 중복 유저 발견 시, 가장 높은 차수(suffix) 찾기
+                        let maxSuffix = 1;
+                        existingUsers.forEach(u => {
+                            const parts = u.id.split('-');
+                            if (parts.length > 1) {
+                                const suffix = parseInt(parts[1]);
+                                if (suffix > maxSuffix) maxSuffix = suffix;
+                            } else {
+                                maxSuffix = Math.max(maxSuffix, 1);
+                            }
+                        });
+                        // 새 ID 발급: 16-2, 16-3 ...
+                        finalId = `${finalId}-${maxSuffix + 1}`;
                     }
 
                     const newUser = {
-                        id,
+                        id: finalId,
                         pw,
                         name,
                         role,
                         duration,
+                        group,
+                        gender,
+                        gradeLevel,
+                        birthDate,
+                        school,
+                        height,
+                        weight,
+                        excelJoinDate,
+                        startDate,
+                        endDate,
+                        frequency,
+                        fee,
+                        uniformFee,
+                        shuttle,
+                        motherName,
+                        fatherName,
+                        email,
+                        uniformInfo: finalUniformInfo,
                         phone,
                         address,
                         memo,
                         stats,
                         avatar: 'fa-user',
-                        joinDate: new Date().toLocaleDateString(),
-                        membershipStart: new Date().toISOString().split('T')[0]
+                        joinDate: startDate || excelJoinDate || new Date().toLocaleDateString(),
+                        membershipStart: startDate || new Date().toISOString().split('T')[0]
                     };
 
                     // 만료일 계산
-                    recalculateMembershipEnd(newUser);
+                    if (endDate) {
+                        newUser.membershipEnd = endDate; // 명시적 종료일이 있으면 우선
+                    } else {
+                        recalculateMembershipEnd(newUser);
+                    }
 
                     // Firebase 저장 (서버 연동)
                     if (db) {
-                        db.collection("users").doc(id).set(newUser).catch(err => console.error("Excel Import Firebase Error:", err));
+                        db.collection("users").doc(finalId).set(newUser).catch(err => console.error("Excel Import Firebase Error:", err));
                     }
 
                     // 로컬 상태 업데이트 (중복 방지)
-                    const existingIdx = state.users.findIndex(u => u.id === id);
+                    const existingIdx = state.users.findIndex(u => u.id === finalId);
                     if (existingIdx !== -1) {
                         state.users[existingIdx] = newUser;
                     } else {
@@ -1538,51 +1617,211 @@
             (user.role || 'Basic').toLowerCase().includes('pro') ? '#7bc2b7' :
                 (user.role || 'Basic').toLowerCase().includes('semi') ? '#f2cb4f' : '#f06958';
 
+        // 엑셀 추가 데이터 매핑
+        const phone = user.phone || '등록되지 않음';
+        const address = user.address || '등록되지 않음';
+        const memo = user.memo || '없음';
+        const group = user.group || '-';
+        const gender = user.gender || '-';
+        const gradeLevel = user.gradeLevel || '-';
+        const birthDate = user.birthDate || '-';
+        const school = user.school || '-';
+        const heightWeight = (user.height || '-') + 'cm / ' + (user.weight || '-') + 'kg';
+        const uniformInfo = user.uniformInfo || '-';
+        const shuttle = user.shuttle || '-';
+        const parents = `부: ${user.fatherName || '-'} / 모: ${user.motherName || '-'}`;
+        const joinDate = user.joinDate || '-';
+
+        const statsHtml = user.stats ? `
+            <div style="margin-top: 15px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 15px;">
+                <h5 style="color: var(--text-white); margin-bottom: 10px; font-size: 0.85rem;"><i class="fas fa-chart-bar"></i> 현재 능력치 스탯</h5>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <span style="background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 20px; font-size: 0.75rem; color: #fff;">스피드: ${user.stats[0]}</span>
+                    <span style="background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 20px; font-size: 0.75rem; color: #fff;">유연성: ${user.stats[1]}</span>
+                    <span style="background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 20px; font-size: 0.75rem; color: #fff;">지구력: ${user.stats[2]}</span>
+                    <span style="background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 20px; font-size: 0.75rem; color: #fff;">근력: ${user.stats[3]}</span>
+                    <span style="background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 20px; font-size: 0.75rem; color: #fff;">반응: ${user.stats[4]}</span>
+                </div>
+            </div>
+        ` : '';
+
         const modalHtml = `
-            <div id="member-detail-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; display: flex; justify-content: center; align-items: center; padding: 20px; backdrop-filter: blur(5px);">
-                <div class="card fade-in" style="width: 100%; max-width: 450px; background: #0f172a; border: 1px solid var(--border-glass); border-radius: 20px; overflow: hidden; position: relative; animation: slideUp 0.3s ease-out;">
-                    <div style="background: linear-gradient(135deg, ${roleColor}, #000); height: 100px; position: relative;">
+            <div id="member-detail-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; display: flex; justify-content: center; align-items: center; padding: 10px; backdrop-filter: blur(5px);">
+                <div class="card fade-in" style="width: 100%; max-width: 500px; background: #0f172a; border: 1px solid var(--border-glass); border-radius: 20px; overflow: hidden; position: relative; animation: slideUp 0.3s ease-out; display: flex; flex-direction: column; max-height: 90vh;">
+                    
+                    <div style="background: linear-gradient(135deg, ${roleColor}, #000); padding: 20px; position: relative; flex-shrink: 0; text-align: center;">
                         <button onclick="document.getElementById('member-detail-modal').remove()" style="position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.3); border: none; color: white; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;"><i class="fas fa-times"></i></button>
-                    </div>
-                    <div style="padding: 20px; margin-top: -50px; text-align: center;">
-                        <div style="width: 100px; height: 100px; border-radius: 50%; background: #1e293b; border: 4px solid #0f172a; margin: 0 auto 15px; display: flex; justify-content: center; align-items: center; font-size: 3rem; color: ${roleColor};">
+                        <div style="width: 70px; height: 70px; border-radius: 50%; background: #1e293b; border: 3px solid #0f172a; margin: 0 auto 10px; display: flex; justify-content: center; align-items: center; font-size: 2rem; color: ${roleColor};">
                             <i class="fas ${user.avatar || 'fa-user'}"></i>
                         </div>
-                        <h2 style="color: white; margin-bottom: 5px; font-size: 1.5rem;">${user.name}</h2>
-                        <span style="color: ${roleColor}; font-weight: bold; font-size: 0.9rem;">${user.role || 'Basic Member'}</span>
+                        <h2 style="color: white; margin-bottom: 5px; font-size: 1.3rem;" id="modal-member-name">${user.name} <span style="font-size: 0.9rem; color: var(--text-gray);">(${user.id})</span></h2>
+                        <span style="color: ${roleColor}; font-weight: bold; font-size: 0.85rem;" id="modal-member-role">${user.role || 'Basic'} / ${user.duration || '1'}개월</span>
+                    </div>
+                    
+                    <div style="padding: 20px; overflow-y: auto; flex-grow: 1;" id="member-detail-content">
+                        <!-- 일반 정보 뷰 -->
+                        <div id="member-view-mode" style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px;">
+                            <h4 style="color: var(--primary); margin-bottom: 10px; font-size: 0.9rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">기본 정보</h4>
+                            <table style="width: 100%; font-size: 0.85rem; color: var(--text-gray); border-collapse: separate; border-spacing: 0 6px;">
+                                <tr><td style="width: 90px;"><i class="fas fa-calendar-check" style="width: 20px;"></i> 그룹:</td><td style="color: white; text-align: right;">${group}</td></tr>
+                                <tr><td><i class="fas fa-phone" style="width: 20px;"></i> 연락처:</td><td style="color: white; text-align: right;">${phone}</td></tr>
+                                <tr><td><i class="fas fa-map-marker-alt" style="width: 20px;"></i> 주소:</td><td style="color: white; text-align: right; word-break: keep-all;">${address}</td></tr>
+                                <tr><td><i class="fas fa-hourglass-start" style="width: 20px;"></i> 가입일:</td><td style="color: white; text-align: right;">${joinDate}</td></tr>
+                                <tr><td><i class="fas fa-hourglass-end" style="width: 20px;"></i> 만료일:</td><td style="color: var(--primary); font-weight: bold; text-align: right;">${user.membershipEnd || '-'}</td></tr>
+                            </table>
+
+                            <h4 style="color: var(--primary); margin-top: 20px; margin-bottom: 10px; font-size: 0.9rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">상세 코칭 정보</h4>
+                            <table style="width: 100%; font-size: 0.85rem; color: var(--text-gray); border-collapse: separate; border-spacing: 0 6px;">
+                                <tr><td style="width: 90px;">성별/학년:</td><td style="color: white; text-align: right;">${gender} / ${gradeLevel}</td></tr>
+                                <tr><td>생년월일:</td><td style="color: white; text-align: right;">${birthDate}</td></tr>
+                                <tr><td>학교명:</td><td style="color: white; text-align: right;">${school}</td></tr>
+                                <tr><td>신체정보:</td><td style="color: white; text-align: right;">${heightWeight}</td></tr>
+                                <tr><td>부모님:</td><td style="color: white; text-align: right;">${parents}</td></tr>
+                                <tr><td>차량운행:</td><td style="color: white; text-align: right;">${shuttle}</td></tr>
+                                <tr><td>유니폼:</td><td style="color: #ffcc00; font-weight: bold; text-align: right;">${uniformInfo}</td></tr>
+                            </table>
+
+                            <div style="margin-top: 15px;">
+                                <span style="display: block; margin-bottom: 5px; font-size: 0.85rem; color: var(--text-gray);"><i class="fas fa-sticky-note" style="width: 20px;"></i> 비고 (메모)</span>
+                                <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; color: white; font-size: 0.8rem; line-height: 1.4;">
+                                    ${memo.replace(/\n/g, '<br>')}
+                                </div>
+                            </div>
+                            
+                            ${statsHtml}
+                        </div>
                         
-                        <div style="margin-top: 25px; text-align: left; display: flex; flex-direction: column; gap: 12px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px;">
-                            <div style="display: flex; justify-content: space-between;">
-                                <span style="color: var(--text-gray); font-size: 0.85rem;"><i class="fas fa-id-card" style="width: 20px;"></i> 아이디:</span>
-                                <span style="color: white; font-size: 0.85rem;">${user.id}</span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between;">
-                                <span style="color: var(--text-gray); font-size: 0.85rem;"><i class="fas fa-phone" style="width: 20px;"></i> 연락처:</span>
-                                <span style="color: white; font-size: 0.85rem;">${user.phone || '등록되지 않음'}</span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between;">
-                                <span style="color: var(--text-gray); font-size: 0.85rem;"><i class="fas fa-map-marker-alt" style="width: 20px;"></i> 주소:</span>
-                                <span style="color: white; font-size: 0.85rem; text-align: right;">${user.address || '등록되지 않음'}</span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between;">
-                                <span style="color: var(--text-gray); font-size: 0.85rem;"><i class="fas fa-calendar-check" style="width: 20px;"></i> 가입일:</span>
-                                <span style="color: white; font-size: 0.85rem;">${user.joinDate || '-'}</span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between;">
-                                <span style="color: var(--text-gray); font-size: 0.85rem;"><i class="fas fa-hourglass-half" style="width: 20px;"></i> 만료일:</span>
-                                <span style="color: var(--primary); font-size: 0.85rem; font-weight: bold;">${user.membershipEnd || '-'}</span>
-                            </div>
-                            <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;">
-                                <span style="color: var(--text-gray); font-size: 0.85rem; display: block; margin-bottom: 5px;"><i class="fas fa-sticky-note" style="width: 20px;"></i> 특이사항:</span>
-                                <p style="color: white; font-size: 0.8rem; line-height: 1.4;">${user.memo || '없음'}</p>
+                        <!-- 편집 뷰 (숨김) -->
+                        <div id="member-edit-mode" style="display: none; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px;">
+                            <h4 style="color: #7bc2b7; margin-bottom: 15px; font-size: 0.9rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;"><i class="fas fa-edit"></i> 회원 정보 수정</h4>
+                            <div style="display: flex; flex-direction: column; gap: 10px;">
+                                <label style="color: var(--text-gray); font-size: 0.8rem;">이름
+                                    <input type="text" id="edit-name" value="${user.name}" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.5); color: white; font-size: 0.85rem; margin-top: 5px;">
+                                </label>
+                                <label style="color: var(--text-gray); font-size: 0.8rem;">아이디(고유번호)
+                                    <input type="text" id="edit-id" value="${user.id}" disabled style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #888; font-size: 0.85rem; margin-top: 5px;">
+                                    <span style="font-size: 0.7rem; color: #ff3b30;">* 아이디는 수정할 수 없습니다.</span>
+                                </label>
+                                <div style="display: flex; gap: 10px;">
+                                    <label style="color: var(--text-gray); font-size: 0.8rem; flex: 1;">등급
+                                        <select id="edit-role" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.5); color: white; font-size: 0.85rem; margin-top: 5px;">
+                                            <option value="Basic" ${user.role === 'Basic' ? 'selected' : ''}>Basic</option>
+                                            <option value="Semi Pro" ${user.role === 'Semi Pro' ? 'selected' : ''}>Semi Pro</option>
+                                            <option value="Pro" ${user.role === 'Pro' ? 'selected' : ''}>Pro</option>
+                                            <option value="Ultimate" ${user.role === 'Ultimate' ? 'selected' : ''}>Ultimate</option>
+                                        </select>
+                                    </label>
+                                    <label style="color: var(--text-gray); font-size: 0.8rem; flex: 1;">만료일
+                                        <input type="date" id="edit-enddate" value="${user.membershipEnd || ''}" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.5); color: white; font-size: 0.85rem; margin-top: 5px;">
+                                    </label>
+                                </div>
+                                <label style="color: var(--text-gray); font-size: 0.8rem;">연락처
+                                    <input type="text" id="edit-phone" value="${user.phone || ''}" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.5); color: white; font-size: 0.85rem; margin-top: 5px;">
+                                </label>
+                                <label style="color: var(--text-gray); font-size: 0.8rem;">특이사항 (메모)
+                                    <textarea id="edit-memo" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.5); color: white; font-size: 0.85rem; margin-top: 5px; height: 80px;">${user.memo || ''}</textarea>
+                                </label>
                             </div>
                         </div>
+                    </div>
+                    
+                    <div style="padding: 15px; background: rgba(0,0,0,0.3); display: flex; gap: 10px; flex-shrink: 0;" id="member-action-btns">
+                        <button onclick="window.toggleEditMember()" id="btn-toggle-edit" style="flex:1; padding: 10px; border-radius: 8px; border: 1px solid #7bc2b7; background: rgba(123, 194, 183, 0.1); color: #7bc2b7; font-weight: bold; cursor: pointer;"><i class="fas fa-edit"></i> 수정하기</button>
+                        <button onclick="window.adminDeleteMember('${user.id}')" id="btn-delete" style="flex:1; padding: 10px; border-radius: 8px; border: 1px solid #ff3b30; background: rgba(255, 59, 48, 0.1); color: #ff3b30; font-weight: bold; cursor: pointer;"><i class="fas fa-trash-alt"></i> 삭제하기</button>
+                        
+                        <button onclick="window.saveMemberDetail('${user.id}')" id="btn-save" style="display:none; flex:2; padding: 10px; border-radius: 8px; border: none; background: #7bc2b7; color: #000; font-weight: bold; cursor: pointer;"><i class="fas fa-save"></i> 저장하기</button>
+                        <button onclick="window.toggleEditMember()" id="btn-cancel" style="display:none; flex:1; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; font-weight: bold; cursor: pointer;">취소</button>
                     </div>
                 </div>
             </div>
         `;
         document.body.insertAdjacentHTML('beforeend', modalHtml);
     };
+
+    window.toggleEditMember = () => {
+        const viewMode = document.getElementById('member-view-mode');
+        const editMode = document.getElementById('member-edit-mode');
+        const btnEdit = document.getElementById('btn-toggle-edit');
+        const btnDelete = document.getElementById('btn-delete');
+        const btnSave = document.getElementById('btn-save');
+        const btnCancel = document.getElementById('btn-cancel');
+
+        if (editMode.style.display === 'none') {
+            viewMode.style.display = 'none';
+            editMode.style.display = 'block';
+            btnEdit.style.display = 'none';
+            btnDelete.style.display = 'none';
+            btnSave.style.display = 'flex';
+            btnSave.style.justifyContent = 'center';
+            btnSave.style.alignItems = 'center';
+            btnSave.style.gap = '5px';
+            btnCancel.style.display = 'block';
+        } else {
+            viewMode.style.display = 'block';
+            editMode.style.display = 'none';
+            btnEdit.style.display = 'inline-block';
+            btnDelete.style.display = 'inline-block';
+            btnSave.style.display = 'none';
+            btnCancel.style.display = 'none';
+        }
+    };
+
+    window.saveMemberDetail = (userId) => {
+        const userIdx = state.users.findIndex(u => u.id === userId);
+        if (userIdx === -1) return;
+
+        const newName = document.getElementById('edit-name').value.trim();
+        const newRole = document.getElementById('edit-role').value;
+        const newEndDate = document.getElementById('edit-enddate').value;
+        const newPhone = document.getElementById('edit-phone').value.trim();
+        const newMemo = document.getElementById('edit-memo').value;
+
+        if (!newName) return alert("이름을 입력해주세요.");
+
+        state.users[userIdx] = {
+            ...state.users[userIdx],
+            name: newName,
+            role: newRole,
+            membershipEnd: newEndDate,
+            phone: newPhone,
+            memo: newMemo
+        };
+
+        // 로컬 & Firebase 저장
+        localStorage.setItem('soccer_users', JSON.stringify(state.users));
+        if (db) {
+            db.collection("users").doc(userId).update({
+                name: newName,
+                role: newRole,
+                membershipEnd: newEndDate,
+                phone: newPhone,
+                memo: newMemo
+            }).catch(e => console.error("Update Error:", e));
+        }
+
+        alert("회원 정보가 성공적으로 수정되었습니다.");
+
+        // 다시 렌더링
+        document.getElementById('member-detail-modal').remove();
+        renderAdminTab('admin-users');
+        window.showMemberDetail(userId); // 업데이트된 모달 다시 열기
+    };
+
+    window.adminDeleteMember = (userId) => {
+        if (!confirm(`회원(${userId}) 정보를 정말 삭제하시겠습니까?\n삭제된 정보는 복구할 수 없습니다.`)) return;
+
+        state.users = state.users.filter(u => u.id !== userId);
+        localStorage.setItem('soccer_users', JSON.stringify(state.users));
+
+        if (db) {
+            db.collection("users").doc(userId).delete().catch(e => console.error("Delete Error:", e));
+        }
+
+        document.getElementById('member-detail-modal').remove();
+        renderAdminTab('admin-users');
+        alert("회원 정보가 삭제되었습니다.");
+    };
+
     window.renderAdminTab = (tabId) => {
         const contentDiv = document.getElementById('admin-tab-content');
         if (!contentDiv) return;
@@ -1670,7 +1909,7 @@
         let html = `
             <div class="fade-in">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h3 style="color: var(--text-white); font-size: 1.2rem; margin: 0;">👨‍💻 회원 관리 (CRM) <span style="font-size: 0.7rem; color: var(--primary); opacity: 0.7;">v2.4</span></h3>
+                    <h3 style="color: var(--text-white); font-size: 1.2rem; margin: 0;">👨‍💻 회원 관리 (CRM) <span style="font-size: 0.7rem; color: var(--primary); opacity: 0.7;">v2.5</span></h3>
                     <button onclick="window.adminResetUsers()" style="background: rgba(255, 59, 48, 0.1); border: 1px solid #ff3b30; color: #ff3b30; font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; cursor: pointer;">
                         <i class="fas fa-trash-alt"></i> 데이터 초기화
                     </button>
