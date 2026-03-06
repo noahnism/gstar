@@ -1474,7 +1474,7 @@
                     ];
 
                     // 멤버십 상향 혜택 (유니폼 무료)
-                    let finalUniformInfo = uniformInfo;
+                    let finalUniformInfo = String(uniformInfo);
                     const durationMonths = parseInt(duration) || 0;
                     if (durationMonths >= 6 || role.toLowerCase().includes('pro') || role.toLowerCase().includes('ultimate')) {
                         if (!finalUniformInfo || finalUniformInfo.trim() === '') finalUniformInfo = "지원 대상 (FREE)";
@@ -1909,7 +1909,7 @@
         let html = `
             <div class="fade-in">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h3 style="color: var(--text-white); font-size: 1.2rem; margin: 0;">👨‍💻 회원 관리 (CRM) <span style="font-size: 0.7rem; color: var(--primary); opacity: 0.7;">v2.5</span></h3>
+                    <h3 style="color: var(--text-white); font-size: 1.2rem; margin: 0;">👨‍💻 회원 관리 (CRM) <span style="font-size: 0.7rem; color: var(--primary); opacity: 0.7;">v2.5.1</span></h3>
                     <button onclick="window.adminResetUsers()" style="background: rgba(255, 59, 48, 0.1); border: 1px solid #ff3b30; color: #ff3b30; font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; cursor: pointer;">
                         <i class="fas fa-trash-alt"></i> 데이터 초기화
                     </button>
