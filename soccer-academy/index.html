@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>G-STAR TRAINING CAMP - 프리미엄 멤버십</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Pretendard:wght@100;400;700&family=Outfit:wght@400;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <div id="app-container">
+        <!-- 배경 데코레이션 -->
+        <div class="bg-blur neon-blue"></div>
+        <div class="bg-blur neon-green"></div>
+
+        <!-- 메인 콘텐츠 영역 -->
+        <main id="main-view">
+            <!-- 초기 로딩 화면 -->
+            <section id="splash-screen" class="view active">
+                <div class="splash-content">
+                    <div class="hero-typography">
+                        <div class="glow-orb"></div>
+                        <h1 class="glitch-text" data-text="G-STAR">G-STAR</h1>
+                        <h2 class="subtitle-text">TRAINING CAMP</h2>
+                        <div class="accent-line"></div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- 로그인/회원가입 화면 -->
+            <section id="auth-view" class="view hidden">
+                <div class="auth-card">
+                    <h2>멤버 로그인</h2>
+                    <p>지트캠 축구캠프<br>멤버십 서비스를 시작하세요.</p>
+
+                    <!-- 로그인 폼 -->
+                    <div id="login-form-area" class="fade-in">
+                        <div class="input-group">
+                            <div class="input-field">
+                                <i class="fas fa-user input-icon"></i>
+                                <input type="text" id="login-id" placeholder="아이디를 입력하세요">
+                            </div>
+                            <div class="input-field">
+                                <i class="fas fa-lock input-icon"></i>
+                                <input type="password" id="login-pw" placeholder="비밀번호를 입력하세요">
+                            </div>
+                        </div>
+                        <button id="btn-login" class="btn-primary">로그인</button>
+                        <div class="auth-footer">
+                            <span>계정이 없으신가요?</span>
+                            <a href="#" id="go-signup">회원가입</a>
+                        </div>
+                    </div>
+
+                    <!-- 회원가입 폼 (초기 숨김) -->
+                    <div id="signup-form-area" class="fade-in hidden">
+                        <div class="input-group">
+                            <div class="input-field">
+                                <i class="fas fa-id-badge input-icon"></i>
+                                <input type="text" id="signup-name" placeholder="이름 (예: 홍길동)">
+                            </div>
+                            <div class="input-field">
+                                <i class="fas fa-user input-icon"></i>
+                                <input type="text" id="signup-id" placeholder="사용할 아이디">
+                            </div>
+                            <div class="input-field">
+                                <i class="fas fa-lock input-icon"></i>
+                                <input type="password" id="signup-pw" placeholder="비밀번호">
+                            </div>
+                            <div class="input-field">
+                                <i class="fas fa-check-circle input-icon"></i>
+                                <input type="password" id="signup-pw-confirm" placeholder="비밀번호 확인">
+                            </div>
+                            <!-- 멤버십 선택 -->
+                            <div class="input-field" style="margin-top: 5px;">
+                                <i class="fas fa-star input-icon"></i>
+                                <select id="signup-membership"
+                                    style="width: 100%; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); padding: 18px 20px 18px 50px; border-radius: 18px; color: var(--text-gray); font-size: 0.95rem; outline: none; appearance: none; -webkit-appearance: none; cursor: pointer;">
+                                    <option value="" disabled selected>멤버십 등급 선택</option>
+                                    <option value="basic">베이직 (Basic)</option>
+                                    <option value="semi">세미 (Semi)</option>
+                                    <option value="pro">프로 (Pro)</option>
+                                    <option value="ultimate">얼티메이트 (Ultimate)</option>
+                                </select>
+                                <i class="fas fa-chevron-down"
+                                    style="position: absolute; right: 20px; color: var(--text-gray); pointer-events: none;"></i>
+                            </div>
+                            <div class="input-field" id="duration-field" style="display: none; margin-top: 5px;">
+                                <i class="fas fa-calendar-alt input-icon"></i>
+                                <select id="signup-duration"
+                                    style="width: 100%; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); padding: 18px 20px 18px 50px; border-radius: 18px; color: var(--text-gray); font-size: 0.95rem; outline: none; appearance: none; -webkit-appearance: none; cursor: pointer;">
+                                    <option value="1" selected>1개월</option>
+                                    <option value="3">3개월</option>
+                                    <option value="6">6개월</option>
+                                    <option value="12">12개월</option>
+                                </select>
+                                <i class="fas fa-chevron-down"
+                                    style="position: absolute; right: 20px; color: var(--text-gray); pointer-events: none;"></i>
+                            </div>
+                        </div>
+                        <button id="btn-signup" class="btn-primary"
+                            style="background: linear-gradient(135deg, var(--secondary), var(--primary)); color: #000; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3); margin-top: 10px;">멤버십
+                            가입완료</button>
+                        <div class="auth-footer">
+                            <span>이미 계정이 있으신가요?</span>
+                            <a href="#" id="go-login">로그인 하기</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 메인 앱 인터페이스 -->
+            <section id="app-view" class="view hidden">
+                <header class="app-header fade-in"
+                    style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px;">
+                    <h1 id="view-title" class="brand-font"
+                        style="font-size: 1.4rem; color: var(--primary); text-shadow: 0 0 10px rgba(0, 210, 255, 0.3);">
+                        HOME</h1>
+                    <!-- 우측 상단 알림/설정 (향후 로그아웃 버튼 포함) -->
+                    <div class="header-actions"
+                        style="display: flex; gap: 15px; color: var(--text-white); font-size: 1.2rem;">
+                        <i class="fas fa-bell header-icon" onclick="window.toggleNotifications()"
+                            style="cursor: pointer; position: relative; transition: color 0.3s ease;"></i>
+                        <i class="fas fa-sign-out-alt header-icon" onclick="window.handleLogout()"
+                            style="cursor: pointer;" title="로그아웃"></i>
+                    </div>
+                </header>
+
+                <div id="tab-content">
+                    <!-- 탭 콘텐츠가 여기에 동적으로 로드됨 -->
+                </div>
+            </section>
+
+            <!-- 관리자 대시보드 화면 -->
+            <section id="admin-view" class="view hidden">
+                <header class="app-header fade-in"
+                    style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 2px solid var(--primary);">
+                    <h1 class="brand-font"
+                        style="font-size: 1.4rem; color: var(--secondary); text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);">
+                        <i class="fas fa-shield-alt" style="margin-right: 8px;"></i>ADMIN CORE
+                    </h1>
+                    <div class="header-actions"
+                        style="display: flex; gap: 15px; color: var(--text-white); font-size: 1.2rem;">
+                        <i class="fas fa-sign-out-alt header-icon" onclick="window.handleLogout()"
+                            style="cursor: pointer;" title="모드 종료 (로그아웃)"></i>
+                    </div>
+                </header>
+
+                <!-- 관리자 GNB -->
+                <nav class="admin-nav"
+                    style="display: flex; justify-content: space-around; background: rgba(15, 23, 42, 0.8); border-bottom: 1px solid var(--border-glass); padding: 10px 0;">
+                    <button class="admin-nav-btn active" data-target="admin-users"
+                        style="background:none; border:none; color: var(--primary); font-size: 0.9rem; font-weight: bold; padding: 10px; cursor:pointer;">회원
+                        관리</button>
+                    <button class="admin-nav-btn" data-target="admin-notices"
+                        style="background:none; border:none; color: var(--text-gray); font-size: 0.9rem; padding: 10px; cursor:pointer;">공지
+                        작성</button>
+                    <button class="admin-nav-btn" data-target="admin-badges"
+                        style="background:none; border:none; color: var(--text-gray); font-size: 0.9rem; padding: 10px; cursor:pointer;">보상
+                        / 뱃지</button>
+                    <button class="admin-nav-btn" data-target="admin-schedule"
+                        style="background:none; border:none; color: var(--text-gray); font-size: 0.9rem; padding: 10px; cursor:pointer;">일정
+                        관리</button>
+                </nav>
+
+                <div id="admin-tab-content" style="padding: 20px; overflow-y: auto; height: calc(100vh - 140px);">
+                    <!-- 관리자 탭 콘텐츠가 여기에 동적으로 로드됨 -->
+                </div>
+            </section>
+        </main>
+
+        <!-- 하단 5탭 내비게이션 -->
+        <nav id="main-nav" class="hidden" style="z-index: 1000;">
+            <button class="nav-btn" data-tab="notice">
+                <i class="fas fa-bullhorn"></i>
+                <span>공지</span>
+            </button>
+            <button class="nav-btn" data-tab="academy">
+                <i class="fas fa-calendar-alt"></i>
+                <span>수업운영</span>
+            </button>
+
+            <!-- 중앙 프로필 탭 -->
+            <div class="center-nav-wrapper" onclick="renderTab('profile')">
+                <button class="nav-btn center-btn active" data-tab="profile">
+                    <i class="fas fa-user-astronaut"></i>
+                </button>
+                <span class="center-label">프로필</span>
+            </div>
+
+            <button class="nav-btn" data-tab="column">
+                <i class="fas fa-book-open"></i>
+                <span>정보</span>
+            </button>
+            <button class="nav-btn" data-tab="social">
+                <i class="fas fa-users"></i>
+                <span>소셜</span>
+            </button>
+        </nav>
+
+        <!-- 좌측 상/하단 등 보조 플로팅 버튼 (필요 시) -->
+        <button id="messenger-fab" class="hidden" onclick="renderTab('messages')">
+            <i class="fas fa-comment-dots"></i>
+            <span class="badge">1</span>
+        </button>
+
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
