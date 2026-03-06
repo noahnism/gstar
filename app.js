@@ -1722,10 +1722,17 @@
                         <h2 style="color: white; margin-bottom: 5px; font-size: 1.3rem;" id="modal-member-name">${user.name} <span style="font-size: 0.9rem; color: var(--text-gray);">(${user.id})</span></h2>
                         <span style="color: ${roleColor}; font-weight: bold; font-size: 0.85rem;" id="modal-member-role">${user.role || 'Basic'} / ${user.duration || '1'}개월</span>
                     </div>
+
+                    <div style="display: flex; background: rgba(0,0,0,0.5); border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0;">
+                        <button id="tab-btn-info" onclick="window.switchMemberDetailTab('info')" style="flex:1; padding: 12px; background: none; border: none; color: var(--primary); font-weight: bold; border-bottom: 2px solid var(--primary); cursor: pointer; transition: 0.3s; font-size: 0.9rem;">개인정보</button>
+                        <button id="tab-btn-fitness" onclick="window.switchMemberDetailTab('fitness')" style="flex:1; padding: 12px; background: none; border: none; color: var(--text-gray); border-bottom: 2px solid transparent; cursor: pointer; transition: 0.3s; font-size: 0.9rem;">체력 검정</button>
+                    </div>
                     
-                    <div style="padding: 20px; overflow-y: auto; flex-grow: 1;" id="member-detail-content">
-                        <!-- 일반 정보 뷰 -->
-                        <div id="member-view-mode" style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px;">
+                    <div style="padding: 20px; overflow-y: auto; flex-grow: 1; position: relative;" id="member-detail-content">
+                        <!-- === [개인정보 탭 영역] === -->
+                        <div id="tab-content-info">
+                            <!-- 일반 정보 뷰 -->
+                            <div id="member-view-mode" style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px;">
                             <h4 style="color: var(--primary); margin-bottom: 10px; font-size: 0.9rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">기본 정보</h4>
                             <table style="width: 100%; font-size: 0.85rem; color: var(--text-gray); border-collapse: separate; border-spacing: 0 6px;">
                                 <tr><td style="width: 90px;"><i class="fas fa-calendar-check" style="width: 20px;"></i> 그룹:</td><td style="color: white; text-align: right;">${group}</td></tr>
@@ -1758,7 +1765,7 @@
                             <div style="margin-top: 25px;">
                                 <h4 style="color: #f2cb4f; margin-bottom: 10px; font-size: 0.9rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;"><i class="fas fa-history"></i> 수강 이력 (총 ${user.history ? user.history.length : 1}회차)</h4>
                                 <div style="display: flex; flex-direction: column; gap: 8px;">
-                                    ${(user.history || [{ role: user.role, duration: user.duration, startDate: user.membershipStart, endDate: user.membershipEnd, group: user.group, frequency: user.frequency }]).map((h, i) => `
+                                    ${(user.history && user.history.length > 0 ? user.history : [{ role: user.role, duration: user.duration, startDate: user.membershipStart, endDate: user.membershipEnd, group: user.group, frequency: user.frequency }]).map((h, i) => `
                                         <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;">
                                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
                                                 <span style="color: var(--primary); font-weight: bold; font-size: 0.85rem;">[${i + 1}회차] ${h.role || 'Basic'}</span>
@@ -1768,6 +1775,7 @@
                                                 <i class="far fa-calendar-alt"></i> ${h.startDate || '-'} ~ ${h.endDate || '-'}
                                             </div>
                                             ${h.group ? `<div style="font-size: 0.75rem; color: #aaa; margin-top: 4px;">수업: ${h.group} ${h.frequency ? `(${h.frequency})` : ''}</div>` : ''}
+                                            ${h.memo ? `<div style="font-size: 0.75rem; color: #888; margin-top: 4px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 4px;">기록: ${h.memo}</div>` : ''}
                                         </div>
                                     `).join('')}
                                 </div>
@@ -1848,18 +1856,157 @@
                                     <input type="text" id="edit-address" value="${user.address || ''}" style="width: 100%; padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.5); color: white; font-size: 0.8rem; margin-top: 4px;">
                                 </label>
 
-                                <label style="color: var(--text-gray); font-size: 0.75rem; grid-column: 1 / -1;">특이사항 (메모)
+                                <label style="color: var(--text-gray); font-size: 0.75rem; grid-column: 1 / -1; margin-top: 10px; border-top: 1px dashed rgba(255,255,255,0.2); padding-top: 10px;">능력치 스탯 (0~100)
+                                    <div style="display: flex; gap: 5px; margin-top: 4px;">
+                                        <input type="number" id="edit-stat-speed" placeholder="스피드" value="${user.stats?.[0] || 30}" style="width: 20%; padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.5); color: white; font-size: 0.75rem; text-align: center;">
+                                        <input type="number" id="edit-stat-flex" placeholder="유연성" value="${user.stats?.[1] || 30}" style="width: 20%; padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.5); color: white; font-size: 0.75rem; text-align: center;">
+                                        <input type="number" id="edit-stat-stam" placeholder="지구력" value="${user.stats?.[2] || 30}" style="width: 20%; padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.5); color: white; font-size: 0.75rem; text-align: center;">
+                                        <input type="number" id="edit-stat-str" placeholder="근력" value="${user.stats?.[3] || 30}" style="width: 20%; padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.5); color: white; font-size: 0.75rem; text-align: center;">
+                                        <input type="number" id="edit-stat-react" placeholder="반응" value="${user.stats?.[4] || 30}" style="width: 20%; padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.5); color: white; font-size: 0.75rem; text-align: center;">
+                                    </div>
+                                </label>
+
+                                <label style="color: var(--text-gray); font-size: 0.75rem; grid-column: 1 / -1; margin-top: 10px; border-top: 1px dashed rgba(255,255,255,0.2); padding-top: 10px;">전체 특이사항 (메모)
                                     <textarea id="edit-memo" style="width: 100%; padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.5); color: white; font-size: 0.8rem; margin-top: 4px; height: 60px;">${user.memo || ''}</textarea>
                                 </label>
+                                
+                                <div style="grid-column: 1 / -1; margin-top: 10px; border-top: 1px dashed rgba(255,255,255,0.2); padding-top: 10px;">
+                                    <h5 style="color: #f2cb4f; font-size: 0.8rem; margin-bottom: 8px;">수강 이력 수정 (JSON 보관용)</h5>
+                                    ${(user.history && user.history.length > 0 ? user.history : [{ role: user.role, duration: user.duration, startDate: user.membershipStart, endDate: user.membershipEnd, group: user.group, frequency: user.frequency }]).map((h, idx) => `
+                                        <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.05); font-size: 0.75rem;">
+                                            <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+                                                <input type="text" id="edit-hist-role-${idx}" value="${h.role || ''}" placeholder="등급" style="flex:1; padding:4px; border-radius:4px; border:none; background:rgba(255,255,255,0.1); color:white;">
+                                                <input type="text" id="edit-hist-dur-${idx}" value="${h.duration || ''}" placeholder="개월" style="width:40px; text-align:center; padding:4px; border-radius:4px; border:none; background:rgba(255,255,255,0.1); color:white;">
+                                            </div>
+                                            <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+                                                <input type="date" id="edit-hist-start-${idx}" value="${h.startDate ? h.startDate.replace(/\./g, '-') : ''}" style="flex:1; padding:4px; border-radius:4px; border:none; background:rgba(255,255,255,0.1); color:white;">
+                                                <span style="color:var(--text-gray); align-self:center;">~</span>
+                                                <input type="date" id="edit-hist-end-${idx}" value="${h.endDate ? h.endDate.replace(/\./g, '-') : ''}" style="flex:1; padding:4px; border-radius:4px; border:none; background:rgba(255,255,255,0.1); color:white;">
+                                            </div>
+                                            <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+                                                <input type="text" id="edit-hist-group-${idx}" value="${h.group || ''}" placeholder="그룹명" style="flex:1; padding:4px; border-radius:4px; border:none; background:rgba(255,255,255,0.1); color:white;">
+                                                <input type="text" id="edit-hist-freq-${idx}" value="${h.frequency || ''}" placeholder="주N회" style="width:60px; padding:4px; border-radius:4px; border:none; background:rgba(255,255,255,0.1); color:white;">
+                                            </div>
+                                            <input type="text" id="edit-hist-memo-${idx}" value="${h.memo || ''}" placeholder="기록/비고" style="width:100%; padding:4px; border-radius:4px; border:none; background:rgba(255,255,255,0.1); color:white;">
+                                        </div>
+                                    `).join('')}
+                                    <input type="hidden" id="edit-hist-length" value="${user.history ? user.history.length : 1}">
+                                </div>
                             </div>
                         </div>
+
+                        <!-- === [체력 검정 탭 영역] === -->
+                        <div id="tab-content-fitness" style="display: none; height: 100%;">
+                            <div id="fitness-view-mode">
+                                <!-- 시즌 선택 -->
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                                    <h4 style="color: var(--primary); font-size: 0.9rem; margin:0;"><i class="fas fa-dumbbell"></i> 시즌별 체력 스탯</h4>
+                                    <div style="display:flex; gap: 5px;">
+                                        <select id="fitness-season-select" onchange="window.changeFitnessSeason(this.value, '${user.id}')" style="background: rgba(0,0,0,0.5); color: white; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; padding: 5px 10px; font-size: 0.8rem; outline: none;">
+                                            ${(user.fitnessTests && user.fitnessTests.length > 0) ? user.fitnessTests.map((ft, idx) => `<option value="${idx}">${ft.label} (${ft.date})</option>`).join('') : '<option value="-1">데이터 없음</option>'}
+                                        </select>
+                                        <button onclick="window.toggleFitnessEditMode()" style="background: rgba(123, 194, 183, 0.2); border: 1px solid #7bc2b7; color: #7bc2b7; border-radius: 6px; padding: 5px 8px; cursor: pointer; font-size: 0.8rem;"><i class="fas fa-edit"></i> 수정/추가</button>
+                                    </div>
+                                </div>
+
+                                <!-- 레이더 차트 컨테이너 -->
+                                <div style="background: rgba(255,255,255,0.03); border-radius: 12px; padding: 10px; margin-bottom: 20px; display: flex; justify-content: center; align-items: center; min-height: 250px;">
+                                    ${(user.fitnessTests && user.fitnessTests.length > 0) ? '<canvas id="fitnessRadarChart"></canvas>' : '<span style="color: var(--text-gray); font-size: 0.85rem;">등록된 체력 검정 결과가 없습니다.</span>'}
+                                </div>
+
+                                <!-- 세부 측정 기록 표 -->
+                                ${(user.fitnessTests && user.fitnessTests.length > 0) ? `
+                                <div id="fitness-records-table">
+                                    <h5 style="color: #7bc2b7; font-size: 0.85rem; margin-bottom: 10px;"><i class="fas fa-list-ul"></i> 세부 측정 기록</h5>
+                                    <table style="width: 100%; font-size: 0.75rem; color: #ddd; border-collapse: collapse; text-align: center;">
+                                        <tr style="background: rgba(123, 194, 183, 0.2); color: #7bc2b7;">
+                                            <th style="padding: 6px; border: 1px solid rgba(255,255,255,0.1);">종목</th>
+                                            <th style="padding: 6px; border: 1px solid rgba(255,255,255,0.1);">분류</th>
+                                            <th style="padding: 6px; border: 1px solid rgba(255,255,255,0.1);">기록</th>
+                                        </tr>
+                                        <tr><td style="padding: 6px; border: 1px solid rgba(255,255,255,0.1); text-align: left;">10m 스프린트 (초)</td><td style="border: 1px solid rgba(255,255,255,0.1);">스피드</td><td style="border: 1px solid rgba(255,255,255,0.1);" id="rec-sprint10m">-</td></tr>
+                                        <tr><td style="padding: 6px; border: 1px solid rgba(255,255,255,0.1); text-align: left;">20m 스프린트 (초)</td><td style="border: 1px solid rgba(255,255,255,0.1);">스피드</td><td style="border: 1px solid rgba(255,255,255,0.1);" id="rec-sprint20m">-</td></tr>
+                                        <tr><td style="padding: 6px; border: 1px solid rgba(255,255,255,0.1); text-align: left;">10m 드리블 (초)</td><td style="border: 1px solid rgba(255,255,255,0.1);">드리블</td><td style="border: 1px solid rgba(255,255,255,0.1);" id="rec-dribble10m">-</td></tr>
+                                        <tr><td style="padding: 6px; border: 1px solid rgba(255,255,255,0.1); text-align: left;">20m 드리블 (초)</td><td style="border: 1px solid rgba(255,255,255,0.1);">드리블</td><td style="border: 1px solid rgba(255,255,255,0.1);" id="rec-dribble20m">-</td></tr>
+                                        <tr><td style="padding: 6px; border: 1px solid rgba(255,255,255,0.1); text-align: left;">콘 10개 드리블 (초)</td><td style="border: 1px solid rgba(255,255,255,0.1);">민첩/공감각</td><td style="border: 1px solid rgba(255,255,255,0.1);" id="rec-cone10m">-</td></tr>
+                                        <tr><td style="padding: 6px; border: 1px solid rgba(255,255,255,0.1); text-align: left;">T Test (초)</td><td style="border: 1px solid rgba(255,255,255,0.1);">민첩/공감각</td><td style="border: 1px solid rgba(255,255,255,0.1);" id="rec-ttest">-</td></tr>
+                                        <tr><td style="padding: 6px; border: 1px solid rgba(255,255,255,0.1); text-align: left;">제자리 멀리뛰기 (cm)</td><td style="border: 1px solid rgba(255,255,255,0.1);">근력</td><td style="border: 1px solid rgba(255,255,255,0.1);" id="rec-longjump">-</td></tr>
+                                        <tr><td style="padding: 6px; border: 1px solid rgba(255,255,255,0.1); text-align: left;">스쿼트 (개)</td><td style="border: 1px solid rgba(255,255,255,0.1);">근력</td><td style="border: 1px solid rgba(255,255,255,0.1);" id="rec-squat">-</td></tr>
+                                        <tr><td style="padding: 6px; border: 1px solid rgba(255,255,255,0.1); text-align: left;">Wall Sit 오른발 (초)</td><td style="border: 1px solid rgba(255,255,255,0.1);">근력</td><td style="border: 1px solid rgba(255,255,255,0.1);" id="rec-wallsitR">-</td></tr>
+                                        <tr><td style="padding: 6px; border: 1px solid rgba(255,255,255,0.1); text-align: left;">Wall Sit 왼발 (초)</td><td style="border: 1px solid rgba(255,255,255,0.1);">근력</td><td style="border: 1px solid rgba(255,255,255,0.1);" id="rec-wallsitL">-</td></tr>
+                                        <tr><td style="padding: 6px; border: 1px solid rgba(255,255,255,0.1); text-align: left;">푸쉬업 (개)</td><td style="border: 1px solid rgba(255,255,255,0.1);">근력</td><td style="border: 1px solid rgba(255,255,255,0.1);" id="rec-pushup">-</td></tr>
+                                        <tr><td style="padding: 6px; border: 1px solid rgba(255,255,255,0.1); text-align: left;">눈감고 균형잡기 왼발(초)</td><td style="border: 1px solid rgba(255,255,255,0.1);">밸런스/코어</td><td style="border: 1px solid rgba(255,255,255,0.1);" id="rec-balanceL">-</td></tr>
+                                        <tr><td style="padding: 6px; border: 1px solid rgba(255,255,255,0.1); text-align: left;">눈감고 균형잡기 오른발(초)</td><td style="border: 1px solid rgba(255,255,255,0.1);">밸런스/코어</td><td style="border: 1px solid rgba(255,255,255,0.1);" id="rec-balanceR">-</td></tr>
+                                        <tr><td style="padding: 6px; border: 1px solid rgba(255,255,255,0.1); text-align: left;">Trunk Lift (cm)</td><td style="border: 1px solid rgba(255,255,255,0.1);">밸런스/코어</td><td style="border: 1px solid rgba(255,255,255,0.1);" id="rec-trunklift">-</td></tr>
+                                        <tr><td style="padding: 6px; border: 1px solid rgba(255,255,255,0.1); text-align: left;">크런치 (개)</td><td style="border: 1px solid rgba(255,255,255,0.1);">밸런스/코어</td><td style="border: 1px solid rgba(255,255,255,0.1);" id="rec-crunch">-</td></tr>
+                                    </table>
+                                </div>
+                                ` : ''}
+                            </div>
+
+                            <!-- 체력 검정 편집 뷰 -->
+                            <div id="fitness-edit-mode" style="display: none;">
+                                <h4 style="color: #7bc2b7; margin-bottom: 15px; font-size: 0.9rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;"><i class="fas fa-plus-circle"></i> 체력 검정 데이터 추가/수정</h4>
+                                
+                                <label style="display:block; color: var(--text-gray); font-size: 0.75rem; margin-top:10px;">시즌 선택 (수정 시) 또는 신규 등록
+                                    <select id="edit-fitness-season" onchange="window.loadFitnessForm(this.value, '${user.id}')" style="width: 100%; padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.5); color: white; font-size: 0.8rem; margin-top: 4px;">
+                                        <option value="new">=== 신규 시즌 입력 ===</option>
+                                        ${(user.fitnessTests || []).map((ft, idx) => `<option value="${idx}">[수정] ${ft.label} (${ft.date})</option>`).join('')}
+                                    </select>
+                                </label>
+
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+                                    <label style="color: var(--text-gray); font-size: 0.75rem;">측정일 (기본: 오늘)
+                                        <input type="date" id="fit-date" value="${new Date().toISOString().split('T')[0]}" style="width: 100%; padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.5); color: white; font-size: 0.8rem; margin-top: 4px;">
+                                    </label>
+                                    <label style="color: var(--text-gray); font-size: 0.75rem;">시즌명 (예: 시즌 1)
+                                        <input type="text" id="fit-label" placeholder="시즌 1 체력 테스트" style="width: 100%; padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.5); color: white; font-size: 0.8rem; margin-top: 4px;">
+                                    </label>
+                                </div>
+
+                                <h5 style="color: var(--primary); font-size: 0.8rem; margin-top: 15px; margin-bottom: 5px;">★ 종합 점수 (0~5점) - <span style="font-size:0.7rem; color:var(--text-gray);">차트 반영용</span></h5>
+                                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px;">
+                                    <input type="number" id="fit-score-speed" placeholder="스피드" min="0" max="5" step="0.1" style="width: 100%; padding: 6px; border-radius: 6px; background: rgba(0,0,0,0.5); color: white; font-size: 0.75rem; text-align: center; border: 1px solid rgba(255,255,255,0.2);">
+                                    <input type="number" id="fit-score-dribble" placeholder="드리블" min="0" max="5" step="0.1" style="width: 100%; padding: 6px; border-radius: 6px; background: rgba(0,0,0,0.5); color: white; font-size: 0.75rem; text-align: center; border: 1px solid rgba(255,255,255,0.2);">
+                                    <input type="number" id="fit-score-agility" placeholder="공감각" min="0" max="5" step="0.1" style="width: 100%; padding: 6px; border-radius: 6px; background: rgba(0,0,0,0.5); color: white; font-size: 0.75rem; text-align: center; border: 1px solid rgba(255,255,255,0.2);">
+                                    <input type="number" id="fit-score-power" placeholder="근력" min="0" max="5" step="0.1" style="width: 100%; padding: 6px; border-radius: 6px; background: rgba(0,0,0,0.5); color: white; font-size: 0.75rem; text-align: center; border: 1px solid rgba(255,255,255,0.2);">
+                                    <input type="number" id="fit-score-balance" placeholder="밸런스" min="0" max="5" step="0.1" style="width: 100%; padding: 6px; border-radius: 6px; background: rgba(0,0,0,0.5); color: white; font-size: 0.75rem; text-align: center; border: 1px solid rgba(255,255,255,0.2);">
+                                </div>
+
+                                <h5 style="color: var(--primary); font-size: 0.8rem; margin-top: 15px; margin-bottom: 5px;">세부 기록 (단위 제외하고 숫자만 입력)</h5>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                    <input type="number" id="fit-rec-sprint10m" placeholder="10m 스프린트 (초)" step="0.01" style="padding: 6px; border-radius: 6px; background: rgba(0,0,0,0.5); color: white; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.2);">
+                                    <input type="number" id="fit-rec-sprint20m" placeholder="20m 스프린트 (초)" step="0.01" style="padding: 6px; border-radius: 6px; background: rgba(0,0,0,0.5); color: white; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.2);">
+                                    <input type="number" id="fit-rec-dribble10m" placeholder="10m 드리블 (초)" step="0.01" style="padding: 6px; border-radius: 6px; background: rgba(0,0,0,0.5); color: white; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.2);">
+                                    <input type="number" id="fit-rec-dribble20m" placeholder="20m 드리블 (초)" step="0.01" style="padding: 6px; border-radius: 6px; background: rgba(0,0,0,0.5); color: white; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.2);">
+                                    <input type="number" id="fit-rec-cone10m" placeholder="콘 10개 드리블 (초)" step="0.01" style="padding: 6px; border-radius: 6px; background: rgba(0,0,0,0.5); color: white; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.2);">
+                                    <input type="number" id="fit-rec-ttest" placeholder="T Test (초)" step="0.01" style="padding: 6px; border-radius: 6px; background: rgba(0,0,0,0.5); color: white; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.2);">
+                                    <input type="number" id="fit-rec-longjump" placeholder="제자리 멀리뛰기 (cm)" step="0.1" style="padding: 6px; border-radius: 6px; background: rgba(0,0,0,0.5); color: white; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.2);">
+                                    <input type="number" id="fit-rec-squat" placeholder="스쿼트 (개)" step="1" style="padding: 6px; border-radius: 6px; background: rgba(0,0,0,0.5); color: white; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.2);">
+                                    <input type="number" id="fit-rec-wallsitR" placeholder="Wall Sit 오른발 (초)" step="0.01" style="padding: 6px; border-radius: 6px; background: rgba(0,0,0,0.5); color: white; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.2);">
+                                    <input type="number" id="fit-rec-wallsitL" placeholder="Wall Sit 왼발 (초)" step="0.01" style="padding: 6px; border-radius: 6px; background: rgba(0,0,0,0.5); color: white; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.2);">
+                                    <input type="number" id="fit-rec-pushup" placeholder="푸쉬업 (개)" step="1" style="padding: 6px; border-radius: 6px; background: rgba(0,0,0,0.5); color: white; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.2);">
+                                    <input type="number" id="fit-rec-balanceL" placeholder="눈감고 균형잡기 왼발 (초)" step="0.01" style="padding: 6px; border-radius: 6px; background: rgba(0,0,0,0.5); color: white; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.2);">
+                                    <input type="number" id="fit-rec-balanceR" placeholder="눈감고 균형잡기 오른발 (초)" step="0.01" style="padding: 6px; border-radius: 6px; background: rgba(0,0,0,0.5); color: white; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.2);">
+                                    <input type="number" id="fit-rec-trunklift" placeholder="Trunk Lift (cm)" step="0.1" style="padding: 6px; border-radius: 6px; background: rgba(0,0,0,0.5); color: white; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.2);">
+                                    <input type="number" id="fit-rec-crunch" placeholder="크런치 (개)" step="1" style="padding: 6px; border-radius: 6px; background: rgba(0,0,0,0.5); color: white; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.2);">
+                                </div>
+                                
+                                <button onclick="window.saveFitnessData('${user.id}')" style="width: 100%; margin-top: 20px; padding: 10px; border-radius: 8px; border: none; background: linear-gradient(135deg, #7bc2b7, #1a6aa3); color: white; font-weight: bold; cursor: pointer;"><i class="fas fa-layer-group"></i> 해당 시즌 기록 저장 (수동 덮어쓰기)</button>
+                                <div style="display: flex; gap: 8px; margin-top: 8px;">
+                                    <button onclick="window.toggleFitnessEditMode()" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; font-weight: bold; cursor: pointer;">취소</button>
+                                    <button onclick="window.deleteFitnessData('${user.id}')" id="btn-delete-fitness" style="display:none; flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ff3b30; background: rgba(255, 59, 48, 0.1); color: #ff3b30; font-weight: bold; cursor: pointer;"><i class="fas fa-trash-alt"></i> 기록 삭제</button>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                     
                     <div style="padding: 15px; background: rgba(0,0,0,0.3); display: flex; gap: 10px; flex-shrink: 0;" id="member-action-btns">
                         <button onclick="window.toggleEditMember()" id="btn-toggle-edit" style="flex:1; padding: 10px; border-radius: 8px; border: 1px solid #7bc2b7; background: rgba(123, 194, 183, 0.1); color: #7bc2b7; font-weight: bold; cursor: pointer;"><i class="fas fa-edit"></i> 수정하기</button>
                         <button onclick="window.adminDeleteMember('${user.id}')" id="btn-delete" style="flex:1; padding: 10px; border-radius: 8px; border: 1px solid #ff3b30; background: rgba(255, 59, 48, 0.1); color: #ff3b30; font-weight: bold; cursor: pointer;"><i class="fas fa-trash-alt"></i> 삭제하기</button>
                         
-                        <button onclick="window.saveMemberDetail('${user.id}')" id="btn-save" style="display:none; flex:2; padding: 10px; border-radius: 8px; border: none; background: #7bc2b7; color: #000; font-weight: bold; cursor: pointer;"><i class="fas fa-save"></i> 저장하기</button>
+                        <button onclick="window.saveMemberDetail('${user.id}')" id="btn-save" style="display:none; flex:2; padding: 10px; border-radius: 8px; border: none; background: #7bc2b7; color: #000; font-weight: bold; cursor: pointer;"><i class="fas fa-save"></i> 개인정보 저장하기</button>
                         <button onclick="window.toggleEditMember()" id="btn-cancel" style="display:none; flex:1; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; font-weight: bold; cursor: pointer;">취소</button>
                     </div>
                 </div>
@@ -1920,6 +2067,30 @@
         const newPhone = document.getElementById('edit-phone').value.trim();
         const newMemo = document.getElementById('edit-memo').value;
 
+        // 스탯 수집
+        const s1 = parseInt(document.getElementById('edit-stat-speed')?.value || '30');
+        const s2 = parseInt(document.getElementById('edit-stat-flex')?.value || '30');
+        const s3 = parseInt(document.getElementById('edit-stat-stam')?.value || '30');
+        const s4 = parseInt(document.getElementById('edit-stat-str')?.value || '30');
+        const s5 = parseInt(document.getElementById('edit-stat-react')?.value || '30');
+        const newStats = [s1, s2, s3, s4, s5];
+
+        // 수강 이력(history) 수집
+        const histLength = parseInt(document.getElementById('edit-hist-length')?.value || '1');
+        const newHistory = [];
+        for (let i = 0; i < histLength; i++) {
+            newHistory.push({
+                role: document.getElementById(`edit-hist-role-${i}`)?.value || '',
+                duration: document.getElementById(`edit-hist-dur-${i}`)?.value || '',
+                startDate: document.getElementById(`edit-hist-start-${i}`)?.value.replace(/-/g, '.') || '',
+                endDate: document.getElementById(`edit-hist-end-${i}`)?.value.replace(/-/g, '.') || '',
+                group: document.getElementById(`edit-hist-group-${i}`)?.value || '',
+                frequency: document.getElementById(`edit-hist-freq-${i}`)?.value || '',
+                memo: document.getElementById(`edit-hist-memo-${i}`)?.value || '',
+                fee: state.users[userIdx].history?.[i]?.fee || '' // 기존 fee는 유지
+            });
+        }
+
         if (!newName || !newId) return alert("이름과 아이디(고유번호)는 필수 입력입니다.");
 
         // ID가 변경된 경우 중복 체크
@@ -1934,7 +2105,7 @@
             id: newId,
             name: newName,
             role: newRole,
-            membershipEnd: newEndDate,
+            membershipEnd: newEndDate ? newEndDate.replace(/-/g, '.') : state.users[userIdx].membershipEnd,
             joinDate: newJoinDate || state.users[userIdx].joinDate,
             group: newGroup,
             gender: newGender,
@@ -1949,7 +2120,9 @@
             uniformInfo: newUniform,
             address: newAddress,
             phone: newPhone,
-            memo: newMemo
+            memo: newMemo,
+            stats: newStats,
+            history: newHistory
         };
 
         state.users[userIdx] = updatedUser;
@@ -1971,6 +2144,307 @@
         document.getElementById('member-detail-modal').remove();
         renderAdminTab('admin-users');
         window.showMemberDetail(newId);
+    };
+
+    // === [ 체력 검정 (Fitness Test) 탭 관리 함수들 ] ===
+    window.switchMemberDetailTab = (tab) => {
+        const infoBtn = document.getElementById('tab-btn-info');
+        const fitBtn = document.getElementById('tab-btn-fitness');
+        const infoContent = document.getElementById('tab-content-info');
+        const fitContent = document.getElementById('tab-content-fitness');
+        const actionBtns = document.getElementById('member-action-btns');
+
+        if (tab === 'info') {
+            infoBtn.style.color = 'var(--primary)';
+            infoBtn.style.borderBottom = '2px solid var(--primary)';
+            fitBtn.style.color = 'var(--text-gray)';
+            fitBtn.style.borderBottom = '2px solid transparent';
+            infoContent.style.display = 'block';
+            fitContent.style.display = 'none';
+            actionBtns.style.display = 'flex'; // 개인정보 탭 버튼 표시
+        } else {
+            fitBtn.style.color = 'var(--primary)';
+            fitBtn.style.borderBottom = '2px solid var(--primary)';
+            infoBtn.style.color = 'var(--text-gray)';
+            infoBtn.style.borderBottom = '2px solid transparent';
+            infoContent.style.display = 'none';
+            fitContent.style.display = 'flex';
+            fitContent.style.flexDirection = 'column';
+            actionBtns.style.display = 'none'; // 체력 검정 탭에서는 자체 UI 사용
+
+            // 탭 전환 시 차트 재조정
+            const selectEl = document.getElementById('fitness-season-select');
+            if (selectEl && selectEl.value !== "-1") {
+                const userId = document.getElementById('modal-member-name').textContent.match(/\((.*?)\)/)?.[1];
+                if (userId) window.changeFitnessSeason(selectEl.value, userId);
+            }
+        }
+    };
+
+    let fitnessRadarChartInstance = null;
+
+    window.changeFitnessSeason = (idxStr, userId) => {
+        const user = state.users.find(u => u.id === userId);
+        if (!user || !user.fitnessTests || user.fitnessTests.length === 0) return;
+
+        const idx = parseInt(idxStr);
+        if (isNaN(idx) || idx < 0 || idx >= user.fitnessTests.length) return;
+
+        const ft = user.fitnessTests[idx];
+
+        // 1. 테이블 업데이트
+        const records = ft.records || {};
+        const getRec = (key) => records[key] !== undefined && records[key] !== null && records[key] !== '' ? records[key] : '-';
+
+        if (document.getElementById('rec-sprint10m')) {
+            document.getElementById('rec-sprint10m').innerText = getRec('sprint10m');
+            document.getElementById('rec-sprint20m').innerText = getRec('sprint20m');
+            document.getElementById('rec-dribble10m').innerText = getRec('dribble10m');
+            document.getElementById('rec-dribble20m').innerText = getRec('dribble20m');
+            document.getElementById('rec-cone10m').innerText = getRec('cone10m');
+            document.getElementById('rec-ttest').innerText = getRec('ttest');
+            document.getElementById('rec-longjump').innerText = getRec('longjump');
+            document.getElementById('rec-squat').innerText = getRec('squat');
+            document.getElementById('rec-wallsitR').innerText = getRec('wallsitR');
+            document.getElementById('rec-wallsitL').innerText = getRec('wallsitL');
+            document.getElementById('rec-pushup').innerText = getRec('pushup');
+            document.getElementById('rec-balanceL').innerText = getRec('balanceL');
+            document.getElementById('rec-balanceR').innerText = getRec('balanceR');
+            document.getElementById('rec-trunklift').innerText = getRec('trunklift');
+            document.getElementById('rec-crunch').innerText = getRec('crunch');
+        }
+
+        // 2. 폼도 함께 동기화
+        window.loadFitnessForm(idxStr, userId);
+
+        // 3. 차트 그리기
+        const ctx = document.getElementById('fitnessRadarChart');
+        if (!ctx) return;
+
+        const scores = ft.scores || [3, 3, 3, 3, 3];
+        const chartData = {
+            labels: ['스피드', '드리블', '공감각/민첩성', '근력', '밸런스/코어'],
+            datasets: [{
+                label: ft.label || '현재 시즌 측정치',
+                data: scores,
+                backgroundColor: 'rgba(0, 210, 255, 0.2)',
+                borderColor: 'rgba(0, 210, 255, 1)',
+                pointBackgroundColor: 'rgba(0, 210, 255, 1)',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: 'rgba(0, 210, 255, 1)',
+                borderWidth: 2,
+            }]
+        };
+
+        const config = {
+            type: 'radar',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        pointLabels: { color: '#ccc', font: { size: 10, family: 'Pretendard' } },
+                        ticks: { min: 0, max: 5, stepSize: 1, display: false }
+                    }
+                },
+                plugins: {
+                    legend: { labels: { color: '#fff' }, position: 'top' }
+                }
+            }
+        };
+
+        if (fitnessRadarChartInstance) {
+            fitnessRadarChartInstance.destroy();
+        }
+        try {
+            fitnessRadarChartInstance = new Chart(ctx, config);
+        } catch (e) { console.error("Chart Render Failed", e); }
+    };
+
+    window.toggleFitnessEditMode = () => {
+        const viewMode = document.getElementById('fitness-view-mode');
+        const editMode = document.getElementById('fitness-edit-mode');
+        if (!viewMode || !editMode) return;
+
+        if (editMode.style.display === 'none') {
+            viewMode.style.display = 'none';
+            editMode.style.display = 'block';
+            // 폼 열릴 때 현재 셀렉트박스 값 기반으로 자동 로드
+            const currentSeason = document.getElementById('fitness-season-select')?.value;
+            if (currentSeason && currentSeason !== "-1") {
+                document.getElementById('edit-fitness-season').value = currentSeason;
+            } else {
+                document.getElementById('edit-fitness-season').value = 'new';
+            }
+            const userId = document.getElementById('modal-member-name').textContent.match(/\((.*?)\)/)?.[1];
+            if (userId) window.loadFitnessForm(document.getElementById('edit-fitness-season').value, userId);
+
+        } else {
+            viewMode.style.display = 'block';
+            editMode.style.display = 'none';
+
+            // 뷰모드 돌아갈 때 차트 문제 해결
+            const selVal = document.getElementById('fitness-season-select')?.value;
+            const userId = document.getElementById('modal-member-name').textContent.match(/\((.*?)\)/)?.[1];
+            if (userId && selVal !== "-1") window.changeFitnessSeason(selVal, userId);
+        }
+    };
+
+    window.loadFitnessForm = (selectedVal, userId) => {
+        const user = state.users.find(u => u.id === userId);
+        const btnDelete = document.getElementById('btn-delete-fitness');
+
+        if (selectedVal === 'new') {
+            document.getElementById('fit-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('fit-label').value = `시즌 ${(user?.fitnessTests?.length || 0) + 1} 체력 테스트`;
+
+            ['speed', 'dribble', 'agility', 'power', 'balance'].forEach(k => document.getElementById(`fit-score-${k}`).value = '');
+            ['sprint10m', 'sprint20m', 'dribble10m', 'dribble20m', 'cone10m', 'ttest', 'longjump', 'squat', 'wallsitR', 'wallsitL', 'pushup', 'balanceL', 'balanceR', 'trunklift', 'crunch'].forEach(k => {
+                const el = document.getElementById(`fit-rec-${k}`);
+                if (el) el.value = '';
+            });
+            if (btnDelete) btnDelete.style.display = 'none';
+        } else {
+            const idx = parseInt(selectedVal);
+            if (!user || isNaN(idx)) return;
+            const ft = user.fitnessTests[idx];
+            if (!ft) return;
+
+            document.getElementById('fit-date').value = ft.date ? ft.date.replace(/\./g, '-') : new Date().toISOString().split('T')[0];
+            document.getElementById('fit-label').value = ft.label || '';
+
+            const s = ft.scores || [3, 3, 3, 3, 3];
+            document.getElementById('fit-score-speed').value = s[0];
+            document.getElementById('fit-score-dribble').value = s[1];
+            document.getElementById('fit-score-agility').value = s[2];
+            document.getElementById('fit-score-power').value = s[3];
+            document.getElementById('fit-score-balance').value = s[4];
+
+            const r = ft.records || {};
+            ['sprint10m', 'sprint20m', 'dribble10m', 'dribble20m', 'cone10m', 'ttest', 'longjump', 'squat', 'wallsitR', 'wallsitL', 'pushup', 'balanceL', 'balanceR', 'trunklift', 'crunch'].forEach(k => {
+                const el = document.getElementById(`fit-rec-${k}`);
+                if (el) el.value = r[k] !== undefined ? r[k] : '';
+            });
+
+            if (btnDelete) btnDelete.style.display = 'block';
+        }
+    };
+
+    window.saveFitnessData = (currentUserId) => {
+        const userIdx = state.users.findIndex(u => u.id === currentUserId);
+        if (userIdx === -1) return;
+        const user = state.users[userIdx];
+
+        const selectedVal = document.getElementById('edit-fitness-season').value;
+        const dateStr = document.getElementById('fit-date').value.replace(/-/g, '.');
+        const labelStr = document.getElementById('fit-label').value.trim() || '시즌 체력 테스트';
+
+        const parseNum = (id) => {
+            const val = document.getElementById(id).value;
+            return val === '' ? null : Number(val);
+        };
+
+        const scores = [
+            parseNum('fit-score-speed') || 0,
+            parseNum('fit-score-dribble') || 0,
+            parseNum('fit-score-agility') || 0,
+            parseNum('fit-score-power') || 0,
+            parseNum('fit-score-balance') || 0
+        ];
+
+        const records = {
+            sprint10m: parseNum('fit-rec-sprint10m'),
+            sprint20m: parseNum('fit-rec-sprint20m'),
+            dribble10m: parseNum('fit-rec-dribble10m'),
+            dribble20m: parseNum('fit-rec-dribble20m'),
+            cone10m: parseNum('fit-rec-cone10m'),
+            ttest: parseNum('fit-rec-ttest'),
+            longjump: parseNum('fit-rec-longjump'),
+            squat: parseNum('fit-rec-squat'),
+            wallsitR: parseNum('fit-rec-wallsitR'),
+            wallsitL: parseNum('fit-rec-wallsitL'),
+            pushup: parseNum('fit-rec-pushup'),
+            balanceL: parseNum('fit-rec-balanceL'),
+            balanceR: parseNum('fit-rec-balanceR'),
+            trunklift: parseNum('fit-rec-trunklift'),
+            crunch: parseNum('fit-rec-crunch')
+        };
+
+        const newData = {
+            date: dateStr,
+            label: labelStr,
+            scores: scores,
+            records: records
+        };
+
+        if (!user.fitnessTests) user.fitnessTests = [];
+
+        if (selectedVal === 'new') {
+            user.fitnessTests.push(newData);
+        } else {
+            const idx = parseInt(selectedVal);
+            if (!isNaN(idx)) {
+                user.fitnessTests[idx] = newData;
+            }
+        }
+
+        // Firebase & LocalStorage 저장
+        localStorage.setItem('soccer_users', JSON.stringify(state.users));
+        if (db) {
+            db.collection("users").doc(currentUserId).update({ fitnessTests: user.fitnessTests }).catch(e => console.error(e));
+        }
+
+        alert("체력 검정 데이터가 성공적으로 반영되었습니다.");
+
+        document.getElementById('member-detail-modal').remove();
+        renderAdminTab('admin-users');
+        window.showMemberDetail(currentUserId);
+
+        // 다시 팝업 띄우고 피트니스 탭 개방
+        setTimeout(() => {
+            window.switchMemberDetailTab('fitness');
+            if (user.fitnessTests && user.fitnessTests.length > 0) {
+                const newIdx = selectedVal === 'new' ? (user.fitnessTests.length - 1).toString() : selectedVal;
+                const selectEl = document.getElementById('fitness-season-select');
+                if (selectEl) {
+                    selectEl.value = newIdx;
+                    window.changeFitnessSeason(newIdx, currentUserId);
+                }
+            }
+        }, 80);
+    };
+
+    window.deleteFitnessData = (currentUserId) => {
+        const selectedVal = document.getElementById('edit-fitness-season').value;
+        if (selectedVal === 'new') return;
+
+        if (!confirm("해당 시즌의 체력 검정 데이터를 정말 삭제하시겠습니까?")) return;
+
+        const userIdx = state.users.findIndex(u => u.id === currentUserId);
+        if (userIdx === -1) return;
+        const user = state.users[userIdx];
+        const idx = parseInt(selectedVal);
+
+        if (!isNaN(idx) && user.fitnessTests) {
+            user.fitnessTests.splice(idx, 1);
+
+            localStorage.setItem('soccer_users', JSON.stringify(state.users));
+            if (db) {
+                db.collection("users").doc(currentUserId).update({ fitnessTests: user.fitnessTests }).catch(e => console.error(e));
+            }
+            alert("시즌 데이터가 삭제되었습니다.");
+
+            document.getElementById('member-detail-modal').remove();
+            renderAdminTab('admin-users');
+            window.showMemberDetail(currentUserId);
+            setTimeout(() => {
+                window.switchMemberDetailTab('fitness');
+            }, 80);
+        }
     };
 
     window.adminDeleteMember = (userId) => {
@@ -2174,7 +2648,7 @@
         let html = `
             <div class="fade-in">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h3 style="color: var(--text-white); font-size: 1.2rem; margin: 0;">👨‍💻 회원 관리 (CRM) <span style="font-size: 0.7rem; color: var(--primary); opacity: 0.7;">v2.8.4</span></h3>
+                    <h3 style="color: var(--text-white); font-size: 1.2rem; margin: 0;">👨‍💻 회원 관리 (CRM) <span style="font-size: 0.7rem; color: var(--primary); opacity: 0.7;">v2.8.5</span></h3>
                     <div style="display: flex; gap: 8px;">
                         <button onclick="window.adminAddNewMember()" style="background: rgba(0, 210, 255, 0.1); border: 1px solid var(--primary); color: var(--text-white); font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; cursor: pointer;">
                             <i class="fas fa-user-plus"></i> 수동 등록
