@@ -1389,8 +1389,8 @@
                 }
                 const worksheet = workbook.Sheets[firstSheetName];
 
-                // 로우 데이터를 2D 배열로 먼저 읽기 (헤더 행을 찾기 위함)
-                const arrayOfArrays = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                // 로우 데이터를 2D 배열로 읽기 (raw: false로 날짜 포맷 유지)
+                const arrayOfArrays = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
                 console.log("Raw Excel Data:", arrayOfArrays);
 
                 if (!arrayOfArrays || arrayOfArrays.length === 0) return alert('엑셀 데이터가 비어있거나 읽을 수 없습니다.');
@@ -1549,7 +1549,16 @@
                         if (weight) existingUser.weight = weight;
                         if (gradeLevel) existingUser.gradeLevel = gradeLevel;
 
-                        if (db) db.collection("users").doc(existingUser.id).update(existingUser).catch(e => console.error(e));
+                        if (db) {
+                            // Firebase는 undefined 값을 허용하지 않으므로 순회하며 제거
+                            const cleanUpdateData = {};
+                            Object.keys(existingUser).forEach(key => {
+                                if (existingUser[key] !== undefined) {
+                                    cleanUpdateData[key] = existingUser[key];
+                                }
+                            });
+                            db.collection("users").doc(existingUser.id).update(cleanUpdateData).catch(e => console.error(e));
+                        }
 
                     } else {
                         // 완전 신규 회원 생성
@@ -1990,11 +1999,17 @@
 
     const renderAdminUsersTab = () => {
         const sortedUsers = [...state.users].sort((a, b) => {
-            const numA = parseInt(a.id);
-            const numB = parseInt(b.id);
-            if (isNaN(numA) && isNaN(numB)) return String(a.id).localeCompare(String(b.id));
-            if (isNaN(numA)) return 1;
-            if (isNaN(numB)) return -1;
+            if (a.id === 'admin') return -1;
+            if (b.id === 'admin') return 1;
+
+            // 문자열 안의 첫 번째 연속된 숫자를 찾아 비교
+            const numA = parseInt(String(a.id).match(/\d+/)?.[0] || '999999');
+            const numB = parseInt(String(b.id).match(/\d+/)?.[0] || '999999');
+
+            if (numA === numB) {
+                // 숫자 부분이 같으면 전체 문자열로 비교 (예: 16-2 vs 16-3)
+                return String(a.id).localeCompare(String(b.id));
+            }
             return numA - numB;
         });
         const today = new Date();
@@ -2046,7 +2061,7 @@
         let html = `
             <div class="fade-in">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h3 style="color: var(--text-white); font-size: 1.2rem; margin: 0;">👨‍💻 회원 관리 (CRM) <span style="font-size: 0.7rem; color: var(--primary); opacity: 0.7;">v2.7.2</span></h3>
+                    <h3 style="color: var(--text-white); font-size: 1.2rem; margin: 0;">👨‍💻 회원 관리 (CRM) <span style="font-size: 0.7rem; color: var(--primary); opacity: 0.7;">v2.7.4</span></h3>
                     <button onclick="window.adminResetUsers()" style="background: rgba(255, 59, 48, 0.1); border: 1px solid #ff3b30; color: #ff3b30; font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; cursor: pointer;">
                         <i class="fas fa-trash-alt"></i> 데이터 초기화
                     </button>
