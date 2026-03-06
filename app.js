@@ -1550,13 +1550,13 @@
                         if (gradeLevel) existingUser.gradeLevel = gradeLevel;
 
                         if (db) {
-                            // Firebase는 undefined 값을 허용하지 않으므로 순회하며 제거
-                            const cleanUpdateData = {};
-                            Object.keys(existingUser).forEach(key => {
-                                if (existingUser[key] !== undefined) {
-                                    cleanUpdateData[key] = existingUser[key];
-                                }
-                            });
+                            // Firebase는 undefined(빈 공간) 값을 허용하지 않으므로 구조 깊숙한 곳까지 완전히 제거
+                            const cleanUpdateData = JSON.parse(JSON.stringify(existingUser));
+
+                            // 혹시 배열 내부에 null 변환된 undefined가 있다면 빈 문자열 처리
+                            if (cleanUpdateData.history) {
+                                cleanUpdateData.history = cleanUpdateData.history.map(item => item || {});
+                            }
                             db.collection("users").doc(existingUser.id).update(cleanUpdateData).catch(e => console.error(e));
                         }
 
@@ -1956,9 +1956,55 @@
             db.collection("users").doc(userId).delete().catch(e => console.error("Delete Error:", e));
         }
 
-        document.getElementById('member-detail-modal').remove();
+        const modal = document.getElementById('member-detail-modal');
+        if (modal) modal.remove();
+
         renderAdminTab('admin-users');
-        alert("회원 정보가 삭제되었습니다.");
+        // alert("회원 정보가 삭제되었습니다."); // UI 꼬임을 방지하기 위해 alert 제거
+    };
+
+    window.adminAddNewMember = () => {
+        const name = prompt("추가하실 회원의 이름을 입력하세요:\n(상세 정보와 ID는 생성 후 리스트 항목을 클릭하여 수정 가능합니다.)");
+        if (!name || name.trim() === '') return;
+
+        const duration = prompt("초기 등록 기간(개월)을 숫자로 입력하세요:\n(예: 1, 3, 6, 12 등)", "1");
+        if (!duration) return;
+
+        const baseId = 'new_' + Date.now().toString().slice(-6);
+        const joinDate = new Date().toLocaleDateString();
+        const role = parseInt(duration) >= 6 ? 'Pro' : (parseInt(duration) >= 3 ? 'Semi' : 'Basic');
+
+        const tempUser = { membershipStart: joinDate, duration: duration };
+        recalculateMembershipEnd(tempUser);
+
+        const newUser = {
+            id: baseId,
+            pw: '1234',
+            name: name,
+            role: role,
+            duration: duration,
+            avatar: 'fa-user',
+            joinDate: joinDate,
+            membershipStart: joinDate,
+            membershipEnd: tempUser.membershipEnd,
+            history: [{
+                role: role,
+                duration: duration,
+                startDate: joinDate,
+                endDate: tempUser.membershipEnd,
+                fee: '',
+                group: '',
+                frequency: '',
+                memo: ''
+            }]
+        };
+
+        state.users.push(newUser);
+        localStorage.setItem('soccer_users', JSON.stringify(state.users));
+        if (db) db.collection("users").doc(baseId).set(newUser).catch(e => console.error(e));
+
+        renderAdminTab('admin-users');
+        alert(`신규 회원 [${name}]님이 추가되었습니다!\n목록 최하단 또는 검색을 통해 확인하신 후, 항목을 클릭해서 고유번호(ID)와 상세 정보를 수정해주세요.`);
     };
 
     window.renderAdminTab = (tabId) => {
@@ -1997,6 +2043,19 @@
         contentDiv.scrollTop = 0;
     };
 
+    window.adminUserFilter = window.adminUserFilter || 'all';
+    window.adminUserSearch = window.adminUserSearch || '';
+
+    window.setAdminUserFilter = (filter) => {
+        window.adminUserFilter = filter;
+        renderAdminTab('admin-users');
+    };
+
+    window.setAdminUserSearch = (query) => {
+        window.adminUserSearch = String(query).trim();
+        renderAdminTab('admin-users');
+    };
+
     const renderAdminUsersTab = () => {
         const sortedUsers = [...state.users].sort((a, b) => {
             if (a.id === 'admin') return -1;
@@ -2027,11 +2086,38 @@
 
                 if (diffDays <= 30 && diffDays >= 0) {
                     expiringUsers.push({ ...u, dDay: diffDays });
-                } else if (diffDays < 0) {
-                    expiringUsers.push({ ...u, dDay: diffDays }); // 이미 만료
+                } else if (diffDays < 0 && diffDays >= -7) {
+                    expiringUsers.push({ ...u, dDay: diffDays }); // 이미 만료 (7일 이내만 표시)
                 }
             }
         });
+
+        const allCount = sortedUsers.filter(u => u.id !== 'admin').length;
+        const expiredCount = expiringUsers.filter(u => u.dDay < 0).length;
+        const activeCount = allCount - expiredCount;
+
+        let displayUsers = sortedUsers.filter(u => u.id !== 'admin');
+
+        if (window.adminUserFilter === 'active') {
+            displayUsers = displayUsers.filter(u => {
+                const isExpired = u.membershipEnd && new Date(u.membershipEnd) < today;
+                return !isExpired;
+            });
+        } else if (window.adminUserFilter === 'expired') {
+            displayUsers = displayUsers.filter(u => {
+                const isExpired = u.membershipEnd && new Date(u.membershipEnd) < today;
+                return isExpired;
+            });
+        }
+
+        if (window.adminUserSearch) {
+            const query = window.adminUserSearch.toLowerCase();
+            displayUsers = displayUsers.filter(u =>
+                (u.name && u.name.toLowerCase().includes(query)) ||
+                (u.id && String(u.id).toLowerCase().includes(query)) ||
+                (u.phone && String(u.phone).toLowerCase().includes(query))
+            );
+        }
 
         if (expiringUsers.length > 0) {
             // D-day 오름차순 정렬
@@ -2048,7 +2134,7 @@
                 else badgeInfo = `<span style="background: rgba(255,255,255,0.2); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;">D-${u.dDay}</span>`;
                 return `
                                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 5px;">
-                                    <span style="color: var(--text-white); font-size: 0.85rem;">[${u.id}] ${u.name} <span style="font-size: 0.75rem; color: var(--text-gray);">(${u.membershipEnd})</span></span>
+                                    <span style="color: var(--text-white); font-size: 0.85rem; cursor: pointer;" onclick="window.showMemberDetail('${u.id}')">[${u.id}] ${u.name} <span style="font-size: 0.75rem; color: var(--text-gray);">(${u.membershipEnd})</span></span>
                                     ${badgeInfo}
                                 </div>
                             `;
@@ -2061,13 +2147,18 @@
         let html = `
             <div class="fade-in">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h3 style="color: var(--text-white); font-size: 1.2rem; margin: 0;">👨‍💻 회원 관리 (CRM) <span style="font-size: 0.7rem; color: var(--primary); opacity: 0.7;">v2.7.4</span></h3>
-                    <button onclick="window.adminResetUsers()" style="background: rgba(255, 59, 48, 0.1); border: 1px solid #ff3b30; color: #ff3b30; font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; cursor: pointer;">
-                        <i class="fas fa-trash-alt"></i> 데이터 초기화
-                    </button>
+                    <h3 style="color: var(--text-white); font-size: 1.2rem; margin: 0;">👨‍💻 회원 관리 (CRM) <span style="font-size: 0.7rem; color: var(--primary); opacity: 0.7;">v2.8.2</span></h3>
+                    <div style="display: flex; gap: 8px;">
+                        <button onclick="window.adminAddNewMember()" style="background: rgba(0, 210, 255, 0.1); border: 1px solid var(--primary); color: var(--text-white); font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; cursor: pointer;">
+                            <i class="fas fa-user-plus"></i> 수동 등록
+                        </button>
+                        <button onclick="window.adminResetUsers()" style="background: rgba(255, 59, 48, 0.1); border: 1px solid #ff3b30; color: #ff3b30; font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; cursor: pointer;">
+                            <i class="fas fa-trash-alt"></i> 초기화
+                        </button>
+                    </div>
                 </div>
                 
-                <!-- 엑셀 데이터 임포트 영역 (배경색 강조) -->
+                <!-- 엑셀 데이터 임포트 영역 -->
                 <div class="card" style="background: rgba(0, 210, 255, 0.05); border: 1px dashed var(--primary); padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; align-items: center; text-align: center;">
                     <div style="font-size: 0.85rem; color: var(--text-white);">
                         <i class="fas fa-file-excel" style="color: #217346; margin-right: 5px;"></i>
@@ -2082,29 +2173,40 @@
 
                 ${warningHtml}
 
-                <div style="background: rgba(0,0,0,0.3); border-radius: 12px; padding: 15px; margin-bottom: 20px; border: 1px solid var(--border-glass);">
+                <div style="background: rgba(0,0,0,0.3); border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid var(--border-glass);">
                     <div style="display: flex; justify-content: space-around; text-align: center;">
-                        <div>
+                        <div onclick="window.setAdminUserFilter('all')" style="cursor: pointer; padding: 5px 10px; border-radius: 8px; background: ${window.adminUserFilter === 'all' ? 'rgba(255,255,255,0.1)' : 'transparent'}; transition: all 0.2s;">
                             <span style="display: block; font-size: 0.8rem; color: var(--text-gray); margin-bottom: 5px;">전체 회원</span>
-                            <span style="font-size: 1.5rem; font-weight: bold; color: white;">${sortedUsers.length - (state.users.some(u => u.id === 'admin') ? 1 : 0)}<span style="font-size: 0.9rem; font-weight: normal; color: #888;"> 명</span></span>
+                            <span style="font-size: 1.5rem; font-weight: bold; color: white;">${allCount}<span style="font-size: 0.9rem; font-weight: normal; color: #888;"> 명</span></span>
                         </div>
                         <div style="width: 1px; background: rgba(255,255,255,0.1);"></div>
-                        <div>
+                        <div onclick="window.setAdminUserFilter('active')" style="cursor: pointer; padding: 5px 10px; border-radius: 8px; background: ${window.adminUserFilter === 'active' ? 'rgba(0, 210, 255, 0.1)' : 'transparent'}; transition: all 0.2s;">
                             <span style="display: block; font-size: 0.8rem; color: var(--text-gray); margin-bottom: 5px;">현재 등록 (활동중)</span>
-                            <span style="font-size: 1.5rem; font-weight: bold; color: var(--primary);">${sortedUsers.length - expiringUsers.filter(u => u.dDay < 0).length - (state.users.some(u => u.id === 'admin') ? 1 : 0)}<span style="font-size: 0.9rem; font-weight: normal; color: #888;"> 명</span></span>
+                            <span style="font-size: 1.5rem; font-weight: bold; color: var(--primary);">${activeCount}<span style="font-size: 0.9rem; font-weight: normal; color: #888;"> 명</span></span>
                         </div>
                         <div style="width: 1px; background: rgba(255,255,255,0.1);"></div>
-                        <div>
+                        <div onclick="window.setAdminUserFilter('expired')" style="cursor: pointer; padding: 5px 10px; border-radius: 8px; background: ${window.adminUserFilter === 'expired' ? 'rgba(255, 59, 48, 0.1)' : 'transparent'}; transition: all 0.2s;">
                             <span style="display: block; font-size: 0.8rem; color: var(--text-gray); margin-bottom: 5px;">만료/탈퇴</span>
-                            <span style="font-size: 1.5rem; font-weight: bold; color: #ff3b30;">${expiringUsers.filter(u => u.dDay < 0).length}<span style="font-size: 0.9rem; font-weight: normal; color: #888;"> 명</span></span>
+                            <span style="font-size: 1.5rem; font-weight: bold; color: #ff3b30;">${expiredCount}<span style="font-size: 0.9rem; font-weight: normal; color: #888;"> 명</span></span>
                         </div>
                     </div>
                 </div>
 
+                <!-- 검색 창 -->
+                <div style="margin-bottom: 20px; position: relative; display: flex; gap: 10px;">
+                    <div style="position: relative; flex: 1;">
+                        <i class="fas fa-search" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-gray);"></i>
+                        <input type="text" id="admin-search-input" value="${window.adminUserSearch}" onkeyup="if(event.key === 'Enter') window.setAdminUserSearch(this.value)" placeholder="이름, 고유번호(ID) 또는 연락처로 검색 (엔터)" style="width: 100%; background: rgba(20,25,35,0.8); border: 1px solid var(--border-glass); padding: 12px 12px 12px 40px; border-radius: 8px; color: white; outline: none; font-size: 0.9rem;">
+                    </div>
+                    <button onclick="window.setAdminUserSearch(document.getElementById('admin-search-input').value)" style="background: var(--primary); color: #000; border: none; padding: 0 20px; border-radius: 8px; font-weight: bold; cursor: pointer;">검색</button>
+                    ${window.adminUserSearch ? `<button onclick="window.setAdminUserSearch('')" style="background: rgba(255,255,255,0.1); color: white; border: 1px solid var(--border-glass); padding: 0 15px; border-radius: 8px; cursor: pointer;"><i class="fas fa-times"></i></button>` : ''}
+                </div>
+
                 <div style="display: flex; flex-direction: column; gap: 15px;">
+                    ${displayUsers.length === 0 ? `<div style="text-align: center; color: var(--text-gray); padding: 20px;">검색 결과가 없습니다.</div>` : ''}
         `;
 
-        sortedUsers.forEach(u => {
+        displayUsers.forEach(u => {
             const role = (u.role || 'Basic').toLowerCase();
             const isExpired = u.membershipEnd && new Date(u.membershipEnd) < today;
 
@@ -2116,21 +2218,54 @@
             if (isExpired) roleColor = '#808080'; // Expired (Gray)
             if (u.role === 'admin') roleColor = 'var(--primary)';
 
+            // 나이 계산 (생년월일 기반, 예: '150428', '2015-04-28' 등)
+            let ageDisplay = '';
+            if (u.birthDate) {
+                const birthStr = String(u.birthDate).replace(/[^0-9]/g, '');
+                let birthYear = 0;
+                if (birthStr.length === 6) { // YYMMDD
+                    const prefix = parseInt(birthStr.substring(0, 2)) > 50 ? 1900 : 2000;
+                    birthYear = prefix + parseInt(birthStr.substring(0, 2));
+                } else if (birthStr.length >= 4) { // YYYY...
+                    birthYear = parseInt(birthStr.substring(0, 4));
+                }
+                if (birthYear > 1900 && birthYear <= today.getFullYear()) {
+                    const age = today.getFullYear() - birthYear + 1; // 한국 나이(연 나이+1) 혹은 만 나이 혼용 대비 단순히 (올해-태어난해+1 혹은 0)
+                    ageDisplay = ` / ${age}세`;
+                }
+            }
+
             html += `
-                <div class="card" style="background: rgba(20, 25, 35, 0.8); border: 1px solid ${isExpired ? '#444' : 'var(--border-glass)'}; padding: 15px; border-radius: 12px; display: flex; flex-direction: column; gap: 12px; opacity: ${isExpired ? '0.7' : '1'};">
+                <div class="card" style="background: rgba(20, 25, 35, 0.8); border: 2px solid ${isExpired ? '#444' : roleColor}; padding: 15px; border-radius: 12px; display: flex; flex-direction: column; gap: 12px; opacity: ${isExpired ? '0.7' : '1'};">
                     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
                         <div style="display: flex; align-items: center; gap: 10px; cursor: pointer;" onclick="window.showMemberDetail('${u.id}')">
                             <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--glass-bg); display: flex; justify-content: center; align-items: center; font-size: 1.2rem; color: ${roleColor};">
                                 <i class="fas ${u.avatar || 'fa-user'}"></i>
                             </div>
                             <div>
-                                <h4 style="color: var(--text-white); margin-bottom: 3px;">${u.name} <span style="font-size:0.75rem; color:var(--text-gray);">(${u.id})</span></h4>
+                                <h4 style="color: var(--text-white); margin-bottom: 3px;">${u.name}${ageDisplay} <span style="font-size:0.75rem; color:var(--text-gray);">(${u.id})</span></h4>
                                 <span style="font-size: 0.75rem; color: ${roleColor}; font-weight: bold;">${u.role || 'Basic'} ${isExpired ? '(만료)' : ''}</span>
                             </div>
                         </div>
+                        <i class="fas fa-trash-alt" style="color: #ff3b30; font-size: 1.1rem; cursor: pointer; padding: 5px; opacity: 0.8;" onclick="event.stopPropagation(); window.adminDeleteMember('${u.id}')" title="이 회원 삭제"></i>
                     </div>
                     
-                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.8rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: var(--text-gray);">학교/어린이집:</span>
+                            <span style="color: var(--text-white);">${u.school || '-'}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: var(--text-gray);">주소:</span>
+                            <span style="color: var(--text-white); text-align: right; word-break: keep-all; flex: 0.8;">${u.address || '-'}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: var(--text-gray);">차량운행:</span>
+                            <span style="color: var(--text-white);">${u.shuttle || '-'}</span>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 8px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <span style="color: var(--text-gray); font-size: 0.8rem;">가입일:</span>
                             <span style="color: var(--text-white); font-size: 0.8rem;">${u.joinDate || 'YYYY-MM-DD'}</span>
@@ -2146,7 +2281,7 @@
                     </div>
 
                     <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;">
-                        <span style="color: var(--text-gray); font-size: 0.85rem;">멤버십 등급 수정:</span>
+                        <span style="color: var(--text-gray); font-size: 0.85rem;">멤버쉽 등급 수정:</span>
                         <select onchange="window.adminUpdateMembership('${u.id}', this.value)" style="background: var(--glass-bg); color: var(--text-white); border: 1px solid var(--border-glass); padding: 5px 10px; border-radius: 6px; font-size: 0.85rem; outline: none; flex: 0.7;">
                             <option value="Basic" style="background: #0f172a; color: #ffffff;" ${u.role === 'Basic' || !u.role ? 'selected' : ''}>Basic (1개월)</option>
                             <option value="Semi" style="background: #0f172a; color: #ffffff;" ${u.role === 'Semi' ? 'selected' : ''}>Semi (3개월)</option>
