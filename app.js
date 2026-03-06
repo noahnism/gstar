@@ -1480,92 +1480,114 @@
                         if (!finalUniformInfo || finalUniformInfo.trim() === '') finalUniformInfo = "지원 대상 (FREE)";
                     }
 
-                    // --- [지능형 아이디 연장 로직 (16-2, 16-3 등)] ---
-                    // baseId 형식이 원래부터 '16-2' 였을 수도 있으니 '-'앞의 진짜 baseId만 추출
+                    // --- [단일 프로필 수강 이력(히스토리) 누적 로직] ---
+                    // baseId 형식이 불규칙하거나 45080 등 엉뚱한 번호일 경우를 대비해 '-' 파싱
                     const pureBaseId = baseId ? baseId.split('-')[0] : '';
-                    let finalId = pureBaseId;
 
-                    // 동일한 baseId를 가지거나 이름이 같은 기존 회원이 있는지 검사
-                    let existingUsers = [];
+                    // 동일한 baseId를 가지거나 이름이 같은 기존 회원 검사
+                    let existingUser = null;
                     if (pureBaseId) {
-                        existingUsers = state.users.filter(u => u.id.split('-')[0] === pureBaseId || (u.name === name && u.name !== ''));
-                    } else if (name) {
-                        existingUsers = state.users.filter(u => u.name === name);
-                        if (existingUsers.length > 0) {
-                            finalId = existingUsers[0].id.split('-')[0]; // 이름으로 기존 회원 찾은 경우 그 baseId 사용
-                        } else {
-                            finalId = 'new_' + Date.now().toString().slice(-6); // 아이디도 번호도 아예 없으면 임시 발급
-                        }
+                        existingUser = state.users.find(u => u.id.split('-')[0] === pureBaseId);
+                    }
+                    if (!existingUser && name) {
+                        existingUser = state.users.find(u => u.name === name); // 이름 매칭 (날짜 파싱 등 오류로 ID가 깨졌을 때 구제해줌)
                     }
 
-                    if (existingUsers.length > 0) {
-                        // 중복 유저 발견 시, 가장 높은 차수(suffix) 찾기
-                        let maxSuffix = 1;
-                        existingUsers.forEach(u => {
-                            const parts = u.id.split('-');
-                            if (parts.length > 1) {
-                                const suffix = parseInt(parts[1]);
-                                if (suffix > maxSuffix) maxSuffix = suffix;
-                            } else {
-                                maxSuffix = Math.max(maxSuffix, 1);
-                            }
-                        });
-                        // 새 ID 발급: 16-2, 16-3 ...
-                        finalId = `${finalId}-${maxSuffix + 1}`;
-                    }
-
-                    const newUser = {
-                        id: finalId,
-                        pw,
-                        name,
+                    // 수강 이력(History) 객체 생성 (이번에 엑셀에서 올라온 회차 단위 정보)
+                    const historyEntry = {
                         role,
                         duration,
-                        group,
-                        gender,
-                        gradeLevel,
-                        birthDate,
-                        school,
-                        height,
-                        weight,
-                        excelJoinDate,
-                        startDate,
-                        endDate,
-                        frequency,
+                        startDate: startDate || excelJoinDate || new Date().toISOString().split('T')[0],
+                        endDate: endDate || '',
                         fee,
-                        uniformFee,
-                        shuttle,
-                        motherName,
-                        fatherName,
-                        email,
-                        uniformInfo: finalUniformInfo,
-                        phone,
-                        address,
-                        memo,
-                        stats,
-                        avatar: 'fa-user',
-                        joinDate: startDate || excelJoinDate || new Date().toLocaleDateString(),
-                        membershipStart: startDate || new Date().toISOString().split('T')[0]
+                        group,
+                        frequency,
+                        memo
                     };
 
-                    // 만료일 계산
-                    if (endDate) {
-                        newUser.membershipEnd = endDate; // 명시적 종료일이 있으면 우선
-                    } else {
-                        recalculateMembershipEnd(newUser);
+                    if (!historyEntry.endDate) {
+                        const tempUser = { membershipStart: historyEntry.startDate, duration: historyEntry.duration };
+                        recalculateMembershipEnd(tempUser);
+                        historyEntry.endDate = tempUser.membershipEnd;
                     }
 
-                    // Firebase 저장 (서버 연동)
-                    if (db) {
-                        db.collection("users").doc(finalId).set(newUser).catch(err => console.error("Excel Import Firebase Error:", err));
-                    }
+                    if (existingUser) {
+                        // 기존 유저 발견 -> 회차(history) 누적
+                        if (!existingUser.history) {
+                            // 기존 데이터 통합
+                            existingUser.history = [{
+                                role: existingUser.role,
+                                duration: existingUser.duration,
+                                startDate: existingUser.membershipStart || existingUser.joinDate,
+                                endDate: existingUser.membershipEnd,
+                                fee: existingUser.fee || '',
+                                group: existingUser.group || '',
+                                frequency: existingUser.frequency || '',
+                                memo: ''
+                            }];
+                        }
+                        existingUser.history.push(historyEntry);
 
-                    // 로컬 상태 업데이트 (중복 방지)
-                    const existingIdx = state.users.findIndex(u => u.id === finalId);
-                    if (existingIdx !== -1) {
-                        state.users[existingIdx] = newUser;
+                        // 메인 프로필 업데이트 (가장 최신 데이터로 플로우업)
+                        existingUser.role = role;
+                        existingUser.duration = duration;
+                        existingUser.membershipStart = historyEntry.startDate;
+                        existingUser.membershipEnd = historyEntry.endDate;
+                        existingUser.group = group || existingUser.group;
+                        existingUser.frequency = frequency || existingUser.frequency;
+                        if (memo) existingUser.memo = existingUser.memo ? existingUser.memo + '\n[' + historyEntry.startDate + '] ' + memo : memo;
+
+                        // 추가 정보들 덮어쓰기
+                        if (height) existingUser.height = height;
+                        if (weight) existingUser.weight = weight;
+                        if (gradeLevel) existingUser.gradeLevel = gradeLevel;
+
+                        if (db) db.collection("users").doc(existingUser.id).update(existingUser).catch(e => console.error(e));
+
                     } else {
+                        // 완전 신규 회원 생성
+                        // pureBaseId가 비정상일 경우 임시 아이디 부여. 만약 존재하면 그대로 16, 17 부여
+                        let finalId = pureBaseId || ('new_' + Date.now().toString().slice(-6));
+
+                        const newUser = {
+                            id: finalId,
+                            pw,
+                            name,
+                            role,
+                            duration,
+                            group,
+                            gender,
+                            gradeLevel,
+                            birthDate,
+                            school,
+                            height,
+                            weight,
+                            excelJoinDate,
+                            startDate,
+                            endDate,
+                            frequency,
+                            fee,
+                            uniformFee,
+                            shuttle,
+                            motherName,
+                            fatherName,
+                            email,
+                            uniformInfo: finalUniformInfo,
+                            phone,
+                            address,
+                            memo,
+                            stats,
+                            avatar: 'fa-user',
+                            joinDate: startDate || excelJoinDate || new Date().toLocaleDateString(),
+                            membershipStart: historyEntry.startDate,
+                            membershipEnd: historyEntry.endDate,
+                            history: [historyEntry] // <-- 초기 1회차 삽입
+                        };
+
                         state.users.push(newUser);
+                        if (db) db.collection("users").doc(finalId).set(newUser).catch(e => console.error(e));
                     }
+
                     successCount++;
                 });
 
@@ -1689,6 +1711,24 @@
                             </div>
                             
                             ${statsHtml}
+
+                            <div style="margin-top: 25px;">
+                                <h4 style="color: #f2cb4f; margin-bottom: 10px; font-size: 0.9rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;"><i class="fas fa-history"></i> 수강 이력 (총 ${user.history ? user.history.length : 1}회차)</h4>
+                                <div style="display: flex; flex-direction: column; gap: 8px;">
+                                    ${(user.history || [{ role: user.role, duration: user.duration, startDate: user.membershipStart, endDate: user.membershipEnd, group: user.group, frequency: user.frequency }]).map((h, i) => `
+                                        <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;">
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                                <span style="color: var(--primary); font-weight: bold; font-size: 0.85rem;">[${i + 1}회차] ${h.role || 'Basic'}</span>
+                                                <span style="color: var(--text-gray); font-size: 0.75rem;">${h.duration || '1'}개월</span>
+                                            </div>
+                                            <div style="font-size: 0.8rem; color: #ccc;">
+                                                <i class="far fa-calendar-alt"></i> ${h.startDate || '-'} ~ ${h.endDate || '-'}
+                                            </div>
+                                            ${h.group ? `<div style="font-size: 0.75rem; color: #aaa; margin-top: 4px;">수업: ${h.group} ${h.frequency ? `(${h.frequency})` : ''}</div>` : ''}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
                         </div>
                         
                         <!-- 편집 뷰 (숨김) -->
@@ -1909,7 +1949,7 @@
         let html = `
             <div class="fade-in">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h3 style="color: var(--text-white); font-size: 1.2rem; margin: 0;">👨‍💻 회원 관리 (CRM) <span style="font-size: 0.7rem; color: var(--primary); opacity: 0.7;">v2.5.1</span></h3>
+                    <h3 style="color: var(--text-white); font-size: 1.2rem; margin: 0;">👨‍💻 회원 관리 (CRM) <span style="font-size: 0.7rem; color: var(--primary); opacity: 0.7;">v2.6.0</span></h3>
                     <button onclick="window.adminResetUsers()" style="background: rgba(255, 59, 48, 0.1); border: 1px solid #ff3b30; color: #ff3b30; font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; cursor: pointer;">
                         <i class="fas fa-trash-alt"></i> 데이터 초기화
                     </button>
