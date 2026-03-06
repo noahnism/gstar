@@ -1,0 +1,1608 @@
+(() => {
+    // === 상수 및 상태 관리 ===
+    function getInitialUsers() {
+        const today = new Date();
+        const formatDate = (d) => {
+            const yr = d.getFullYear();
+            const mo = String(d.getMonth() + 1).padStart(2, '0');
+            const da = String(d.getDate()).padStart(2, '0');
+            return `${yr}-${mo}-${da}`;
+        };
+
+        const thirtyDaysAgo = new Date(today); thirtyDaysAgo.setDate(today.getDate() - 30);
+        const sixtyDaysAgo = new Date(today); sixtyDaysAgo.setDate(today.getDate() - 60);
+
+        // 오늘 기준 D-7 (만료 임박 테스트용)
+        const dMinus7 = new Date(today); dMinus7.setDate(today.getDate() + 7);
+        // 오늘 기준 D-1 (당일/내일 만료 테스트용)
+        const dMinus1 = new Date(today); dMinus1.setDate(today.getDate() + 1);
+        // 이미 만료된 케이스
+        const expired = new Date(today); expired.setDate(today.getDate() - 5);
+
+        return [
+            { id: '1', pw: '1234', name: '김태환', role: '우수 훈련병', currentClass: 'A반', joinDate: formatDate(sixtyDaysAgo), membershipStart: formatDate(sixtyDaysAgo), membershipEnd: formatDate(dMinus7), avatar: 'fa-user-ninja' },
+            { id: '2', pw: '1234', name: '이청용', role: 'player', currentClass: 'B반', joinDate: formatDate(thirtyDaysAgo), membershipStart: formatDate(thirtyDaysAgo), membershipEnd: formatDate(dMinus1), avatar: 'fa-user' },
+            { id: '3', pw: '1234', name: '박지성', role: 'vip', currentClass: 'S반', joinDate: '2023-01-15', membershipStart: '2024-01-15', membershipEnd: '2025-01-15', avatar: 'fa-user-secret' },
+            { id: '4', pw: '1234', name: '손흥민', role: 'player', currentClass: 'A반', joinDate: formatDate(today), membershipStart: formatDate(today), membershipEnd: '2024-12-31', avatar: 'fa-user-astronaut' },
+            { id: '5', pw: '1234', name: '이강인', role: 'player', currentClass: 'B반', joinDate: '2024-05-10', membershipStart: '2024-05-10', membershipEnd: formatDate(expired), avatar: 'fa-user' }
+        ];
+    }
+
+    let usersData = [];
+    try {
+        const saved = localStorage.getItem('soccer_users');
+        if (saved) {
+            usersData = JSON.parse(saved);
+        } else {
+            usersData = getInitialUsers();
+            localStorage.setItem('soccer_users', JSON.stringify(usersData));
+        }
+    } catch (e) {
+        console.error("LocalStorage access failed", e);
+        usersData = getInitialUsers();
+    }
+
+    let postsData = [];
+    try {
+        const savedPosts = localStorage.getItem('soccer_posts');
+        postsData = savedPosts ? JSON.parse(savedPosts) : [
+            /* 기본 샘플 포스트 데이터 (최초 접속 시 확인용) */
+            { id: 101, authorId: '1', content: '오늘 A반 패스 훈련 미쳤어! 💪', date: '2024.11.20', media: 'https://images.unsplash.com/photo-1551244072-5d12893278ab?auto=format&fit=crop&w=400' },
+            { id: 102, authorId: '3', content: '주말 풋살장 같이 뛸 팀 모집합니다 ⚽', date: '2024.11.18', media: 'https://images.unsplash.com/photo-1511886929837-354d827aae26?auto=format&fit=crop&w=400' },
+            { id: 103, authorId: '2', content: '나이키 신상 축구화 언박싱 🥾 (쇼츠영상)', date: '2024.11.15', media: 'https://images.unsplash.com/photo-1505550796333-d8a4e1044458?auto=format&fit=crop&w=400', isVideo: true }
+        ];
+    } catch (e) {
+        console.error("Posts loading failed", e);
+    }
+
+    let schedulesData = [];
+    try {
+        const savedSchedules = localStorage.getItem('soccer_schedules');
+        schedulesData = savedSchedules ? JSON.parse(savedSchedules) : [
+            { id: 1, date: '2024-11-20', time: '19:00 - 21:00', title: 'A반 드리블 스킬 집중 훈련', location: '1호 메인 구장' },
+            { id: 2, date: '2024-11-23', time: '10:00 - 13:00', title: '주말 친선전 (vs 블루윙즈)', location: '수원 블루윙즈 연습구장' }
+        ];
+    } catch (e) { }
+
+    const state = {
+        isLoggedIn: false,
+        currentUser: null,
+        activeTab: 'profile',
+        scheduleMode: 'day', // 'day' or 'month'
+        selectedDate: new Date().toISOString().split('T')[0], // 추가: 선택된 날짜 (기본 오늘)
+        users: usersData,
+        posts: postsData,
+        schedules: schedulesData,
+        columns: [
+            { id: 1001, isHot: true, label: '추천 칼럼', labelIcon: 'fa-star', title: '프로 선수들의 식단 관리 노하우', desc: '시합 전 최상의 컨디션을 유지하기 위해 어떤 음식을 먹어야 할까요? 전문 뉴트리셔니스트의 인터뷰를 확인하세요.', thumb: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=800&q=80', time: '5분 소요' },
+            { id: 1002, isHot: false, label: '스킬 가이드', labelIcon: 'fa-futbol', title: '볼 컨트롤의 기본: 퍼스트 터치', desc: '수비수를 따돌리는 가장 첫 번째 스킬, 완벽한 첫 터치를 위한 3가지 연습 방법 소개.', thumb: 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=800&q=80', time: '3분 소요' },
+            { id: 1003, isHot: false, label: '축구 AI 뉴스', labelIcon: 'fa-robot', title: '[오늘의 소식] 유럽 리그 최신 이적 루머 통계 분석', desc: 'AI가 수집한 해외 최상위 리그별 주요 선수들의 이적장 데이터를 바탕으로 지트캠프 회원들에게 가장 필요한 뉴스를 요약해 드립니다.', thumb: 'https://images.unsplash.com/photo-1504450758481-7338ba7524a7?auto=format&fit=crop&w=800&q=80', time: '1분 소요' }
+        ],
+        notifications: [],
+        messages: [], // 테스트용: 채팅 데이터
+        following: ['1', '2'], // 기본 팔로잉 명단
+        followers: ['1', '3'], // 기본 팔로잉 명단
+        viewingUserId: null // 현재 보고 있는 프로필 ID (null이면 내 프로필)
+    };
+
+    // === 전역 함수: 로컬 스토리지에 state 저장 ===
+    window.saveState = () => {
+        try {
+            // 알림, 메시지, 팔로잉 등 상태 보존
+            localStorage.setItem('soccer_social_data', JSON.stringify({
+                notifications: state.notifications,
+                messages: state.messages,
+                following: state.following,
+                followers: state.followers
+            }));
+        } catch (e) { }
+    };
+
+    // === DOM 요소 ===
+    const splash = document.getElementById('splash-screen');
+    const authView = document.getElementById('auth-view');
+    const appView = document.getElementById('app-view');
+    const adminView = document.getElementById('admin-view');
+    const mainNav = document.getElementById('main-nav');
+    const tabContent = document.getElementById('tab-content');
+    const viewTitle = document.getElementById('view-title');
+    const progressBar = document.querySelector('.progress');
+
+    // === 초기화 로직 ===
+    function init() {
+        console.log("App initializing...");
+
+        // 스플래시 애니메이션 시뮬레이션
+        if (progressBar) {
+            setTimeout(() => { progressBar.style.width = '100%'; }, 50);
+        }
+
+        // 1.5초 후 메인 화면으로 전환
+        setTimeout(() => {
+            hideSplashAndStart();
+        }, 1500);
+
+        // 만약 3초 뒤에도 스플래시가 있으면 강제 제거 (안전 장치)
+        setTimeout(() => {
+            if (splash && !splash.classList.contains('hidden')) {
+                console.warn("Forcing splash hide");
+                hideSplashAndStart();
+            }
+        }, 3000);
+    }
+
+    function hideSplashAndStart() {
+        if (splash) splash.classList.add('hidden');
+        checkAuth();
+    }
+
+    function checkAuth() {
+        let savedUser = null;
+        try {
+            savedUser = localStorage.getItem('soccer_session');
+        } catch (e) { }
+
+        if (savedUser) {
+            try {
+                const parsedUser = JSON.parse(savedUser);
+                state.isLoggedIn = true;
+                state.currentUser = parsedUser;
+
+                // --- [관리자 분기 추가] ---
+                if (parsedUser.id === 'admin' || parsedUser.role === 'admin') {
+                    if (adminView) adminView.classList.remove('hidden');
+                    if (window.renderAdminTab) window.renderAdminTab('admin-users');
+                } else {
+                    showApp();
+                }
+            } catch (e) {
+                if (authView) authView.classList.remove('hidden');
+            }
+        } else {
+            if (authView) authView.classList.remove('hidden');
+        }
+    }
+
+    // === DOM 요소 추가 ===
+    const loginFormArea = document.getElementById('login-form-area');
+    const signupFormArea = document.getElementById('signup-form-area');
+    const goSignupBtn = document.getElementById('go-signup');
+    const goLoginBtn = document.getElementById('go-login');
+    const signupBtn = document.getElementById('btn-signup');
+
+    // === 인증/회원가입 화면 전환 ===
+    if (goSignupBtn) {
+        goSignupBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (loginFormArea) loginFormArea.classList.add('hidden');
+            if (signupFormArea) signupFormArea.classList.remove('hidden');
+        });
+    }
+
+    if (goLoginBtn) {
+        goLoginBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (signupFormArea) signupFormArea.classList.add('hidden');
+            if (loginFormArea) loginFormArea.classList.remove('hidden');
+        });
+    }
+
+    // --- 멤버십 선택 시 기간 자동 연동 ---
+    const signupMembership = document.getElementById('signup-membership');
+    const signupDuration = document.getElementById('signup-duration');
+    if (signupMembership && signupDuration) {
+        signupMembership.addEventListener('change', () => {
+            const level = signupMembership.value;
+            let duration = "1";
+            if (level === 'semi') duration = "3";
+            else if (level === 'pro' || level === 'player') duration = "6";
+            else if (level === 'ultimate' || level === 'vip') duration = "12";
+
+            signupDuration.value = duration;
+            // 베이직이 아니면 추가 기간 선택이 가능하도록 필드를 보여줄 수도 있으나, 
+            // 현재 요구사항은 "자동 등록"이므로 사용자에게 확신을 주기 위해 강제 설정함.
+        });
+    }
+
+    // === 회원가입 처리 로직 ===
+    if (signupBtn) {
+        signupBtn.addEventListener('click', () => {
+            const name = document.getElementById('signup-name').value.trim();
+            const id = document.getElementById('signup-id').value.trim();
+            const pw = document.getElementById('signup-pw').value.trim();
+            const pwConfirm = document.getElementById('signup-pw-confirm').value.trim();
+
+            if (!name || !id || !pw) return alert('모든 정보를 입력해 주세요.');
+            if (pw !== pwConfirm) return alert('비밀번호가 일치하지 않습니다.');
+
+            // 기존 회원 아이디 중복 검사
+            if (state.users.find(u => u.id === id)) {
+                return alert('이미 존재하는 아이디입니다.');
+            }
+
+            // 새 회원 등록
+            const membership = document.getElementById('signup-membership').value || 'Basic';
+            const duration = document.getElementById('signup-duration').value || '1';
+
+            const newUser = {
+                id,
+                pw,
+                name,
+                role: membership,
+                duration: duration,
+                joinDate: new Date().toLocaleDateString(),
+                membershipStart: new Date().toISOString().split('T')[0]
+            };
+
+            // 만료일 초기 계산
+            recalculateMembershipEnd(newUser);
+            state.users.push(newUser);
+
+            try {
+                localStorage.setItem('soccer_users', JSON.stringify(state.users));
+                alert(`${name}님, 가입을 환영합니다!\n로그인 화면으로 이동합니다.`);
+                // 폼 리셋 및 로그인 화면 전환
+                document.getElementById('signup-name').value = '';
+                document.getElementById('signup-id').value = '';
+                document.getElementById('signup-pw').value = '';
+                document.getElementById('signup-pw-confirm').value = '';
+
+                signupFormArea.classList.add('hidden');
+                loginFormArea.classList.remove('hidden');
+            } catch (e) {
+                alert('가입 처리 중 오류가 발생했습니다.');
+            }
+        });
+    }
+
+    // === 로그아웃 로직 (관리자 뷰에서도 사용될 수 있도록 일반화) ===
+    window.handleLogout = () => {
+        if (!confirm('로그아웃 하시겠습니까?')) return;
+        localStorage.removeItem('soccer_session'); // 'soccer_user' 대신 'soccer_session' 사용
+        state.currentUser = null;
+        state.isLoggedIn = false;
+
+        // 일반 뷰 가리기
+        if (appView) appView.classList.add('hidden');
+        if (mainNav) mainNav.classList.add('hidden');
+
+        // 관리자 뷰 가리기
+        if (adminView) adminView.classList.add('hidden');
+
+        // 로그인 뷰 표시
+        if (authView) authView.classList.remove('hidden');
+
+        // 플로팅 메신저 버튼 비활성화
+        const fab = document.getElementById('messenger-fab');
+        if (fab) fab.classList.add('hidden');
+    };
+
+    // === 로그인 로직 (강화됨) ===
+    window.login = () => {
+        const idInput = document.getElementById('login-id');
+        const pwInput = document.getElementById('login-pw');
+        const id = idInput ? idInput.value.trim() : '';
+        const pw = pwInput ? pwInput.value.trim() : '';
+
+        if (!id || !pw) return alert('아이디와 비밀번호를 모두 입력하세요.');
+
+        // --- [관리자 분기 추가] ---
+        if (id.toLowerCase() === 'admin' && pw === 'admin123') { // 관리자 비밀번호는 임시로 'admin123'
+            state.currentUser = { id: 'admin', name: '최고관리자', role: 'admin' };
+            state.isLoggedIn = true;
+            try {
+                localStorage.setItem('soccer_session', JSON.stringify(state.currentUser));
+            } catch (e) { console.error("LocalStorage save failed", e); }
+
+            if (authView) authView.classList.add('hidden');
+            if (adminView) adminView.classList.remove('hidden');
+            renderAdminTab('admin-users'); // 초기 탭 렌더링
+            return;
+        }
+
+        // 1. 등록된 회원 검색 (관리자가 아닌 일반 사용자)
+        const user = state.users.find(u => u.id === id);
+
+        if (!user) { // user가 없으면 등록되지 않은 아이디
+            return alert('등록되지 않은 아이디입니다. 먼저 회원가입을 진행해 주세요.');
+        }
+
+        // 2. 비밀번호 일치 확인
+        if (user.pw !== pw) {
+            return alert('비밀번호가 일치하지 않습니다.');
+        }
+
+        // 로그인 성공 처리
+        try {
+            localStorage.setItem('soccer_session', JSON.stringify(user));
+        } catch (e) { }
+
+        state.currentUser = user;
+        state.isLoggedIn = true;
+
+        if (authView) authView.classList.add('hidden');
+        showApp();
+    };
+
+    const loginBtn = document.getElementById('btn-login');
+    if (loginBtn) {
+        loginBtn.addEventListener('click', window.login);
+    }
+
+    // === 앱 메인 로직 ===
+    function showApp() {
+        if (appView) appView.classList.remove('hidden');
+        if (mainNav) mainNav.classList.remove('hidden');
+
+        // 플로팅 메신저 버튼 활성화
+        const fab = document.getElementById('messenger-fab');
+        if (fab) {
+            fab.classList.remove('hidden');
+            fab.onclick = () => alert('운영자 1:1 채팅 화면으로 연결됩니다. (추후 업데이트)');
+        }
+
+        renderTab(state.activeTab);
+    }
+
+    window.renderTab = renderTab;
+    window.setScheduleMode = (mode) => {
+        state.scheduleMode = mode;
+        renderTab('academy');
+    };
+
+    window.selectScheduleDate = (date) => {
+        state.selectedDate = date;
+        renderTab('academy');
+    };
+
+    function renderTab(tabId) {
+        state.activeTab = tabId;
+
+        // 내비게이션 활성화 표시
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tab === tabId);
+        });
+
+        // 타이틀 변경
+        const titles = {
+            notice: '운영 게시판',
+            academy: '수업운영 정보',
+            schedule: '스케줄 목록',
+            profile: '나의 G-STAR',
+            column: '매거진 & 정보',
+            social: '소셜 갤러리'
+        };
+        if (viewTitle) viewTitle.innerText = titles[tabId] || '축구교실';
+
+        // 콘텐츠 렌더링
+        let html = '';
+        switch (tabId) {
+            case 'notice':
+                html = `
+                    <div class="card notice fade-in">
+                        <span class="tag" style="background:var(--primary); color:#000;">필독</span>
+                        <h4>이번 주 동계 훈련 특별 일정안내</h4>
+                        <p>우천 시 인근 실내 돔 경기장으로 장소가 변경됩니다.</p>
+                        <p style="font-size: 0.8rem; color: var(--text-gray); margin-top: 10px;">관리자 • 2시간 전</p>
+                    </div>
+                    <div class="card notice fade-in" style="background: var(--glass-bg);">
+                        <span class="tag" style="background:var(--accent-gold); color:#000;">안내</span>
+                        <h4>12월 신규 가입자 웰컴 패키지 배부</h4>
+                        <p>새로 오신 회원분들께 공식 유니폼과 양말 세트를 지급합니다.</p>
+                        <p style="font-size: 0.8rem; color: var(--text-gray); margin-top: 10px;">운영팀 • 1일 전</p>
+                    </div>
+                `;
+                break;
+            case 'academy':
+            case 'schedule':
+                const isMonth = state.scheduleMode === 'month';
+                const todayStr = new Date().toISOString().split('T')[0];
+                const selectedDateStr = state.selectedDate || todayStr;
+
+                // --- 캘린더 생성 로직 (현재 월 기준) ---
+                const now = new Date();
+                const calendarYear = now.getFullYear();
+                const calendarMonth = now.getMonth();
+                const firstDay = new Date(calendarYear, calendarMonth, 1).getDay(); // 0(일) ~ 6(토)
+                const lastDate = new Date(calendarYear, calendarMonth + 1, 0).getDate();
+
+                const calendarDays = [];
+                for (let i = 1; i <= lastDate; i++) {
+                    const dateVal = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                    const hasEvent = state.schedules.some(s => s.date === dateVal);
+                    const isSelected = selectedDateStr === dateVal;
+                    const isRealToday = todayStr === dateVal;
+
+                    calendarDays.push(`
+                        <div onclick="window.selectScheduleDate('${dateVal}')" 
+                             style="aspect-ratio: 1; border: 1px solid ${isSelected ? 'var(--primary)' : 'rgba(255,255,255,0.05)'}; 
+                                    border-radius: 12px; display: flex; flex-direction: column; justify-content: center; 
+                                    align-items: center; position: relative; cursor: pointer; 
+                                    background: ${isSelected ? 'rgba(0,210,255,0.15)' : 'transparent'}; 
+                                    transition: 0.2s; ${isRealToday ? 'box-shadow: inset 0 0 10px rgba(0,210,255,0.2);' : ''}">
+                            <span style="font-size: 0.95rem; font-weight: ${isSelected || isRealToday ? '800' : '500'}; 
+                                         color: ${isRealToday ? 'var(--primary)' : (isSelected ? 'white' : 'var(--text-gray)')};">${i}</span>
+                            ${hasEvent ? '<div style="width: 4px; height: 4px; background: var(--accent-gold); border-radius: 50%; position: absolute; bottom: 6px; box-shadow: 0 0 5px var(--accent-gold);"></div>' : ''}
+                        </div>
+                    `);
+                }
+
+                // 선택된 날짜의 일정 필터링
+                const filteredSchedules = state.schedules.filter(s => s.date === selectedDateStr);
+
+                html = `
+                    <div class="schedule-filter fade-in" style="display: flex; gap: 10px; margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 5px; border-radius: 15px;">
+                        <button class="btn-check" onclick="setScheduleMode('day')" style="${!isMonth ? 'background: var(--primary); color: #000; font-weight: 700;' : 'background: transparent; color: var(--text-gray); border:none;'} flex: 1; padding: 12px; border-radius: 12px;">주간(Weekly)</button>
+                        <button class="btn-check" onclick="setScheduleMode('month')" style="${isMonth ? 'background: var(--primary); color: #000; font-weight: 700;' : 'background: transparent; color: var(--text-gray); border:none;'} flex: 1; padding: 12px; border-radius: 12px;">월간(Monthly)</button>
+                    </div>
+                    
+                    ${!isMonth ? `
+                        <h4 class="section-title fade-in" style="font-size: 1.1rem; color: var(--text-white); margin-bottom: 15px;">전체 훈련 일정 목록</h4>
+                        <div class="schedule-list fade-in">
+                            ${state.schedules.length > 0 ? state.schedules.slice().sort((a, b) => new Date(a.date) - new Date(b.date)).map((s, idx) => `
+                                <div class="schedule-item" style="border-left: 3px solid ${new Date(s.date) >= new Date(todayStr) ? 'var(--primary)' : 'rgba(255,255,255,0.2)'}; background: rgba(30, 41, 59, 0.4); margin-bottom: 12px; padding: 18px; border-radius: 15px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                                        <div class="day" style="font-weight: 800; color: ${new Date(s.date) >= new Date(todayStr) ? 'var(--primary)' : 'var(--text-gray)'}; font-size: 1rem;">${s.date}</div>
+                                        <span style="font-size: 0.75rem; background: ${new Date(s.date) >= new Date(todayStr) ? 'rgba(0,210,255,0.1)' : 'rgba(255,255,255,0.05)'}; color: ${new Date(s.date) >= new Date(todayStr) ? 'var(--primary)' : '#666'}; padding:3px 8px; border-radius:10px;">
+                                            ${new Date(s.date) < new Date(todayStr) ? '종료됨' : '예정'}
+                                        </span>
+                                    </div>
+                                    <div class="info">
+                                        <strong style="font-size: 1.1rem; color: var(--text-white); display:block; margin-bottom: 8px;">${s.title}</strong>
+                                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                            <span style="color:var(--text-gray); font-size: 0.85rem;"><i class="fas fa-clock" style="margin-right:5px; color:var(--primary);"></i> ${s.time}</span>
+                                            <span style="color:var(--text-gray); font-size: 0.85rem;"><i class="fas fa-map-marker-alt" style="margin-right:5px; color:var(--primary);"></i> ${s.location}</span>
+                                        </div>
+                                        ${s.description ? `<p style="margin-top: 12px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px; color: #cbd5e1; font-size: 0.85rem; line-height: 1.5;">${s.description}</p>` : ''}
+                                    </div>
+                                </div>
+                            `).join('') : '<p style="color:var(--text-gray); text-align:center; padding: 40px;">훈련 일정이 아직 없습니다.</p>'}
+                        </div>
+                    ` : `
+                        <div class="fade-in" style="background: rgba(20, 25, 35, 0.6); border: 1px solid var(--border-glass); border-radius: 20px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                            <h4 style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; color: var(--text-white);">
+                                <span style="font-size: 1.2rem; font-weight: 800;">${calendarYear}년 ${calendarMonth + 1}월</span>
+                                <div style="display: flex; gap: 15px;">
+                                    <i class="fas fa-chevron-left" style="color: var(--text-gray); cursor: pointer;"></i>
+                                    <i class="fas fa-chevron-right" style="color: var(--text-gray); cursor: pointer;"></i>
+                                </div>
+                            </h4>
+                            <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center; margin-bottom: 12px; font-size: 0.8rem; font-weight: 700; color: var(--text-gray);">
+                                <div style="color: #ff3b30;">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div style="color: var(--primary);">토</div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px;">
+                                ${Array(firstDay).fill('<div style="aspect-ratio: 1;"></div>').join('')}
+                                ${calendarDays.join('')}
+                            </div>
+                        </div>
+
+                        <div class="fade-in" style="margin-top: 25px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <h5 style="color: var(--text-white); font-size: 1.1rem; font-weight: 700;">
+                                    <span style="color: var(--primary);">${selectedDateStr.split('-')[2]}일</span>의 일정
+                                </h5>
+                                <span style="font-size: 0.8rem; color: var(--text-gray);">${filteredSchedules.length}건 검색됨</span>
+                            </div>
+                            
+                            ${filteredSchedules.length > 0 ? filteredSchedules.map(s => `
+                                <div class="card" style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9)); border: 1px solid rgba(0,210,255,0.2); padding: 18px; border-radius: 15px; margin-bottom: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.2);">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                        <span style="font-size: 0.75rem; color: var(--primary); font-weight: 700; background: rgba(0,210,255,0.1); padding: 3px 8px; border-radius: 8px;">${s.time}</span>
+                                        <span style="font-size: 0.75rem; color: var(--text-gray);"><i class="fas fa-map-marker-alt" style="margin-right: 4px;"></i>${s.location}</span>
+                                    </div>
+                                    <h4 style="font-size: 1.1rem; color: var(--text-white); margin-bottom: 8px;">${s.title}</h4>
+                                    ${s.description ? `<p style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.4; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px; margin-top: 5px;">${s.description}</p>` : ''}
+                                </div>
+                            `).join('') : `
+                                <div style="text-align: center; padding: 40px 20px; background: rgba(255,255,255,0.02); border-radius: 15px; border: 1px dashed rgba(255,255,255,0.1);">
+                                    <i class="fas fa-calendar-times" style="font-size: 2rem; color: rgba(255,255,255,0.1); margin-bottom: 10px;"></i>
+                                    <p style="color: var(--text-gray); font-size: 0.9rem;">해당 날짜에 예정된 일정이 없습니다.</p>
+                                </div>
+                            `}
+                        </div>
+                    `}
+                `;
+                break;
+            case 'profile':
+                // 미니 블로그 형태 프로필
+                html = `
+                    <div class="profile-header fade-in" style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), transparent); padding: 25px 20px; border-radius: 20px; margin-bottom: 20px; position: relative;">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div style="display: flex; flex-direction: column; align-items: center; width: 40%;">
+                                <div style="position: relative; width: 75px; height: 75px; margin-bottom: 10px;">
+                                    <div class="user-avatar" style="width: 100%; height: 100%; border-color: var(--primary); border-width: 3px; font-size: 2.5rem; color: var(--text-white); display:flex; justify-content:center; align-items:center; overflow:hidden; background-color: var(--glass-bg);">
+                                        ${state.currentUser && state.currentUser.avatar ? `<img src="${state.currentUser.avatar}" style="width: 100%; height: 100%; object-fit: cover;">` : `<i class="fas fa-user-astronaut"></i>`}
+                                    </div>
+                                    <input type="file" id="profile-upload-input" accept="image/*" style="display: none;" onchange="window.handleProfileUpload(event)">
+                                    <button onclick="document.getElementById('profile-upload-input').click()" style="position: absolute; bottom: -5px; right: -5px; width: 28px; height: 28px; border-radius: 50%; background: var(--primary); border:none; box-shadow: 0 4px 10px rgba(0,0,0,0.5); cursor:pointer;"><i class="fas fa-camera" style="color:#000; font-size:0.8rem;"></i></button>
+                                </div>
+                                <h3 style="font-size: 1.25rem; letter-spacing: -1px; margin-bottom: 2px; color: var(--text-white);">${state.currentUser ? state.currentUser.name : '회원님'}</h3>
+                                <p style="color: var(--secondary); font-size: 0.75rem; font-weight: 700;">G-STAR 멤버십</p>
+                            </div>
+                            
+                            <div style="width: 60%; height: 190px; position: relative; display: flex; justify-content: center; align-items: center; margin-left: 5px;">
+                                <canvas id="myStatChart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <div class="user-stats" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); display:flex; justify-content: space-around;">
+                            <div class="stat"><strong style="font-size:1.3rem; color: var(--text-white);">12</strong><span style="font-size:0.75rem;">참여수업</span></div>
+                            <div class="stat"><strong style="font-size:1.3rem; color: var(--text-white);">24</strong><span style="font-size:0.75rem;">연결 팀원</span></div>
+                        </div>
+                    </div>
+
+                    <div class="active-class-section fade-in" style="margin-bottom: 20px; background: rgba(20, 30, 48, 0.6); border: 1px solid rgba(0, 210, 255, 0.2); border-left: 4px solid var(--primary); border-radius: 15px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                            <div>
+                                <span style="font-size: 0.75rem; color: var(--primary); font-weight: 700; background: rgba(0,210,255,0.1); padding: 3px 8px; border-radius: 10px; margin-bottom: 5px; display: inline-block;">현재 진행중</span>
+                                <h4 style="font-size: 1.05rem; color: var(--text-white); margin: 0;">A반 드리블 스킬 집중 훈련</h4>
+                            </div>
+                            <span style="font-size: 0.8rem; color: var(--text-gray);">19:00 - 21:00</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: var(--text-gray); margin-bottom: 15px;"><i class="fas fa-map-marker-alt" style="margin-right: 5px; color: var(--accent-gold);"></i>제 1 풋살 파크 구장</p>
+                        
+                        <div style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 15px;">
+                            <span style="font-size: 0.8rem; color: var(--text-gray); margin-bottom: 8px; display: block;">함께 참여 중인 팀원 (4명)</span>
+                            <div style="display: flex; align-items: center;">
+                                <div style="width: 32px; height: 32px; border-radius: 50%; overflow: hidden; border: 2px solid rgba(20, 30, 48, 1); margin-left: 0; z-index: 5; background: var(--glass-bg); display: flex; justify-content: center; align-items: center; color: var(--primary); font-size: 0.9rem;">
+                                    <i class="fas fa-user-ninja"></i>
+                                </div>
+                                <div style="width: 32px; height: 32px; border-radius: 50%; overflow: hidden; border: 2px solid rgba(20, 30, 48, 1); margin-left: -10px; z-index: 4; background: var(--glass-bg); display: flex; justify-content: center; align-items: center; color: var(--primary); font-size: 0.9rem;">
+                                    <i class="fas fa-user-secret"></i>
+                                </div>
+                                <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--primary); color: #000; border: 2px solid rgba(20, 30, 48, 1); display: flex; justify-content: center; align-items: center; font-size: 0.75rem; font-weight: 700; z-index: 3; margin-left: -10px;">
+                                    +2
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 획득 뱃지 섹션 -->
+                    <div class="badges-section fade-in" style="margin-bottom: 20px; background: rgba(20, 30, 48, 0.6); border: 1px solid rgba(255, 215, 0, 0.2); border-radius: 15px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h4 style="font-size: 0.95rem; color: var(--text-white); margin: 0;"><i class="fas fa-medal" style="color: var(--accent-gold); margin-right: 6px;"></i>획득 뱃지 콜렉션</h4>
+                            <span style="font-size: 0.75rem; color: var(--primary); font-weight: 700;">총 3개</span>
+                        </div>
+                        <div style="display: flex; gap: 15px; overflow-x: auto; padding-bottom: 5px;">
+                            <div style="min-width: 70px; text-align: center;">
+                                <div style="width: 55px; height: 55px; border-radius: 50%; background: linear-gradient(135deg, #ffd700, #b8860b); margin: 0 auto 8px; display: flex; justify-content: center; align-items: center; font-size: 1.6rem; color: #000; box-shadow: 0 5px 15px rgba(255, 215, 0, 0.3);">
+                                    <i class="fas fa-fire"></i>
+                                </div>
+                                <span style="font-size: 0.75rem; color: var(--text-white); font-weight: 600;">개근왕</span>
+                            </div>
+                            <div style="min-width: 70px; text-align: center;">
+                                <div style="width: 55px; height: 55px; border-radius: 50%; background: linear-gradient(135deg, #00d2ff, #3a7bd5); margin: 0 auto 8px; display: flex; justify-content: center; align-items: center; font-size: 1.6rem; color: #fff; box-shadow: 0 5px 15px rgba(0, 210, 255, 0.3);">
+                                    <i class="fas fa-tachometer-alt"></i>
+                                </div>
+                                <span style="font-size: 0.75rem; color: var(--text-white); font-weight: 600;">스프린터</span>
+                            </div>
+                            <div style="min-width: 70px; text-align: center;">
+                                <div style="width: 55px; height: 55px; border-radius: 50%; background: linear-gradient(135deg, #c0c0c0, #808080); margin: 0 auto 8px; display: flex; justify-content: center; align-items: center; font-size: 1.6rem; color: #fff;">
+                                    <i class="fas fa-shoe-prints"></i>
+                                </div>
+                                <span style="font-size: 0.75rem; color: var(--text-white); font-weight: 600;">패스 마스터</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="menu-list fade-in" style="margin-top: 20px;">
+                        <div class="menu-item" onclick="showTrainingLog()"><i class="fas fa-history" style="color: var(--primary);"></i> 내 훈련 일지 보기 <i class="fas fa-chevron-right"></i></div>
+                        <div class="menu-item" onclick="showFriends('following')"><i class="fas fa-users" style="color: var(--text-white);"></i> 연결된 친구 관리 <i class="fas fa-chevron-right"></i></div>
+                        <div class="menu-item" onclick="logout()"><i class="fas fa-sign-out-alt" style="color: #ff3b30;"></i> 로그아웃 <i class="fas fa-chevron-right"></i></div>
+                    </div>
+                    
+                    <h4 class="section-title" style="margin-top: 30px; margin-bottom: 15px;">나의 소식 & 갤러리</h4>
+                    
+                    <!-- 업로드 입력 폼 -->
+                    <div style="background: rgba(20, 25, 35, 0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 15px; margin-bottom: 25px;">
+                        <textarea id="post-input" placeholder="새로운 훈련 소식이나 사진을 기록하세요..." style="width: 100%; background: transparent; border: none; color: var(--text-white); font-family: 'Pretendard', sans-serif; resize: none; min-height: 50px; outline: none; font-size: 0.95rem;"></textarea>
+                        
+                        <!-- 선택된 이미지 미리보기 (기본 숨김) -->
+                        <div id="post-image-preview" style="display: none; position: relative; width: 60px; height: 60px; margin-top: 10px; border-radius: 8px; overflow: hidden;">
+                            <img id="preview-img" src="" style="width: 100%; height: 100%; object-fit: cover;">
+                            <button onclick="clearPostImage()" style="position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 0.6rem; cursor: pointer;"><i class="fas fa-times"></i></button>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; margin-top: 10px;">
+                            <input type="file" id="post-file-input" accept="image/*,video/*" style="display: none;" onchange="window.handlePostFileSelect(event)">
+                            <button onclick="window.selectPostImage()" style="background:none; border:none; color: var(--text-gray); font-size: 1.2rem; cursor: pointer; transition: color 0.2s;"><i class="fas fa-camera"></i></button>
+                            <button onclick="window.submitPost()" style="background: var(--text-white); color: var(--bg-dark); border: none; padding: 6px 18px; font-size: 0.85rem; font-weight: 700; border-radius: 20px; cursor: pointer;">게시하기</button>
+                        </div>
+                    </div>
+
+                    <!-- 내 게시물 갤러리 렌더링 -->
+                    <div class="social-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+                        ${state.posts.filter(p => p.authorId === (state.currentUser ? state.currentUser.id : '')).reverse().map(post => `
+                            <div class="social-item" style="aspect-ratio: 1; border-radius: 15px; overflow:hidden; position:relative; cursor:pointer;" onclick="alert('게시물 내용:\\n${post.content}')">
+                                <img src="${post.media}" alt="Post image" style="width:100%; height:100%; object-fit:cover;">
+                                ${post.isVideo ? '<i class="fas fa-play" style="position:absolute; top:10px; right:10px; color:white; text-shadow: 0 0 5px rgba(0,0,0,0.8);"></i>' : ''}
+                                ${post.content ? `<div style="position:absolute; bottom:0; padding:10px; width:100%; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);"><p style="color:white; font-size:0.7rem; margin:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${post.content}</p></div>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                break;
+            case 'column':
+                html = `
+                    <div class="fade-in" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px;">
+                        <div>
+                            <h3 style="font-size: 1.4rem; color: var(--text-white); margin-bottom: 5px;">G-STAR <span style="color: var(--primary);">매거진</span></h3>
+                            <p style="font-size: 0.8rem; color: var(--text-gray);">축구 스킬업을 위한 프리미엄 인사이트 & 데일리 뉴스</p>
+                        </div>
+                        <i class="fas fa-search" style="color: var(--primary); font-size: 1.2rem; cursor: pointer;"></i>
+                    </div>
+                `;
+
+                state.columns.forEach(col => {
+                    const highlightBorder = col.isHot ? 'var(--accent-gold)' : 'var(--primary)';
+                    const btnStyle = col.isHot ? 'background: var(--primary); color: #000; border: none;' : 'background: transparent; border: 1px solid var(--text-white); color: var(--text-white);';
+
+                    html += `
+                        <div class="card fade-in" style="background: rgba(20, 25, 35, 0.7); border: 1px solid var(--border-glass); border-radius: 15px; overflow: hidden; margin-bottom: 25px; box-shadow: 0 10px 20px rgba(0,0,0,0.3);">
+                            <div style="position: relative; width: 100%; height: 180px;">
+                                <img src="${col.thumb}" style="width: 100%; height: 100%; object-fit: cover;" alt="article">
+                                <div style="position: absolute; top: 15px; left: 15px; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); border: 1px solid ${highlightBorder}; color: ${highlightBorder}; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;">
+                                    <i class="fas ${col.labelIcon}" style="margin-right: 4px;"></i>${col.label}
+                                </div>
+                                <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 50%; background: linear-gradient(to top, rgba(15,23,42,1), transparent);"></div>
+                            </div>
+                            <div style="padding: 20px;">
+                                <h4 style="font-size: 1.2rem; color: var(--text-white); margin-bottom: 10px; line-height: 1.4;">${col.title}</h4>
+                                <p style="color: var(--text-gray); font-size: 0.9rem; line-height: 1.6; margin-bottom: 15px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis;">${col.desc}</p>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-size: 0.75rem; color: #666;"><i class="far fa-clock" style="margin-right: 4px;"></i>${col.time}</span>
+                                    <button onclick="alert('데이터 연동 진행중입니다.')" style="${btnStyle} padding: 8px 18px; border-radius: 20px; font-size: 0.85rem; font-weight: 700; cursor: pointer; ${col.isHot ? 'box-shadow: 0 4px 10px rgba(0,210,255,0.3);' : ''}">칼럼 읽기</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                break;
+            case 'social':
+                // 외부 SNS 크롤링 목업 데이터 (최신 트렌드 해시태그 기반)
+                const externalSnsMock = [
+                    { id: 901, authorName: '축구사랑녀_99', authorAvatar: 'fa-user', content: '#지스타 최고의 훈련 캠프! 오늘 하루도 불태웠다 🔥', media: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=400', isExternal: true },
+                    { id: 902, authorName: '골잡이_KIM', authorAvatar: 'fa-user-ninja', content: '이번 #축구캠프 정말 도움 많이 되네요. 드리블 스킬업! ⚽ #지스타트레이닝캠프', media: 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=400', isExternal: true },
+                    { id: 903, authorName: 'SoccerHolic', authorAvatar: 'fa-user-secret', content: '친구들과 함께한 #지스타트레이닝캠프 주말 매치 하이라이트 영상입니다. 놀라운 패스워시!', media: 'https://images.unsplash.com/photo-1511886929837-354d827aae26?auto=format&fit=crop&w=400', isVideo: true, isExternal: true }
+                ];
+
+                // 앱 내 유저들의 포스트 변환 (작성자 이름과 아바타 매칭)
+                const internalPosts = state.posts.map(p => {
+                    let u = state.users.find(user => String(user.id) === String(p.authorId));
+                    if (!u && state.currentUser && String(state.currentUser.id) === String(p.authorId)) {
+                        u = state.currentUser;
+                    }
+                    return {
+                        id: p.id,
+                        authorName: u && u.name ? u.name : 'G-STAR 멤버',
+                        authorAvatar: u && u.avatar && u.avatar.startsWith('data:') ? null : 'fa-user-astronaut',
+                        authorAvatarImg: u && u.avatar && u.avatar.startsWith('data:') ? u.avatar : null,
+                        content: p.content,
+                        media: p.media,
+                        isVideo: p.isVideo,
+                        isExternal: false
+                    };
+                });
+
+                // 모든 포스트 합치기 및 정렬 (최신 번호순)
+                const allFeed = [...internalPosts, ...externalSnsMock].sort((a, b) => b.id - a.id);
+
+                html = `
+                    <div class="social-header fade-in" style="display:flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
+                        <h3 style="font-size: 1.4rem; color: var(--text-white);">트렌딩 소셜 피드</h3>
+                        <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px;">
+                            <span style="background: rgba(0,210,255,0.15); color: var(--primary); padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; white-space: nowrap; border: 1px solid rgba(0,210,255,0.3);">#지스타</span>
+                            <span style="background: rgba(255,255,255,0.1); color: var(--text-gray); padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; white-space: nowrap;">#지스타트레이닝캠프</span>
+                            <span style="background: rgba(255,255,255,0.1); color: var(--text-gray); padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; white-space: nowrap;">#축구캠프</span>
+                        </div>
+                    </div>
+                    <div class="fade-in" style="display: flex; flex-direction: column; gap: 20px; padding-bottom: 30px;">
+                        ${allFeed.map(post => `
+                            <div class="card" style="background: rgba(20, 25, 35, 0.7); border: 1px solid var(--border-glass); border-radius: 15px; overflow: hidden; box-shadow: 0 10px 20px rgba(0,0,0,0.3);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <div style="width: 35px; height: 35px; border-radius: 50%; background: var(--bg-dark); display: flex; justify-content: center; align-items: center; color: var(--primary); font-size: 1rem; overflow: hidden; border: 1px solid var(--border-glass);">
+                                            ${post.authorAvatarImg ? `<img src="${post.authorAvatarImg}" style="width:100%; height:100%; object-fit:cover;">` : `<i class="fas ${post.authorAvatar || 'fa-user'}"></i>`}
+                                        </div>
+                                        <div>
+                                            <span style="font-weight: 700; font-size: 0.95rem; color: var(--text-white);">${post.authorName}</span>
+                                            ${post.isExternal ? '<span style="font-size: 0.65rem; color: #ff3b30; margin-left: 5px; background: rgba(255,59,48,0.1); padding: 2px 6px; border-radius: 10px; border: 1px solid rgba(255,59,48,0.3);">Instagram</span>' : '<span style="font-size: 0.65rem; color: var(--primary); margin-left: 5px; background: rgba(0,210,255,0.1); padding: 2px 6px; border-radius: 10px; border: 1px solid rgba(0,210,255,0.3);">G-STAR 멤버</span>'}
+                                        </div>
+                                    </div>
+                                    <i class="fas fa-ellipsis-h" style="color: var(--text-gray);"></i>
+                                </div>
+                                <div style="position: relative; width: 100%; aspect-ratio: 4/3; background: #000;">
+                                    <img src="${post.media}" style="width: 100%; height: 100%; object-fit: cover;">
+                                    ${post.isVideo ? '<div style="position: absolute; top:50%; left:50%; transform: translate(-50%, -50%); width: 50px; height: 50px; background: rgba(0,0,0,0.6); border-radius: 50%; display: flex; justify-content:center; align-items:center;"><i class="fas fa-play" style="color: white; font-size: 1.5rem; margin-left: 3px;"></i></div>' : ''}
+                                </div>
+                                <div style="padding: 15px;">
+                                    <div style="display: flex; gap: 15px; margin-bottom: 10px; font-size: 1.4rem; color: var(--text-white);">
+                                        <i class="far fa-heart" style="cursor: pointer; transition: 0.2s;" onclick="this.classList.toggle('fas'); this.classList.toggle('far'); this.style.color = this.style.color === 'rgb(255, 59, 48)' ? 'var(--text-white)' : '#ff3b30';"></i>
+                                        <i class="far fa-comment"></i>
+                                        <i class="far fa-paper-plane"></i>
+                                    </div>
+                                    <p style="font-size: 0.95rem; line-height: 1.5; color: var(--text-gray); margin-bottom: 5px;">
+                                        <strong style="color: var(--text-white);">${post.authorName}</strong> ${post.content}
+                                    </p>
+                                    <span style="font-size: 0.75rem; color: #666;">방금 전</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                break;
+        }
+        if (tabContent) {
+            tabContent.innerHTML = html;
+            tabContent.scrollTop = 0;
+
+            if (tabId === 'profile') {
+                const myScores = [31, 24, 29, 26, 32];
+                setTimeout(() => {
+                    if (window.drawRadarChart) {
+                        window.drawRadarChart('myStatChart', myScores);
+                    }
+                }, 100);
+            }
+        }
+    }
+
+    // === 서브 뷰: 내 훈련 일지 ===
+    window.showTrainingLog = () => {
+        const btnBack = `<button onclick="renderTab('profile')" style="background:none;border:none;color:white;font-size:1.2rem;margin-right:15px;cursor:pointer;"><i class="fas fa-arrow-left"></i></button>`;
+        if (viewTitle) viewTitle.innerHTML = btnBack + '내 훈련 일지';
+
+        const logs = [
+            { date: '2024.11.20', title: 'A반 드리블 스킬 마스터 훈련', content: '퍼스트 터치 후 수비수 타이밍 뺏기, 좁은 공간에서의 볼 소유 및 연계 플레이', feedback: '퍼스트 터치가 눈에 띄게 좋아졌습니다. 다음 훈련엔 공간 패스 타이밍을 중점적으로 보겠습니다.', coach: '김명훈 코치' },
+            { date: '2024.11.16', title: '포지셔닝 및 공간 창출', content: '공격 지역에서의 오프더볼 움직임, 하프 스페이스 침투 및 크로스 타겟팅', feedback: '수비 전환 시 내려오는 속도가 조금 늦습니다. 체력 훈련을 병행하면 완벽할 것 같습니다.', coach: '이동국 코치' },
+            { date: '2024.11.13', title: '슈팅 세션', content: '페널티 박스 외곽 중거리 슈팅, 원터치 슈팅 및 감아차기 영점 조절', feedback: '발등에 얹히는 임팩트가 훌륭합니다. 실전에서도 자신감 있게 과감한 슈팅을 시도하세요.', coach: '김명훈 코치' }
+        ];
+
+        let html = `
+            <div class="fade-in" style="padding-top: 10px; padding-bottom: 20px;">
+                <div style="background: linear-gradient(135deg, rgba(20, 30, 48, 0.8), transparent); padding: 20px; border-radius: 15px; margin-bottom: 25px; border: 1px solid rgba(0, 210, 255, 0.2);">
+                    <h3 style="color: var(--text-white); margin-bottom: 10px; font-size: 1.1rem;"><i class="fas fa-chart-line" style="color: var(--primary); margin-right: 8px;"></i>훈련 기록 요약</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <p style="color: var(--text-gray); font-size: 0.85rem; margin-bottom: 5px;">조회 기간</p>
+                            <p style="color: var(--text-white); font-weight: 700; font-size: 0.95rem;">2024.11.01 ~ 2024.11.30</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <p style="color: var(--text-gray); font-size: 0.85rem; margin-bottom: 5px;">참여 횟수</p>
+                            <p style="color: var(--primary); font-weight: 800; font-size: 1.1rem;">총 ${logs.length}회</p>
+                        </div>
+                    </div>
+                </div>
+
+                ${logs.map(log => `
+                    <div class="card" style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.8)); border: 1px solid rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.2);">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                            <div>
+                                <span style="background: rgba(0,210,255,0.1); color: var(--primary); padding: 4px 10px; border-radius: 15px; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.5px;">${log.date}</span>
+                                <h4 style="font-size: 1.1rem; margin-top: 10px; color: var(--text-white);">${log.title}</h4>
+                            </div>
+                            <span style="background: rgba(255,215,0,0.1); color: var(--accent-gold); padding: 4px 10px; border-radius: 15px; font-size: 0.75rem; font-weight: 600; border: 1px solid rgba(255,215,0,0.3);"><i class="fas fa-user-tie" style="margin-right: 5px;"></i>${log.coach}</span>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <h5 style="color: var(--text-gray); font-size: 0.8rem; margin-bottom: 5px;"><i class="fas fa-clipboard-list" style="margin-right:5px;"></i>훈련 내용</h5>
+                            <p style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.5; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px;">${log.content}</p>
+                        </div>
+
+                        <div>
+                            <h5 style="color: var(--accent-gold); font-size: 0.8rem; margin-bottom: 5px;"><i class="fas fa-comment-dots" style="margin-right:5px;"></i>코치 코멘트</h5>
+                            <div style="background: rgba(255,215,0,0.05); padding: 15px; border-radius: 8px; border-left: 3px solid var(--accent-gold);">
+                                <p style="font-size: 0.9rem; color: var(--text-white); line-height: 1.5; margin: 0;">"${log.feedback}"</p>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+        if (tabContent) {
+            tabContent.innerHTML = html;
+            tabContent.scrollTop = 0;
+        }
+    };
+
+    // === 서브 뷰: 친구 관리 ===
+    window.showFriends = (tab = 'following') => {
+        const btnBack = `<button onclick="renderTab('profile')" style="background:none;border:none;color:white;font-size:1.2rem;margin-right:15px;cursor:pointer;"><i class="fas fa-arrow-left"></i></button>`;
+        if (viewTitle) viewTitle.innerHTML = btnBack + '친구 관리';
+
+        // 목업 데이터
+        const following = [
+            { id: '1', name: '김태환', avatar: 'fa-user-ninja', role: '스트라이커', currentClass: 'A반 전술 훈련' },
+            { id: '2', name: '이청용', avatar: 'fa-user-secret', role: '미드필더', currentClass: 'B반 피지컬 트레이닝' }
+        ];
+
+        const followers = [
+            { id: '3', name: '박지성', avatar: 'fa-user-tie', role: '수비수', currentClass: 'C반 기본기 훈련' },
+            { id: '1', name: '김태환', avatar: 'fa-user-ninja', role: '스트라이커', currentClass: 'A반 전술 훈련' }
+        ];
+
+        const list = tab === 'following' ? following : followers;
+
+        let html = `
+            <div class="fade-in" style="padding-top: 10px; padding-bottom: 20px;">
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <button class="btn-check" onclick="showFriends('following')" style="${tab === 'following' ? 'background: var(--primary); color: #000;' : ''} flex: 1;">내가 팔로우 (${following.length})</button>
+                    <button class="btn-check" onclick="showFriends('followers')" style="${tab === 'followers' ? 'background: var(--primary); color: #000;' : ''} flex: 1;">나를 팔로우 (${followers.length})</button>
+                </div>
+                
+                <div class="user-list">
+                    ${list.map(friend => `
+                        <div class="card" onclick="showFriendProfile('${friend.id}')" style="background: linear-gradient(to right, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9)); border: 1px solid var(--border-glass); padding: 15px; border-radius: 15px; margin-bottom: 15px; cursor: pointer; display: flex; align-items: center; gap: 15px; transition: 0.3s;">
+                            <div style="width: 50px; height: 50px; border-radius: 50%; background: var(--glass-bg); display: flex; justify-content: center; align-items: center; font-size: 1.5rem; color: var(--primary); border: 2px solid var(--border-glass);">
+                                <i class="fas ${friend.avatar}"></i>
+                            </div>
+                            <div style="flex: 1;">
+                                <h4 style="color: var(--text-white); margin-bottom: 5px;">${friend.name}</h4>
+                                <p style="font-size: 0.8rem; color: var(--text-gray);">${friend.role} | ${friend.currentClass}</p>
+                            </div>
+                            <i class="fas fa-chevron-right" style="color: var(--text-gray);"></i>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+
+        if (tabContent) {
+            tabContent.innerHTML = html;
+            tabContent.scrollTop = 0;
+        }
+    };
+
+    // === 서브 뷰: 친구 상세 프로필 ===
+    window.showFriendProfile = (friendId) => {
+        // 임시 데이터
+        const friend = { id: friendId, name: friendId === '1' ? '김태환' : (friendId === '2' ? '이청용' : '박지성'), avatar: 'fa-user-ninja' };
+
+        const btnBack = `<button onclick="showFriends('following')" style="background:none;border:none;color:white;font-size:1.2rem;margin-right:15px;cursor:pointer;"><i class="fas fa-arrow-left"></i></button>`;
+        if (viewTitle) viewTitle.innerHTML = btnBack + `${friend.name}님의 프로필`;
+
+        const friendLogs = [
+            { date: '2024.11.19', title: '패스 마스터리 훈련' },
+            { date: '2024.11.15', title: '실전 모의 경기' }
+        ];
+
+        let html = `
+            <div class="fade-in" style="padding-top: 10px; padding-bottom: 20px;">
+                <div class="profile-header" style="background: linear-gradient(135deg, rgba(20, 30, 48, 0.8), transparent); padding: 25px 20px; border-radius: 20px; margin-bottom: 20px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div style="display: flex; flex-direction: column; align-items: center; width: 40%;">
+                            <div style="width: 75px; height: 75px; border-radius: 50%; background: var(--glass-bg); margin-bottom: 10px; display: flex; justify-content: center; align-items: center; font-size: 2.5rem; color: var(--primary); border: 2px solid var(--primary);">
+                                <i class="fas ${friend.avatar}"></i>
+                            </div>
+                            <h3 style="font-size: 1.2rem; margin-bottom: 2px;">${friend.name}</h3>
+                            <p style="color: var(--accent-gold); font-size: 0.75rem; font-weight: 600;">우수 훈련병</p>
+                        </div>
+                        <div style="width: 55%; height: 140px; position: relative;">
+                            <canvas id="friendStatChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px; display: flex; justify-content: center; gap: 10px;">
+                        ${state.following.includes(friend.id)
+                ? `<button class="btn-check" onclick="toggleFollow('${friend.id}', '${friend.name}')" style="background: var(--primary); color: #000; padding: 8px 20px;">언팔로우</button>`
+                : `<button class="btn-check" onclick="toggleFollow('${friend.id}', '${friend.name}')" style="background: #2a334a; color: var(--text-white); padding: 8px 20px; border: 1px solid var(--border-glass);">팔로우</button>`
+            }
+                        <button class="btn-check" onclick="openMessageModal('${friend.id}', '${friend.name}')" style="background: transparent; border: 1px solid var(--primary); color: var(--primary); padding: 8px 20px;">쪽지 보내기</button>
+                    </div>
+                </div>
+
+                <h4 class="section-title" style="margin-bottom: 15px;">획득한 뱃지</h4>
+                <div style="display: flex; gap: 15px; margin-bottom: 25px; overflow-x: auto; padding-bottom: 10px;">
+                    <div style="min-width: 80px; text-align: center;">
+                        <div style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #ffd700, #b8860b); margin: 0 auto 10px; display: flex; justify-content: center; align-items: center; font-size: 1.8rem; color: #000; box-shadow: 0 5px 15px rgba(255, 215, 0, 0.3);">
+                            <i class="fas fa-fire"></i>
+                        </div>
+                        <span style="font-size: 0.75rem; color: var(--text-gray);">개근왕</span>
+                    </div>
+                    <div style="min-width: 80px; text-align: center;">
+                        <div style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #00d2ff, #3a7bd5); margin: 0 auto 10px; display: flex; justify-content: center; align-items: center; font-size: 1.8rem; color: #fff; box-shadow: 0 5px 15px rgba(0, 210, 255, 0.3);">
+                            <i class="fas fa-tachometer-alt"></i>
+                        </div>
+                        <span style="font-size: 0.75rem; color: var(--text-gray);">스프린터</span>
+                    </div>
+                    <div style="min-width: 80px; text-align: center;">
+                        <div style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #c0c0c0, #808080); margin: 0 auto 10px; display: flex; justify-content: center; align-items: center; font-size: 1.8rem; color: #fff;">
+                            <i class="fas fa-shoe-prints"></i>
+                        </div>
+                        <span style="font-size: 0.75rem; color: var(--text-gray);">패스 마스터</span>
+                    </div>
+                </div>
+
+                <h4 class="section-title" style="margin-bottom: 15px;">최근 훈련 내역</h4>
+                <div>
+                    ${friendLogs.map(log => `
+                        <div class="card" style="background: var(--glass-bg); padding: 15px 20px; border-radius: 12px; margin-bottom: 12px; border-left: 3px solid var(--accent-gold);">
+                            <div style="color: var(--primary); font-size: 0.8rem; margin-bottom: 5px;">${log.date}</div>
+                            <h5 style="font-size: 1rem; color: var(--text-white);">${log.title}</h5>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <h4 class="section-title" style="margin-top: 30px; margin-bottom: 15px;">${friend.name}님의 소식 & 갤러리</h4>
+                <div class="social-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+                    ${state.posts.filter(p => p.authorId === friend.id).reverse().map(post => `
+                        <div class="social-item" style="aspect-ratio: 1; border-radius: 15px; overflow:hidden; position:relative; cursor:pointer;" onclick="alert('게시물 내용:\\n${post.content}')">
+                            <img src="${post.media}" alt="Post image" style="width:100%; height:100%; object-fit:cover;">
+                            ${post.isVideo ? '<i class="fas fa-play" style="position:absolute; top:10px; right:10px; color:white; text-shadow: 0 0 5px rgba(0,0,0,0.8);"></i>' : ''}
+                            ${post.content ? `<div style="position:absolute; bottom:0; padding:10px; width:100%; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);"><p style="color:white; font-size:0.7rem; margin:0; line-height: 1.2; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">${post.content}</p></div>` : ''}
+                        </div>
+                    `).join('') || `<p style="color: var(--text-gray); font-size: 0.85rem; padding: 20px; text-align: center; width: 200%;">등록된 갤러리 정보가 없습니다.</p>`}
+                </div>
+            </div>
+        `;
+
+        if (tabContent) {
+            tabContent.innerHTML = html;
+            tabContent.scrollTop = 0;
+            // 친구 스탯 (조금 더 좋은 스탯으로 예시 구성)
+            const friendScores = [35, 26, 32, 28, 30];
+            setTimeout(() => window.drawRadarChart('friendStatChart', friendScores), 50);
+        }
+    };
+
+    // === 팔로우 / 언팔로우 토글 로직 ===
+    window.toggleFollow = (friendId, friendName) => {
+        if (!state.currentUser) return alert("로그인이 필요합니다.");
+
+        const idx = state.following.indexOf(friendId);
+        if (idx > -1) {
+            // 이미 팔로우 중 -> 언팔로우 실행
+            if (confirm(`${friendName}님을 언팔로우 하시겠습니까?`)) {
+                state.following.splice(idx, 1);
+                alert(`${friendName}님 언팔로우 완료`);
+            }
+        } else {
+            // 팔로우 실행
+            state.following.push(friendId);
+            alert(`${friendName}님을 팔로우합니다!`);
+
+            // 테스트: 내가 누군가를 팔로우하면, 상대방도 나를 팔로우했다고 알림 주기(목업)
+            // state.notifications.unshift({
+            //    id: Date.now(),
+            //    type: 'follow',
+            //    message: `${friendName}님이 맞팔로우를 시작했습니다.`,
+            //    read: false,
+            //    time: '방금 전'
+            // });
+        }
+
+        window.saveState();
+        // UI 즉시 새로고침
+        window.showFriendProfile(friendId);
+    };
+
+    // === 쪽지 모달 창 및 전송 로직 (메신저 연동 포함) ===
+    window.openMessageModal = (friendId, friendName) => {
+        // 기존 모달 닫기
+        const existing = document.getElementById('message-modal-overlay');
+        if (existing) existing.remove();
+
+        // 모달 오버레이 생성
+        const overlay = document.createElement('div');
+        overlay.id = 'message-modal-overlay';
+        overlay.style = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 2000; display: flex; justify-content: center; align-items: center; padding: 20px;";
+
+        // 모달 컨텐츠
+        const modalHtml = `
+            <div class="fade-in" style="background: rgba(20, 30, 48, 0.95); border: 1px solid var(--border-glass); border-radius: 20px; width: 100%; max-width: 360px; padding: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.5);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 style="color: var(--text-white); font-size: 1.2rem; margin: 0;"><i class="fas fa-paper-plane" style="color: var(--primary); margin-right: 8px;"></i>${friendName}님에게 쪽지 보내기</h3>
+                    <i class="fas fa-times" onclick="document.getElementById('message-modal-overlay').remove()" style="color: var(--text-gray); font-size: 1.2rem; cursor: pointer;"></i>
+                </div>
+                <textarea id="message-input-text" placeholder="메시지 내용을 입력하세요..." style="width: 100%; height: 120px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 12px; padding: 15px; color: var(--text-white); font-size: 0.95rem; resize: none; outline: none; margin-bottom: 20px; font-family: 'Pretendard', sans-serif;"></textarea>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="document.getElementById('message-modal-overlay').remove()" class="btn-check" style="flex: 1; background: transparent; border: 1px solid var(--text-gray); color: var(--text-gray); padding: 12px; border-radius: 12px;">취소</button>
+                    <button id="btn-send-message" class="btn-check" style="flex: 1; background: linear-gradient(135deg, var(--secondary), var(--primary)); color: #000; font-weight: bold; border: none; padding: 12px; border-radius: 12px; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);">전송</button>
+                </div>
+            </div>
+        `;
+        overlay.innerHTML = modalHtml;
+        document.body.appendChild(overlay);
+
+        // 텍스트에리어 포커스
+        setTimeout(() => {
+            const textarea = document.getElementById('message-input-text');
+            if (textarea) textarea.focus();
+        }, 100);
+
+        // 전송 버튼 이벤트 바인딩
+        document.getElementById('btn-send-message').addEventListener('click', () => {
+            const inputEl = document.getElementById('message-input-text');
+            const msg = inputEl.value;
+
+            if (msg && msg.trim() !== '') {
+                overlay.remove(); // 모달 닫기
+
+                // === 기존 메시지 전송 로직 재사용 ===
+                const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                // 기존 대화창(chat) 찾기 또는 새로 생성
+                let chat = state.messages.find(m => m.partnerId === friendId);
+                if (!chat) {
+                    chat = { partnerId: friendId, partnerName: friendName, history: [] };
+                    state.messages.unshift(chat);
+                }
+
+                chat.history.push({ id: Date.now(), sender: 'me', text: msg, time: currentTime });
+                window.saveState();
+
+                // 완료 알림 (기본 alert 대신 조금 더 부드러운 토스트 팝업으로 변경 가능하지만 우선 alert 유지)
+                alert(`${friendName}님에게 쪽지를 성공적으로 보냈습니다.`);
+
+                // 상대방의 가상 답장 생성 (3초 뒤)
+                setTimeout(() => {
+                    const replyMsg = `(자동 답장) 알겠습니다, 확인했습니다!`;
+                    chat.history.push({
+                        id: Date.now(),
+                        sender: 'partner',
+                        text: replyMsg,
+                        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    });
+
+                    // 새 쪽지 알림(Notifications) 추가
+                    state.notifications.unshift({
+                        id: Date.now(),
+                        type: 'message',
+                        partnerId: friendId,
+                        message: `${friendName}님으로부터 새 쪽지가 도착했습니다: "${replyMsg}"`,
+                        read: false,
+                        time: '방금 전'
+                    });
+                    window.saveState();
+
+                    // 알림 아이콘(종모양) 흔들림 및 빨간색 표시
+                    const notiIcon = document.querySelector('.fa-bell');
+                    if (notiIcon) {
+                        notiIcon.style.color = '#ff3b30';
+                        notiIcon.classList.add('shake-anim');
+                        setTimeout(() => notiIcon.classList.remove('shake-anim'), 500);
+                    }
+                }, 3000);
+            } else {
+                alert('메시지 내용을 입력해주세요.');
+                inputEl.focus();
+            }
+        });
+    };
+
+
+    // === 전역 함수: 레이더 차트 그리기 (성장성 비교 추가) ===
+    window.drawRadarChart = (canvasId, currentScores, previousScores = [28, 22, 26, 25, 30]) => {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+
+        // Chart.js 인스턴스가 이미 있으면 파괴 후 다시 그리기
+        // 기존 코드에서는 Chart.getChart(canvasId)를 사용했지만,
+        // 전역 변수 myChartInstance를 사용하여 특정 차트 인스턴스를 관리하는 방식으로 변경
+        if (window.myChartInstance && window.myChartInstance.canvas.id === canvasId) {
+            window.myChartInstance.destroy();
+        }
+
+        window.myChartInstance = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: ['스피드', '유연성', '지구력', '근력', '반응속도'],
+                datasets: [
+                    {
+                        label: '최근 (Current)',
+                        data: currentScores,
+                        backgroundColor: 'rgba(0, 210, 255, 0.4)',  // 현재 능력치 (강조)
+                        borderColor: '#00d2ff',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#00d2ff',
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                        zIndex: 2 // 앞쪽에 표시
+                    },
+                    {
+                        label: '이전 (Previous)',
+                        data: previousScores,
+                        backgroundColor: 'rgba(255, 255, 255, 0.05)', // 이전 능력치 (반투명 회색)
+                        borderColor: 'rgba(255, 255, 255, 0.3)',
+                        borderWidth: 1.5,
+                        borderDash: [5, 5], // 점선
+                        pointBackgroundColor: 'transparent',
+                        pointBorderColor: 'rgba(255, 255, 255, 0.5)',
+                        pointRadius: 2,
+                        zIndex: 1 // 뒤쪽에 표시
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom',
+                        labels: {
+                            color: '#cbd5e1',
+                            font: { size: 9, family: 'Pretendard' },
+                            boxWidth: 10,
+                            padding: 5
+                        }
+                    }
+                },
+                scales: {
+                    r: {
+                        angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        pointLabels: {
+                            color: '#cbd5e1',
+                            font: { size: 9, family: 'Pretendard', weight: 'bold' }
+                        },
+                        ticks: {
+                            display: false,
+                            min: 0,
+                            max: 35,
+                            stepSize: 7
+                        }
+                    }
+                }
+            }
+        });
+    };
+
+    // === 프로필 사진 업로드 처리 ===
+    window.handleProfileUpload = (event) => {
+        const file = event.target.files[0];
+        if (!file || !state.currentUser) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const base64Image = e.target.result;
+
+            // 현재 로그인된 유저의 메모리상 아바타 업데이트
+            state.currentUser.avatar = base64Image;
+
+            // 로컬 스토리지 데이터 갱신
+            try {
+                localStorage.setItem('soccer_session', JSON.stringify(state.currentUser));
+
+                // soccer_users 배열 내의 회원 정보도 업데이트 필요
+                const usersJson = localStorage.getItem('soccer_users');
+                if (usersJson) {
+                    const users = JSON.parse(usersJson);
+                    const userIndex = users.findIndex(u => u.id === state.currentUser.id);
+                    if (userIndex !== -1) {
+                        users[userIndex].avatar = base64Image;
+                        localStorage.setItem('soccer_users', JSON.stringify(users));
+                    }
+                }
+            } catch (err) {
+                console.error("아바타 저장 실패:", err);
+                alert("이미지가 너무 큽니다. 다른 이미지를 선택해주세요.");
+                return;
+            }
+
+            // 성공 시 즉시 화면 렌더링
+            renderTab('profile');
+        };
+        reader.readAsDataURL(file);
+    };
+
+    // 업로드할 첨부 이미지/영상 상태
+    let selectedPostMedia = null;
+    let isSelectedVideo = false;
+
+    window.selectPostImage = () => {
+        const fileInput = document.getElementById('post-file-input');
+        if (fileInput) fileInput.click();
+    };
+
+    window.handlePostFileSelect = (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        isSelectedVideo = file.type.startsWith('video/');
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            selectedPostMedia = e.target.result;
+            const previewBlock = document.getElementById('post-image-preview');
+            const previewImg = document.getElementById('preview-img');
+            if (previewBlock && previewImg) {
+                previewImg.src = isSelectedVideo ? 'https://cdn-icons-png.flaticon.com/512/1179/1179069.png' : selectedPostMedia;
+                previewBlock.style.display = 'block';
+            }
+        };
+        reader.readAsDataURL(file);
+    };
+
+    window.clearPostImage = () => {
+        selectedPostMedia = null;
+        isSelectedVideo = false;
+        const previewBlock = document.getElementById('post-image-preview');
+        if (previewBlock) previewBlock.style.display = 'none';
+        const fileInput = document.getElementById('post-file-input');
+        if (fileInput) fileInput.value = '';
+    };
+
+    // === 소셜 갤러리: 포스트 업로드 ===
+    window.submitPost = () => {
+        const input = document.getElementById('post-input');
+        if (!input || (!input.value.trim() && !selectedPostMedia)) {
+            return alert('게시할 내용이나 사진을 선택해주세요.');
+        }
+
+        if (!state.currentUser) {
+            return alert('로그인이 필요합니다.');
+        }
+
+        const today = new Date();
+        const dateStr = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
+
+        const mediaUrl = selectedPostMedia ? selectedPostMedia : 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=400';
+
+        const newPost = {
+            id: Date.now(),
+            authorId: state.currentUser.id,
+            content: input.value.trim(),
+            date: dateStr,
+            media: mediaUrl,
+            isVideo: isSelectedVideo
+        };
+
+        // 로컬 데이터 및 영구 저장소 업데이트
+        state.posts.push(newPost);
+        try {
+            localStorage.setItem('soccer_posts', JSON.stringify(state.posts));
+        } catch (e) {
+            console.error('포스트 저장 실패:', e);
+        }
+
+        alert('게시물이 등록되었습니다!');
+
+        // 폼 초기화
+        input.value = '';
+        clearPostImage();
+
+        renderTab('profile'); // 등록 즉시 화면 갱신
+    };
+
+    window.logout = () => {
+        try {
+            localStorage.removeItem('soccer_session');
+        } catch (e) { }
+        location.reload();
+    };
+
+    // ==========================================
+    // 관리자(Admin) 대시보드 로직
+    // ==========================================
+    window.renderAdminTab = (tabId) => {
+        const contentDiv = document.getElementById('admin-tab-content');
+        if (!contentDiv) return;
+
+        // 버튼 활성화 상태 업데이트
+        document.querySelectorAll('.admin-nav-btn').forEach(btn => {
+            btn.classList.remove('active');
+            btn.style.color = 'var(--text-gray)';
+            btn.style.fontWeight = 'normal';
+            if (btn.dataset.target === tabId) {
+                btn.classList.add('active');
+                btn.style.color = 'var(--primary)';
+                btn.style.fontWeight = 'bold';
+            }
+        });
+
+        let html = '';
+        switch (tabId) {
+            case 'admin-users':
+                html = renderAdminUsersTab();
+                break;
+            case 'admin-notices':
+                html = renderAdminNoticesTab();
+                break;
+            case 'admin-badges':
+                html = renderAdminBadgesTab();
+                break;
+            case 'admin-schedule':
+                html = renderAdminScheduleTab();
+                break;
+        }
+
+        contentDiv.innerHTML = html;
+        contentDiv.scrollTop = 0;
+    };
+
+    const renderAdminUsersTab = () => {
+        const sortedUsers = [...state.users].sort((a, b) => parseInt(b.id) - parseInt(a.id));
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        let warningHtml = '';
+        const expiringUsers = [];
+
+        sortedUsers.forEach(u => {
+            if (u.membershipEnd) {
+                const end = new Date(u.membershipEnd);
+                end.setHours(0, 0, 0, 0);
+                const diffTime = end - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                if (diffDays <= 30 && diffDays >= 0) {
+                    expiringUsers.push({ ...u, dDay: diffDays });
+                } else if (diffDays < 0) {
+                    expiringUsers.push({ ...u, dDay: diffDays }); // 이미 만료
+                }
+            }
+        });
+
+        if (expiringUsers.length > 0) {
+            // D-day 오름차순 정렬
+            expiringUsers.sort((a, b) => a.dDay - b.dDay);
+            warningHtml = `
+                <div class="card" style="background: rgba(40, 15, 15, 0.8); border: 1px solid #ff3b30; padding: 15px; border-radius: 12px; margin-bottom: 20px;">
+                    <h4 style="color: #ff3b30; margin-bottom: 10px; font-size: 1rem;"><i class="fas fa-exclamation-triangle"></i> 멤버십 만료 임박 / 만료 알림</h4>
+                    <div style="max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+                        ${expiringUsers.map(u => {
+                let badgeInfo = '';
+                if (u.dDay < 0) badgeInfo = `<span style="background: #ff3b30; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;">만료됨</span>`;
+                else if (u.dDay === 0) badgeInfo = `<span style="background: #ff9500; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;">D-Day</span>`;
+                else if (u.dDay <= 7) badgeInfo = `<span style="background: #ffcc00; color: black; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;">D-${u.dDay}</span>`;
+                else badgeInfo = `<span style="background: rgba(255,255,255,0.2); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;">D-${u.dDay}</span>`;
+                return `
+                                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 5px;">
+                                    <span style="color: var(--text-white); font-size: 0.85rem;">[${u.id}] ${u.name} <span style="font-size: 0.75rem; color: var(--text-gray);">(${u.membershipEnd})</span></span>
+                                    ${badgeInfo}
+                                </div>
+                            `;
+            }).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        let html = `
+            <div class="fade-in">
+                <h3 style="color: var(--text-white); margin-bottom: 20px; font-size: 1.2rem;">👨‍💻 회원 관리 (CRM)</h3>
+                ${warningHtml}
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+        `;
+
+        sortedUsers.forEach(u => {
+            const roleColor = u.role === 'admin' ? 'red' : (u.role === 'coach' ? 'var(--primary)' : 'var(--accent-gold)');
+            html += `
+                <div class="card" style="background: rgba(20, 25, 35, 0.8); border: 1px solid var(--border-glass); padding: 15px; border-radius: 12px; display: flex; flex-direction: column; gap: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--glass-bg); display: flex; justify-content: center; align-items: center; font-size: 1.2rem; color: ${roleColor};">
+                                <i class="fas ${u.avatar || 'fa-user'}"></i>
+                            </div>
+                            <div>
+                                <h4 style="color: var(--text-white); margin-bottom: 3px;">${u.name} <span style="font-size:0.75rem; color:var(--text-gray);">(${u.id})</span></h4>
+                                <span style="font-size: 0.75rem; color: ${roleColor};">${u.role || 'Basic'}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: var(--text-gray); font-size: 0.8rem;">가입일:</span>
+                            <span style="color: var(--text-white); font-size: 0.8rem;">${u.joinDate || 'YYYY-MM-DD'}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: var(--text-gray); font-size: 0.8rem;">시작일:</span>
+                            <input type="date" value="${u.membershipStart || ''}" onchange="window.adminUpdateMembershipStart('${u.id}', this.value)" style="background: var(--glass-bg); color: var(--text-white); border: 1px solid var(--border-glass); padding: 3px 6px; border-radius: 4px; font-size: 0.8rem; outline: none; flex: 0.6; text-align: right; color-scheme: dark;">
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: var(--text-gray); font-size: 0.8rem;">종료일:</span>
+                            <span style="color: var(--primary); font-size: 0.8rem; font-weight: bold;">${u.membershipEnd || '미지정'}</span>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;">
+                        <span style="color: var(--text-gray); font-size: 0.85rem;">멤버십 등급 수정:</span>
+                        <select onchange="window.adminUpdateMembership('${u.id}', this.value)" style="background: var(--glass-bg); color: var(--text-white); border: 1px solid var(--border-glass); padding: 5px 10px; border-radius: 6px; font-size: 0.85rem; outline: none; flex: 0.7;">
+                            <option value="Basic" style="background: #0f172a; color: #ffffff;" ${u.role === 'Basic' || !u.role ? 'selected' : ''}>Basic (1개월)</option>
+                            <option value="Semi" style="background: #0f172a; color: #ffffff;" ${u.role === 'Semi' ? 'selected' : ''}>Semi (3개월)</option>
+                            <option value="Pro" style="background: #0f172a; color: #ffffff;" ${u.role === 'Pro' || u.role === 'player' ? 'selected' : ''}>Pro (6개월)</option>
+                            <option value="Ultimate" style="background: #0f172a; color: #ffffff;" ${u.role === 'Ultimate' || u.role === 'vip' ? 'selected' : ''}>Ultimate (1년)</option>
+                        </select>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `</div></div>`;
+        return html;
+    };
+
+    const renderAdminNoticesTab = () => {
+        return `
+            <div class="fade-in">
+                <h3 style="color: var(--text-white); margin-bottom: 20px; font-size: 1.2rem;">📢 공지사항 작성</h3>
+                <div class="card" style="background: rgba(20, 25, 35, 0.8); border: 1px solid var(--border-glass); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
+                    <input type="text" id="admin-notice-title" placeholder="제목을 입력하세요" style="width: 100%; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 12px; color: var(--text-white); margin-bottom: 15px; outline: none;">
+                    <textarea id="admin-notice-body" placeholder="공지할 내용을 작성하세요..." style="width: 100%; height: 150px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 12px; color: var(--text-white); resize: none; outline: none; margin-bottom: 15px;"></textarea>
+                    <button onclick="window.adminSubmitNotice()" class="btn-primary" style="width: 100%; padding: 12px;">공지 게시하기</button>
+                </div>
+            </div>
+        `;
+    };
+
+    const renderAdminBadgesTab = () => {
+        return `
+            <div class="fade-in">
+                <h3 style="color: var(--text-white); margin-bottom: 20px; font-size: 1.2rem;">🏅 유저 뱃지 부여</h3>
+                <div class="card" style="background: rgba(20, 25, 35, 0.8); border: 1px solid var(--border-glass); padding: 15px; border-radius: 12px; text-align: center;">
+                    <p style="color: var(--text-gray); font-size: 0.9rem; margin-bottom: 20px;">검색된 유저 데이터를 바탕으로 특수 뱃지를 부여하는 컨트롤 패널입니다.</p>
+                    <i class="fas fa-tools" style="font-size: 3rem; color: var(--border-glass); margin-bottom: 15px;"></i>
+                    <p style="color: var(--secondary);">기능 구조 연결 중 (작업 대기)</p>
+                </div>
+            </div>
+        `;
+    };
+
+    const renderAdminScheduleTab = () => {
+        return `
+            <div class="fade-in">
+                <h3 style="color: var(--text-white); margin-bottom: 20px; font-size: 1.2rem;">📅 클래스/훈련 일정 관리</h3>
+                <div class="card" style="background: rgba(20, 25, 35, 0.8); border: 1px solid var(--border-glass); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
+                    <p style="color: var(--text-gray); font-size: 0.85rem; margin-bottom: 15px;">새로운 훈련 또는 경기 일정을 추가합니다.</p>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <span style="color: var(--text-gray); font-size: 0.8rem; min-width: 40px;">날짜:</span>
+                            <input type="date" id="admin-sched-date" style="flex: 1; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; color: var(--text-white); outline: none; color-scheme: dark;">
+                        </div>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <span style="color: var(--text-gray); font-size: 0.8rem; min-width: 40px;">시간:</span>
+                            <input type="time" id="admin-sched-start" style="flex: 1; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; color: var(--text-white); outline: none; color-scheme: dark;">
+                            <span style="color: var(--text-gray);">~</span>
+                            <input type="time" id="admin-sched-end" style="flex: 1; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; color: var(--text-white); outline: none; color-scheme: dark;">
+                        </div>
+                        <input type="text" id="admin-sched-title" placeholder="일정 제목 (예: A반 드리블 훈련)" style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; color: var(--text-white); outline: none;">
+                        <input type="text" id="admin-sched-loc" placeholder="장소 (예: 1호 메인 구장)" style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; color: var(--text-white); outline: none;">
+                        <textarea id="admin-sched-desc" placeholder="상세 내용 코멘트 (수업 특징, 준비물 등)" style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; color: var(--text-white); outline: none; height: 80px; resize: none;"></textarea>
+                        <button onclick="window.adminSubmitSchedule()" class="btn-primary" style="padding: 12px; margin-top: 5px;">일정 등록하기</button>
+                    </div>
+                </div>
+                
+                <h4 style="color: var(--text-white); margin-bottom: 10px; font-size: 1rem;">현재 등록된 일정</h4>
+                <div style="display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto;">
+                    ${state.schedules.slice().reverse().map(s => `
+                        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); padding: 12px; border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                <span style="color: var(--primary); font-weight: bold; font-size: 0.9rem;">${s.date}</span>
+                                <i class="fas fa-trash-alt" onclick="window.adminDeleteSchedule(${s.id})" style="color: #ff3b30; cursor: pointer; font-size: 0.9rem;"></i>
+                            </div>
+                            <h4 style="color: var(--text-white); font-size: 0.95rem; margin-bottom: 4px;">${s.title}</h4>
+                            <div style="color: var(--text-gray); font-size: 0.8rem; display: flex; flex-direction: column; gap: 4px;">
+                                <span><i class="fas fa-clock"></i> ${s.time}</span>
+                                <span><i class="fas fa-map-marker-alt"></i> ${s.location}</span>
+                                ${s.description ? `<p style="margin-top:5px; padding-top:5px; border-top: 1px solid rgba(255,255,255,0.05); color: #8cf;">${s.description}</p>` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    };
+
+    // 관리자 이벤트 헬퍼
+    window.adminUpdateMembershipStart = (userId, newDate) => {
+        const user = state.users.find(u => u.id === userId);
+        if (user) {
+            user.membershipStart = newDate;
+            recalculateMembershipEnd(user);
+            saveAdminState();
+            renderAdminTab('admin-users'); // 리렌더링
+        }
+    };
+
+    window.adminUpdateMembership = (userId, newLevel) => {
+        const user = state.users.find(u => u.id === userId);
+        if (user) {
+            user.role = newLevel;
+            recalculateMembershipEnd(user);
+            saveAdminState();
+            alert(`${user.name} 님의 멤버십을 [${newLevel}]로 변경했습니다.\n만료일: ${user.membershipEnd}`);
+            renderAdminTab('admin-users'); // 리렌더링
+        }
+    };
+
+    function recalculateMembershipEnd(user) {
+        if (!user.membershipStart || !user.role) return;
+
+        const start = new Date(user.membershipStart);
+        let monthsToAdd = 1; // Basic
+        if (user.role === 'Semi') monthsToAdd = 3;
+        else if (user.role === 'Pro' || user.role === 'player') monthsToAdd = 6;
+        else if (user.role === 'Ultimate' || user.role === 'vip') monthsToAdd = 12;
+
+        start.setMonth(start.getMonth() + monthsToAdd);
+
+        const yr = start.getFullYear();
+        const mo = String(start.getMonth() + 1).padStart(2, '0');
+        const da = String(start.getDate()).padStart(2, '0');
+        user.membershipEnd = `${yr}-${mo}-${da}`;
+    }
+
+    function saveAdminState() {
+        try {
+            localStorage.setItem('soccer_users', JSON.stringify(state.users));
+        } catch (e) { }
+    }
+
+    window.adminSubmitSchedule = () => {
+        const d = document.getElementById('admin-sched-date').value;
+        const start = document.getElementById('admin-sched-start').value;
+        const end = document.getElementById('admin-sched-end').value;
+        const title = document.getElementById('admin-sched-title').value;
+        const loc = document.getElementById('admin-sched-loc').value;
+        const desc = document.getElementById('admin-sched-desc').value;
+
+        if (!d || !start || !end || !title || !loc) return alert('필수 정보(날짜, 시간, 제목, 장소)를 입력해주세요.');
+
+        const newSched = {
+            id: Date.now(),
+            date: d,
+            time: `${start} - ${end}`,
+            title: title,
+            location: loc,
+            description: desc
+        };
+        state.schedules.push(newSched);
+        try { localStorage.setItem('soccer_schedules', JSON.stringify(state.schedules)); } catch (e) { }
+        alert('신규 일정이 등록되었습니다.');
+        renderAdminTab('admin-schedule');
+    };
+
+    window.adminDeleteSchedule = (id) => {
+        if (!confirm('정말 해당 일정을 삭제하시겠습니까?')) return;
+        state.schedules = state.schedules.filter(s => s.id !== id);
+        try { localStorage.setItem('soccer_schedules', JSON.stringify(state.schedules)); } catch (e) { }
+        renderAdminTab('admin-schedule');
+    };
+
+    window.adminSubmitNotice = () => {
+        const t = document.getElementById('admin-notice-title').value;
+        const b = document.getElementById('admin-notice-body').value;
+        if (!t || !b) return alert('제목과 내용을 모두 입력해주세요.');
+
+        // 목업: 최상단 소셜 피드 혹은 공지 배열에 주입
+        state.posts.unshift({
+            id: Date.now(),
+            author: '지트캠프 운영자',
+            avatar: 'fa-shield-alt',
+            type: 'notice',
+            time: '방금 전',
+            content: `[공지] ${t}\n\n${b}`,
+            likes: 0,
+            comments: []
+        });
+
+        alert('새 공지사항이 앱 전반에 성공적으로 게시되었습니다.');
+        document.getElementById('admin-notice-title').value = '';
+        document.getElementById('admin-notice-body').value = '';
+    };
+
+    // 하단 내비게이션 탭 이벤트 핸들러
+    function bindNavEvents() {
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tab = btn.dataset.tab;
+                if (tab) {
+                    renderTab(tab);
+                }
+            });
+        });
+    }
+
+    // 내비게이션 및 관리자 GNB 이벤트
+    document.querySelectorAll('.admin-nav-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            renderAdminTab(btn.dataset.target);
+        });
+    });
+
+    // 시작
+    bindNavEvents();
+    init();
+})();
