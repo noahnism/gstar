@@ -46,11 +46,7 @@
         const expired = new Date(today); expired.setDate(today.getDate() - 5);
 
         return [
-            { id: '1', pw: '1234', name: '김태환', role: '우수 훈련병', currentClass: 'A반', joinDate: formatDate(sixtyDaysAgo), membershipStart: formatDate(sixtyDaysAgo), membershipEnd: formatDate(dMinus7), avatar: 'fa-user-ninja' },
-            { id: '2', pw: '1234', name: '이청용', role: 'player', currentClass: 'B반', joinDate: formatDate(thirtyDaysAgo), membershipStart: formatDate(thirtyDaysAgo), membershipEnd: formatDate(dMinus1), avatar: 'fa-user' },
-            { id: '3', pw: '1234', name: '박지성', role: 'vip', currentClass: 'S반', joinDate: '2023-01-15', membershipStart: '2024-01-15', membershipEnd: '2025-01-15', avatar: 'fa-user-secret' },
-            { id: '4', pw: '1234', name: '손흥민', role: 'player', currentClass: 'A반', joinDate: formatDate(today), membershipStart: formatDate(today), membershipEnd: '2024-12-31', avatar: 'fa-user-astronaut' },
-            { id: '5', pw: '1234', name: '이강인', role: 'player', currentClass: 'B반', joinDate: '2024-05-10', membershipStart: '2024-05-10', membershipEnd: formatDate(expired), avatar: 'fa-user' }
+            { id: 'admin', pw: 'admin', name: '관리자', role: 'admin', avatar: 'fa-user-shield' }
         ];
     }
 
@@ -816,7 +812,7 @@
             tabContent.scrollTop = 0;
 
             if (tabId === 'profile') {
-                const myScores = [31, 24, 29, 26, 32];
+                const myScores = (state.currentUser && state.currentUser.stats) ? state.currentUser.stats : [30, 30, 30, 30, 30];
                 setTimeout(() => {
                     if (window.drawRadarChart) {
                         window.drawRadarChart('myStatChart', myScores);
@@ -1387,12 +1383,26 @@
 
                 let successCount = 0;
                 rows.forEach(row => {
-                    // 데이터 매핑 (한글 헤더 지원)
+                    // 데이터 매핑 (한글 헤더 지원 고도화)
                     const name = row['이름'] || row['name'];
                     const id = String(row['아이디'] || row['id'] || '');
                     const pw = String(row['비밀번호'] || row['password'] || '1234');
                     const role = row['역할'] || row['role'] || 'Basic';
                     const duration = String(row['기간'] || row['duration'] || '1');
+
+                    // 추가 정보 (상세 정보 팝업용)
+                    const phone = row['연락처'] || row['phone'] || '';
+                    const address = row['주소'] || row['address'] || '';
+                    const memo = row['비고'] || row['memo'] || '';
+
+                    // 스탯 정보 (능력치 차트용)
+                    const stats = [
+                        parseInt(row['스피드'] || row['speed'] || 30),
+                        parseInt(row['유연성'] || row['flexibility'] || 30),
+                        parseInt(row['지구력'] || row['stamina'] || 30),
+                        parseInt(row['근력'] || row['strength'] || 30),
+                        parseInt(row['반응속도'] || row['reaction'] || 30)
+                    ];
 
                     if (!name || !id) return; // 필수 정보 누락 스킵
 
@@ -1402,6 +1412,10 @@
                         name,
                         role,
                         duration,
+                        phone,
+                        address,
+                        memo,
+                        stats,
                         avatar: 'fa-user',
                         joinDate: new Date().toLocaleDateString(),
                         membershipStart: new Date().toISOString().split('T')[0]
@@ -1438,9 +1452,59 @@
         reader.readAsArrayBuffer(file);
     };
 
-    // ==========================================
-    // 관리자(Admin) 대시보드 로직
-    // ==========================================
+    window.showMemberDetail = (userId) => {
+        const user = state.users.find(u => u.id === userId);
+        if (!user) return;
+
+        const roleColor = (user.role || 'Basic').toLowerCase().includes('ultimate') ? '#1a6aa3' :
+            (user.role || 'Basic').toLowerCase().includes('pro') ? '#7bc2b7' :
+                (user.role || 'Basic').toLowerCase().includes('semi') ? '#f2cb4f' : '#f06958';
+
+        const modalHtml = `
+            <div id="member-detail-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; display: flex; justify-content: center; align-items: center; padding: 20px; backdrop-filter: blur(5px);">
+                <div class="card fade-in" style="width: 100%; max-width: 450px; background: #0f172a; border: 1px solid var(--border-glass); border-radius: 20px; overflow: hidden; position: relative; animation: slideUp 0.3s ease-out;">
+                    <div style="background: linear-gradient(135deg, ${roleColor}, #000); height: 100px; position: relative;">
+                        <button onclick="document.getElementById('member-detail-modal').remove()" style="position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.3); border: none; color: white; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div style="padding: 20px; margin-top: -50px; text-align: center;">
+                        <div style="width: 100px; height: 100px; border-radius: 50%; background: #1e293b; border: 4px solid #0f172a; margin: 0 auto 15px; display: flex; justify-content: center; align-items: center; font-size: 3rem; color: ${roleColor};">
+                            <i class="fas ${user.avatar || 'fa-user'}"></i>
+                        </div>
+                        <h2 style="color: white; margin-bottom: 5px; font-size: 1.5rem;">${user.name}</h2>
+                        <span style="color: ${roleColor}; font-weight: bold; font-size: 0.9rem;">${user.role || 'Basic Member'}</span>
+                        
+                        <div style="margin-top: 25px; text-align: left; display: flex; flex-direction: column; gap: 12px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px;">
+                            <div style="display: flex; justify-content: space-between;">
+                                <span style="color: var(--text-gray); font-size: 0.85rem;"><i class="fas fa-id-card" style="width: 20px;"></i> 아이디:</span>
+                                <span style="color: white; font-size: 0.85rem;">${user.id}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span style="color: var(--text-gray); font-size: 0.85rem;"><i class="fas fa-phone" style="width: 20px;"></i> 연락처:</span>
+                                <span style="color: white; font-size: 0.85rem;">${user.phone || '등록되지 않음'}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span style="color: var(--text-gray); font-size: 0.85rem;"><i class="fas fa-map-marker-alt" style="width: 20px;"></i> 주소:</span>
+                                <span style="color: white; font-size: 0.85rem; text-align: right;">${user.address || '등록되지 않음'}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span style="color: var(--text-gray); font-size: 0.85rem;"><i class="fas fa-calendar-check" style="width: 20px;"></i> 가입일:</span>
+                                <span style="color: white; font-size: 0.85rem;">${user.joinDate || '-'}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span style="color: var(--text-gray); font-size: 0.85rem;"><i class="fas fa-hourglass-half" style="width: 20px;"></i> 만료일:</span>
+                                <span style="color: var(--primary); font-size: 0.85rem; font-weight: bold;">${user.membershipEnd || '-'}</span>
+                            </div>
+                            <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;">
+                                <span style="color: var(--text-gray); font-size: 0.85rem; display: block; margin-bottom: 5px;"><i class="fas fa-sticky-note" style="width: 20px;"></i> 특이사항:</span>
+                                <p style="color: white; font-size: 0.8rem; line-height: 1.4;">${user.memo || '없음'}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    };
     window.renderAdminTab = (tabId) => {
         const contentDiv = document.getElementById('admin-tab-content');
         if (!contentDiv) return;
@@ -1547,17 +1611,27 @@
         `;
 
         sortedUsers.forEach(u => {
-            const roleColor = u.role === 'admin' ? 'red' : (u.role === 'coach' ? 'var(--primary)' : 'var(--accent-gold)');
+            const role = (u.role || 'Basic').toLowerCase();
+            const isExpired = u.membershipEnd && new Date(u.membershipEnd) < today;
+
+            let roleColor = '#f06958'; // Basic (Red)
+            if (role.includes('ultimate') || role.includes('vip')) roleColor = '#1a6aa3'; // Ultimate (Blue)
+            else if (role.includes('pro') || role.includes('player')) roleColor = '#7bc2b7'; // Pro (Teal)
+            else if (role.includes('semi')) roleColor = '#f2cb4f'; // Semi (Yellow)
+
+            if (isExpired) roleColor = '#808080'; // Expired (Gray)
+            if (u.role === 'admin') roleColor = 'var(--primary)';
+
             html += `
-                <div class="card" style="background: rgba(20, 25, 35, 0.8); border: 1px solid var(--border-glass); padding: 15px; border-radius: 12px; display: flex; flex-direction: column; gap: 12px;">
+                <div class="card" style="background: rgba(20, 25, 35, 0.8); border: 1px solid ${isExpired ? '#444' : 'var(--border-glass)'}; padding: 15px; border-radius: 12px; display: flex; flex-direction: column; gap: 12px; opacity: ${isExpired ? '0.7' : '1'};">
                     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="display: flex; align-items: center; gap: 10px; cursor: pointer;" onclick="window.showMemberDetail('${u.id}')">
                             <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--glass-bg); display: flex; justify-content: center; align-items: center; font-size: 1.2rem; color: ${roleColor};">
                                 <i class="fas ${u.avatar || 'fa-user'}"></i>
                             </div>
                             <div>
                                 <h4 style="color: var(--text-white); margin-bottom: 3px;">${u.name} <span style="font-size:0.75rem; color:var(--text-gray);">(${u.id})</span></h4>
-                                <span style="font-size: 0.75rem; color: ${roleColor};">${u.role || 'Basic'}</span>
+                                <span style="font-size: 0.75rem; color: ${roleColor}; font-weight: bold;">${u.role || 'Basic'} ${isExpired ? '(만료)' : ''}</span>
                             </div>
                         </div>
                     </div>
@@ -1573,7 +1647,7 @@
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <span style="color: var(--text-gray); font-size: 0.8rem;">종료일:</span>
-                            <span style="color: var(--primary); font-size: 0.8rem; font-weight: bold;">${u.membershipEnd || '미지정'}</span>
+                            <span style="color: ${isExpired ? '#ff3b30' : 'var(--primary)'}; font-size: 0.8rem; font-weight: bold;">${u.membershipEnd || '미지정'}</span>
                         </div>
                     </div>
 
@@ -1582,8 +1656,8 @@
                         <select onchange="window.adminUpdateMembership('${u.id}', this.value)" style="background: var(--glass-bg); color: var(--text-white); border: 1px solid var(--border-glass); padding: 5px 10px; border-radius: 6px; font-size: 0.85rem; outline: none; flex: 0.7;">
                             <option value="Basic" style="background: #0f172a; color: #ffffff;" ${u.role === 'Basic' || !u.role ? 'selected' : ''}>Basic (1개월)</option>
                             <option value="Semi" style="background: #0f172a; color: #ffffff;" ${u.role === 'Semi' ? 'selected' : ''}>Semi (3개월)</option>
-                            <option value="Pro" style="background: #0f172a; color: #ffffff;" ${u.role === 'Pro' || u.role === 'player' ? 'selected' : ''}>Pro (6개월)</option>
-                            <option value="Ultimate" style="background: #0f172a; color: #ffffff;" ${u.role === 'Ultimate' || u.role === 'vip' ? 'selected' : ''}>Ultimate (1년)</option>
+                            <option value="Pro" style="background: #0f172a; color: #ffffff;" ${role.includes('pro') || role.includes('player') ? 'selected' : ''}>Pro (6개월)</option>
+                            <option value="Ultimate" style="background: #0f172a; color: #ffffff;" ${role.includes('ultimate') || role.includes('vip') ? 'selected' : ''}>Ultimate (1년)</option>
                         </select>
                     </div>
                 </div>
