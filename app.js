@@ -55,6 +55,14 @@
         const saved = localStorage.getItem('soccer_users');
         if (saved) {
             usersData = JSON.parse(saved);
+            // 기존 더미 데이터(ID 1~5)가 있다면 자동 삭제 처리
+            const dummyIds = ['1', '2', '3', '4', '5'];
+            const initialCount = usersData.length;
+            usersData = usersData.filter(u => !dummyIds.includes(u.id));
+            if (usersData.length !== initialCount) {
+                localStorage.setItem('soccer_users', JSON.stringify(usersData));
+                console.log("Dummy members cleaned up.");
+            }
         } else {
             usersData = getInitialUsers();
             localStorage.setItem('soccer_users', JSON.stringify(usersData));
@@ -1599,7 +1607,7 @@
 
         let html = `
             <div class="fade-in">
-                <h3 style="color: var(--text-white); margin-bottom: 20px; font-size: 1.2rem;">👨‍💻 회원 관리 (CRM) <span style="font-size: 0.7rem; color: var(--primary); opacity: 0.7;">v2.1</span></h3>
+                <h3 style="color: var(--text-white); margin-bottom: 20px; font-size: 1.2rem;">👨‍💻 회원 관리 (CRM) <span style="font-size: 0.7rem; color: var(--primary); opacity: 0.7;">v2.2</span></h3>
                 
                 <!-- 엑셀 데이터 임포트 영역 (배경색 강조) -->
                 <div class="card" style="background: rgba(0, 210, 255, 0.05); border: 1px dashed var(--primary); padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; align-items: center; text-align: center;">
