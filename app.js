@@ -1434,177 +1434,204 @@
                 let failReason = "";
 
                 validRows.forEach((row, index) => {
-                    // --- [유연한 헤더 매핑 로직] ---
-                    // 1. 이름 찾기
-                    const name = row['이름'] || row['성함'] || row['name'] || row['Name'] || row['user_name'];
-                    // 2. 기본 아이디 찾기
-                    let baseId = String(row['아이디'] || row['ID'] || row['Id'] || row['id'] || row['번호'] || row['No'] || '');
+                    try {
+                        // --- [유연한 헤더 매핑 로직] ---
+                        // 1. 이름 찾기
+                        const name = row['이름'] || row['성함'] || row['name'] || row['Name'] || row['user_name'];
+                        // 2. 기본 아이디 찾기
+                        let baseId = String(row['아이디'] || row['ID'] || row['Id'] || row['id'] || row['번호'] || row['No'] || '');
 
-                    if (!name && !baseId) return; // 이름과 아이디 둘 다 없으면 스킵
+                        if (!name && !baseId) return; // 이름과 아이디 둘 다 없으면 스킵
 
-                    // 3. 비밀번호 등 기본 정보
-                    const pw = String(row['비밀번호'] || row['비번'] || row['password'] || row['pw'] || '1234');
-                    const role = row['역할'] || row['등급'] || row['role'] || row['grade'] || 'Basic';
-                    const duration = String(row['기간'] || row['개월 수'] || row['개월수'] || row['개월'] || row['duration'] || row['months'] || '1');
+                        // 3. 비밀번호 등 기본 정보
+                        const pw = String(row['비밀번호'] || row['비번'] || row['password'] || row['pw'] || '1234');
+                        const role = row['역할'] || row['등급'] || row['role'] || row['grade'] || 'Basic';
+                        const duration = String(row['기간'] || row['개월 수'] || row['개월수'] || row['개월'] || row['duration'] || row['months'] || '1');
 
-                    // 신규 추가/확장 정보 (엑셀 내 개인정보 모두 흡수)
-                    const group = row['수업 그룹'] || row['그룹'] || '';
-                    const gender = row['성별'] || '';
-                    const gradeLevel = row['학년'] || '';
-                    const birthDate = row['생년월일'] || '';
-                    const school = row['학교/어린이집'] || row['어린이집'] || row['학교'] || '';
-                    const height = row['키'] || '';
-                    const weight = row['몸무게'] || '';
-                    const excelJoinDate = row['가입일'] || '';
-                    const startDate = row['시작일'] || '';
-                    const endDate = row['종료일'] || '';
-                    const frequency = row['횟수 (주당)'] || row['횟수'] || '';
-                    const fee = row['등록비'] || '';
-                    const uniformFee = row['유니폼 비'] || row['유니폼비'] || '';
-                    const shuttle = row['차량운행'] || row['차량'] || '';
-                    const motherName = row['모 성함'] || row['모성함'] || row['모'] || '';
-                    const fatherName = row['부 성함'] || row['부성함'] || row['부'] || '';
-                    const email = row['이메일 주소'] || row['이메일'] || row['email'] || '';
-                    const uniformInfo = row['유니폼'] || '';
+                        // 신규 추가/확장 정보 (엑셀 내 개인정보 모두 흡수)
+                        const group = row['수업 그룹'] || row['그룹'] || '';
+                        const gender = row['성별'] || '';
+                        const gradeLevel = row['학년'] || '';
+                        const birthDate = row['생년월일'] || '';
+                        const school = row['학교/어린이집'] || row['어린이집'] || row['학교'] || '';
+                        const height = row['키'] || '';
+                        const weight = row['몸무게'] || '';
+                        const excelJoinDate = row['가입일'] || '';
+                        const startDate = row['시작일'] || '';
+                        const endDate = row['종료일'] || '';
+                        const frequency = row['횟수 (주당)'] || row['횟수'] || '';
+                        const fee = row['등록비'] || '';
+                        const uniformFee = row['유니폼 비'] || row['유니폼비'] || '';
+                        const shuttle = row['차량운행'] || row['차량'] || '';
+                        const motherName = row['모 성함'] || row['모성함'] || row['모'] || '';
+                        const fatherName = row['부 성함'] || row['부성함'] || row['부'] || '';
+                        const email = row['이메일 주소'] || row['이메일'] || row['email'] || '';
+                        const uniformInfo = row['유니폼'] || '';
 
-                    const phone = row['연락처'] || row['본인 연락처'] || row['전화번호'] || row['phone'] || row['tel'] || '';
-                    const address = row['주소'] || row['address'] || '';
-                    const memo = row['비고'] || row['메모'] || row['memo'] || '';
+                        const phone = row['연락처'] || row['본인 연락처'] || row['전화번호'] || row['phone'] || row['tel'] || '';
+                        const address = row['주소'] || row['address'] || '';
+                        const memo = row['비고'] || row['메모'] || row['memo'] || '';
 
-                    // 스탯 정보
-                    const stats = [
-                        parseInt(row['스피드'] || row['speed'] || 30),
-                        parseInt(row['유연성'] || row['flexibility'] || 30),
-                        parseInt(row['지구력'] || row['stamina'] || 30),
-                        parseInt(row['근력'] || row['strength'] || 30),
-                        parseInt(row['반응속도'] || row['reaction'] || 30)
-                    ];
+                        // 스탯 정보
+                        const stats = [
+                            parseInt(row['스피드'] || row['speed'] || 30),
+                            parseInt(row['유연성'] || row['flexibility'] || 30),
+                            parseInt(row['지구력'] || row['stamina'] || 30),
+                            parseInt(row['근력'] || row['strength'] || 30),
+                            parseInt(row['반응속도'] || row['reaction'] || 30)
+                        ];
 
-                    // 멤버십 상향 혜택 (유니폼 무료)
-                    let finalUniformInfo = String(uniformInfo);
-                    const durationMonths = parseInt(duration) || 0;
-                    if (durationMonths >= 6 || role.toLowerCase().includes('pro') || role.toLowerCase().includes('ultimate')) {
-                        if (!finalUniformInfo || finalUniformInfo.trim() === '') finalUniformInfo = "지원 대상 (FREE)";
-                    }
-
-                    // --- [단일 프로필 수강 이력(히스토리) 누적 로직] ---
-                    // baseId 형식이 불규칙하거나 45080 등 엉뚱한 번호일 경우를 대비해 '-' 파싱
-                    const pureBaseId = baseId ? baseId.split('-')[0] : '';
-
-                    // 동일한 baseId를 가지거나 이름이 같은 기존 회원 검사
-                    let existingUser = null;
-                    if (pureBaseId) {
-                        existingUser = state.users.find(u => u.id.split('-')[0] === pureBaseId);
-                    }
-                    if (!existingUser && name) {
-                        existingUser = state.users.find(u => u.name === name); // 이름 매칭 (날짜 파싱 등 오류로 ID가 깨졌을 때 구제해줌)
-                    }
-
-                    // 수강 이력(History) 객체 생성 (이번에 엑셀에서 올라온 회차 단위 정보)
-                    const historyEntry = {
-                        role,
-                        duration,
-                        startDate: startDate || excelJoinDate || new Date().toISOString().split('T')[0],
-                        endDate: endDate || '',
-                        fee,
-                        group,
-                        frequency,
-                        memo
-                    };
-
-                    if (!historyEntry.endDate) {
-                        const tempUser = { membershipStart: historyEntry.startDate, duration: historyEntry.duration };
-                        recalculateMembershipEnd(tempUser);
-                        historyEntry.endDate = tempUser.membershipEnd;
-                    }
-
-                    if (existingUser) {
-                        // 기존 유저 발견 -> 회차(history) 누적
-                        if (!existingUser.history) {
-                            // 기존 데이터 통합
-                            existingUser.history = [{
-                                role: existingUser.role,
-                                duration: existingUser.duration,
-                                startDate: existingUser.membershipStart || existingUser.joinDate,
-                                endDate: existingUser.membershipEnd,
-                                fee: existingUser.fee || '',
-                                group: existingUser.group || '',
-                                frequency: existingUser.frequency || '',
-                                memo: ''
-                            }];
-                        }
-                        existingUser.history.push(historyEntry);
-
-                        // 메인 프로필 업데이트 (가장 최신 데이터로 플로우업)
-                        existingUser.role = role;
-                        existingUser.duration = duration;
-                        existingUser.membershipStart = historyEntry.startDate;
-                        existingUser.membershipEnd = historyEntry.endDate;
-                        existingUser.group = group || existingUser.group;
-                        existingUser.frequency = frequency || existingUser.frequency;
-                        if (memo) existingUser.memo = existingUser.memo ? existingUser.memo + '\n[' + historyEntry.startDate + '] ' + memo : memo;
-
-                        // 추가 정보들 덮어쓰기
-                        if (height) existingUser.height = height;
-                        if (weight) existingUser.weight = weight;
-                        if (gradeLevel) existingUser.gradeLevel = gradeLevel;
-
-                        if (db) {
-                            // Firebase는 undefined(빈 공간) 값을 허용하지 않으므로 구조 깊숙한 곳까지 완전히 제거
-                            const cleanUpdateData = JSON.parse(JSON.stringify(existingUser));
-
-                            // 혹시 배열 내부에 null 변환된 undefined가 있다면 빈 문자열 처리
-                            if (cleanUpdateData.history) {
-                                cleanUpdateData.history = cleanUpdateData.history.map(item => item || {});
-                            }
-                            db.collection("users").doc(existingUser.id).update(cleanUpdateData).catch(e => console.error(e));
+                        // 멤버십 상향 혜택 (유니폼 무료)
+                        let finalUniformInfo = String(uniformInfo);
+                        const durationMonths = parseInt(duration) || 0;
+                        if (durationMonths >= 6 || role.toLowerCase().includes('pro') || role.toLowerCase().includes('ultimate')) {
+                            if (!finalUniformInfo || finalUniformInfo.trim() === '') finalUniformInfo = "지원 대상 (FREE)";
                         }
 
-                    } else {
-                        // 완전 신규 회원 생성
-                        // pureBaseId가 비정상일 경우 임시 아이디 부여. 만약 존재하면 그대로 16, 17 부여
-                        let finalId = pureBaseId || ('new_' + Date.now().toString().slice(-6));
+                        // --- [단일 프로필 수강 이력(히스토리) 누적 로직] ---
+                        // baseId 형식이 불규칙하거나 45080 등 엉뚱한 번호일 경우를 대비해 '-' 파싱
+                        const pureBaseId = baseId ? baseId.split('-')[0] : '';
 
-                        const newUser = {
-                            id: finalId,
-                            pw,
-                            name,
+                        // 동일한 baseId를 가지거나 이름이 같은 기존 회원 검사
+                        let existingUser = null;
+                        if (pureBaseId) {
+                            // 1. 순수 번호(pureBaseId)와 이름이 모두 같아야 완벽한 동일인으로 병합
+                            existingUser = state.users.find(u => u.id.split('-')[0] === pureBaseId && u.name === name);
+                        }
+                        if (!existingUser && name && name !== '이름없음') {
+                            // 2. 번호는 다르지만 이름이 일치하는 경우 (동명이인일 수 있으나 보통 연속 갱신자로 구제)
+                            existingUser = state.users.find(u => u.name === name);
+                        }
+
+                        // 수강 이력(History) 객체 생성 (이번에 엑셀에서 올라온 회차 단위 정보)
+                        const historyEntry = {
                             role,
                             duration,
-                            group,
-                            gender,
-                            gradeLevel,
-                            birthDate,
-                            school,
-                            height,
-                            weight,
-                            excelJoinDate,
-                            startDate,
-                            endDate,
-                            frequency,
+                            startDate: startDate || excelJoinDate || new Date().toISOString().split('T')[0],
+                            endDate: endDate || '',
                             fee,
-                            uniformFee,
-                            shuttle,
-                            motherName,
-                            fatherName,
-                            email,
-                            uniformInfo: finalUniformInfo,
-                            phone,
-                            address,
-                            memo,
-                            stats,
-                            avatar: 'fa-user',
-                            joinDate: startDate || excelJoinDate || new Date().toLocaleDateString(),
-                            membershipStart: historyEntry.startDate,
-                            membershipEnd: historyEntry.endDate,
-                            history: [historyEntry] // <-- 초기 1회차 삽입
+                            group,
+                            frequency,
+                            memo
                         };
 
-                        state.users.push(newUser);
-                        if (db) db.collection("users").doc(finalId).set(newUser).catch(e => console.error(e));
-                    }
+                        if (!historyEntry.endDate) {
+                            const tempUser = { membershipStart: historyEntry.startDate, duration: historyEntry.duration };
+                            recalculateMembershipEnd(tempUser);
+                            historyEntry.endDate = tempUser.membershipEnd;
+                        }
 
-                    successCount++;
+                        if (existingUser) {
+                            // 기존 유저 발견 -> 회차(history) 누적
+                            if (!existingUser.history) {
+                                // 기존 데이터 통합
+                                existingUser.history = [{
+                                    role: existingUser.role,
+                                    duration: existingUser.duration,
+                                    startDate: existingUser.membershipStart || existingUser.joinDate,
+                                    endDate: existingUser.membershipEnd,
+                                    fee: existingUser.fee || '',
+                                    group: existingUser.group || '',
+                                    frequency: existingUser.frequency || '',
+                                    memo: ''
+                                }];
+                            }
+                            existingUser.history.push(historyEntry);
+
+                            // 메인 프로필 업데이트 (가장 최신 데이터로 플로우업)
+                            existingUser.role = role;
+                            existingUser.duration = duration;
+                            existingUser.membershipStart = historyEntry.startDate;
+                            existingUser.membershipEnd = historyEntry.endDate;
+                            existingUser.group = group || existingUser.group;
+                            existingUser.frequency = frequency || existingUser.frequency;
+                            if (memo) existingUser.memo = existingUser.memo ? existingUser.memo + '\n[' + historyEntry.startDate + '] ' + memo : memo;
+
+                            // 추가 정보들 덮어쓰기
+                            if (height) existingUser.height = height;
+                            if (weight) existingUser.weight = weight;
+                            if (gradeLevel) existingUser.gradeLevel = gradeLevel;
+
+                            if (db) {
+                                // Firebase는 undefined(빈 공간) 값을 허용하지 않으므로 구조 깊숙한 곳까지 완전히 제거
+                                const cleanUpdateData = JSON.parse(JSON.stringify(existingUser));
+
+                                // 혹시 배열 내부에 null 변환된 undefined가 있다면 빈 문자열 처리
+                                if (cleanUpdateData.history) {
+                                    cleanUpdateData.history = cleanUpdateData.history.map(item => item || {});
+                                }
+                                db.collection("users").doc(existingUser.id).update(cleanUpdateData).catch(e => console.error(e));
+                            }
+
+                        } else {
+                            // 완전 신규 회원 생성
+                            let finalId = pureBaseId || ('new_' + Date.now().toString().slice(-6));
+
+                            // ★ ID 덮어쓰기(증발) 방지 로직
+                            if (state.users.some(u => u.id === finalId)) {
+                                // 앞선 행에서 누군가 이미 이 ID(예: 6)를 가져갔다면?
+                                if (baseId && baseId !== finalId && !state.users.some(u => u.id === baseId)) {
+                                    finalId = baseId; // 원래 엑셀의 서브 번호(예: 6-3)를 써서 충돌 회피
+                                } else {
+                                    finalId = finalId + '_' + Date.now().toString().slice(-4); // 완전히 새로운 랜덤 접미사 부여
+                                }
+                            }
+
+                            const newUser = {
+                                id: finalId,
+                                pw,
+                                name: name || '이름없음',
+                                role,
+                                duration,
+                                group,
+                                gender,
+                                gradeLevel,
+                                birthDate,
+                                school,
+                                height,
+                                weight,
+                                excelJoinDate,
+                                startDate,
+                                endDate,
+                                frequency,
+                                fee,
+                                uniformFee,
+                                shuttle,
+                                motherName,
+                                fatherName,
+                                email,
+                                uniformInfo: finalUniformInfo,
+                                phone,
+                                address,
+                                memo,
+                                stats,
+                                avatar: 'fa-user',
+                                joinDate: startDate || excelJoinDate || new Date().toLocaleDateString(),
+                                membershipStart: historyEntry.startDate,
+                                membershipEnd: historyEntry.endDate,
+                                history: [historyEntry] // <-- 초기 1회차 삽입
+                            };
+
+                            // Firebase는 undefined(빈 공간) 값을 허용하지 않으므로 구조 깊숙한 곳까지 완전히 제거
+                            const cleanNewUser = JSON.parse(JSON.stringify(newUser));
+                            if (cleanNewUser.history) {
+                                cleanNewUser.history = cleanNewUser.history.map(item => item || {});
+                            }
+
+                            state.users.push(cleanNewUser);
+                            if (db) {
+                                try {
+                                    db.collection("users").doc(finalId).set(cleanNewUser).catch(e => console.error(e));
+                                } catch (syncErr) {
+                                    console.error("Firebase Sync Set Error:", syncErr);
+                                }
+                            }
+                        }
+
+                        successCount++;
+                    } catch (rowErr) {
+                        console.error('Error parsing row at index', index, row, rowErr);
+                    }
                 });
 
                 // 최종 저장 및 알림
@@ -2147,7 +2174,7 @@
         let html = `
             <div class="fade-in">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h3 style="color: var(--text-white); font-size: 1.2rem; margin: 0;">👨‍💻 회원 관리 (CRM) <span style="font-size: 0.7rem; color: var(--primary); opacity: 0.7;">v2.8.2</span></h3>
+                    <h3 style="color: var(--text-white); font-size: 1.2rem; margin: 0;">👨‍💻 회원 관리 (CRM) <span style="font-size: 0.7rem; color: var(--primary); opacity: 0.7;">v2.8.4</span></h3>
                     <div style="display: flex; gap: 8px;">
                         <button onclick="window.adminAddNewMember()" style="background: rgba(0, 210, 255, 0.1); border: 1px solid var(--primary); color: var(--text-white); font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; cursor: pointer;">
                             <i class="fas fa-user-plus"></i> 수동 등록
