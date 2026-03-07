@@ -1476,6 +1476,118 @@
         if (input) input.click();
     };
 
+    window.mergeDuplicateUsers = async () => {
+        if (!confirm("이름과 연락처가 동일한 중복 회원 데이터를 하나로 통합하시겠습니까?\n이 작업은 되돌릴 수 없으므로 주의하세요.")) return;
+
+        const msg = document.getElementById('sync-status-msg');
+        if (msg) {
+            msg.style.display = 'block';
+            msg.textContent = '중복 회원을 찾아 데이터를 통합 중입니다...';
+        }
+
+        try {
+            const userGroups = {};
+            // 1. 이름 + 연락처 기반으로 그룹화 (이름없음 제외)
+            state.users.forEach(u => {
+                if (u.id === 'admin' || !u.name || u.name === '이름없음') return;
+                const key = `${u.name}_${u.phone || ''}`;
+                if (!userGroups[key]) userGroups[key] = [];
+                userGroups[key].push(u);
+            });
+
+            let mergedCount = 0;
+            const usersToRemove = [];
+            const usersToUpdate = [];
+
+            for (const key in userGroups) {
+                const group = userGroups[key];
+                if (group.length > 1) {
+                    // 중복 발견! 첫 번째 유저를 메인으로 삼고 나머지를 병합
+                    // 날짜 순서대로 정렬 (가장 오래된 데이터를 메인 아이디의 기반으로)
+                    group.sort((a, b) => new Date(a.joinDate || a.membershipStart) - new Date(b.joinDate || b.membershipStart));
+
+                    const mainUser = group[0];
+                    if (!mainUser.history) mainUser.history = [];
+
+                    // 나머지 유저들의 정보를 mainUser로 통합
+                    for (let i = 1; i < group.length; i++) {
+                        const other = group[i];
+
+                        // 이력 통합
+                        if (other.history && Array.isArray(other.history)) {
+                            mainUser.history.push(...other.history);
+                        } else {
+                            // 이력이 없는 옛날 데이터라면 현재 정보를 이력으로 변환해서 추가
+                            mainUser.history.push({
+                                role: other.role,
+                                duration: other.duration,
+                                startDate: other.membershipStart || other.joinDate,
+                                endDate: other.membershipEnd,
+                                group: other.group,
+                                memo: '(자동 병합됨)'
+                            });
+                        }
+
+                        // 최신 정보(등급, 종료일 등)로 메인 유저 갱신
+                        const lastEntry = [...mainUser.history].sort((a, b) => new Date(a.startDate) - new Date(b.startDate)).pop();
+                        if (lastEntry) {
+                            mainUser.role = lastEntry.role;
+                            mainUser.membershipStart = lastEntry.startDate;
+                            mainUser.membershipEnd = lastEntry.endDate;
+                            mainUser.duration = lastEntry.duration;
+                        }
+
+                        usersToRemove.push(other.id);
+                        mergedCount++;
+                    }
+
+                    // 메인 유저 이력 중복 제거 및 정렬
+                    const uniqueHistory = [];
+                    const seen = new Set();
+                    mainUser.history.forEach(h => {
+                        const hKey = `${h.startDate}_${h.role}`;
+                        if (!seen.has(hKey)) {
+                            uniqueHistory.push(h);
+                            seen.add(hKey);
+                        }
+                    });
+                    mainUser.history = uniqueHistory.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+
+                    usersToUpdate.push(mainUser);
+                }
+            }
+
+            // 2. 실제 데이터 반영 (Local & Firebase)
+            if (mergedCount > 0) {
+                // 삭제 처리
+                state.users = state.users.filter(u => !usersToRemove.includes(u.id));
+
+                if (db) {
+                    // Firebase에서 중복 데이터 삭제
+                    for (const id of usersToRemove) {
+                        await db.collection("users").doc(id).delete();
+                    }
+                    // 메인 데이터 업데이트
+                    for (const user of usersToUpdate) {
+                        const clean = JSON.parse(JSON.stringify(user));
+                        await db.collection("users").doc(user.id).set(clean);
+                    }
+                }
+
+                localStorage.setItem('soccer_users', JSON.stringify(state.users));
+                alert(`총 ${mergedCount}개의 중복 데이터를 통합 완료했습니다.`);
+                if (window.renderAdminTab) window.renderAdminTab('admin-users');
+            } else {
+                alert('현재 병합할 중복 데이터가 없습니다.');
+            }
+        } catch (err) {
+            console.error("Merge Error:", err);
+            alert('병합 중 오류가 발생했습니다: ' + err.message);
+        } finally {
+            if (msg) msg.style.display = 'none';
+        }
+    };
+
     window.syncLocalToFirebase = async () => {
         if (!db) return alert('서버(Firebase)에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.');
 
@@ -1668,84 +1780,91 @@
                             historyEntry.endDate = tempUser.membershipEnd;
                         }
 
-                        // --- [지능형 아이디 관리 & 차수(Sequence) 부여 로직] ---
+                        // --- [지능형 아이디 관리 & 병합 로직] ---
                         // 이름과 연락처가 모두 일치하는 유저가 이미 있는지 확인
                         const baseIdStr = String(baseId || '');
-                        const samePersonUsers = state.users.filter(u =>
+                        const existingUser = state.users.find(u =>
                             (u.name === name && u.phone === phone && name !== '이름없음') ||
                             (baseIdStr && u.id.split('-')[0] === baseIdStr && u.name === name)
                         );
 
-                        let finalId = baseIdStr || ('new_' + Date.now().toString().slice(-6));
+                        if (existingUser) {
+                            // 이미 존재하는 사람임 -> 기존 데이터에 이력 추가 및 최신 정보 갱신
+                            if (!existingUser.history) existingUser.history = [];
 
-                        if (samePersonUsers.length > 0) {
-                            // 이미 존재하는 사람임 -> 차수 부여 (예: 16 -> 16-2 -> 16-3)
-                            // 기존의 ID들 중 최신 차수를 찾음
-                            const base = samePersonUsers[0].id.split('-')[0];
-                            const sequences = samePersonUsers.map(u => {
-                                const parts = u.id.split('-');
-                                return parts.length > 1 ? parseInt(parts[1]) : 1;
-                            });
-                            const maxSeq = Math.max(...sequences);
+                            // 중복 이력 방지 (시작일과 등급이 같으면 동일 건으로 간주)
+                            const isDuplicateHistory = existingUser.history.some(h =>
+                                h.startDate === historyEntry.startDate && h.role === historyEntry.role
+                            );
 
-                            // 만약 이번에 들어오는 데이터가 기존의 최신 차수 데이터와 날짜가 겹치지 않는다면 새 차수 부여
-                            // (여기서는 단순하게 "기존에 존재하면 무조건 다음 차수 생성" 혹은 "덮어쓰기" 중 선택 가능하나,
-                            // 유저의 요청대로 16-2 체계를 구현하기 위해 '새로운 행'으로 추가함)
-                            finalId = `${base}-${maxSeq + 1}`;
-                        }
+                            if (!isDuplicateHistory) {
+                                existingUser.history.push(historyEntry);
+                                // 날짜순 정렬 (최신이 뒤로)
+                                existingUser.history.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+                            }
 
-                        // ID 덮어쓰기 방지 (완전 신규 아이디일 경우 충돌 체크)
-                        if (state.users.some(u => u.id === finalId)) {
-                            finalId = finalId + '_' + Date.now().toString().slice(-4);
-                        }
+                            // 최신 정보로 기본 필드 업데이트
+                            existingUser.role = role;
+                            existingUser.duration = duration;
+                            existingUser.membershipStart = historyEntry.startDate;
+                            existingUser.membershipEnd = historyEntry.endDate;
+                            if (group) existingUser.group = group;
+                            if (school) existingUser.school = school;
+                            if (phone) existingUser.phone = phone;
 
-                        const newUser = {
-                            id: finalId,
-                            pw,
-                            name: name || '이름없음',
-                            role,
-                            duration,
-                            group,
-                            gender,
-                            gradeLevel,
-                            birthDate,
-                            school,
-                            height,
-                            weight,
-                            excelJoinDate,
-                            startDate,
-                            endDate,
-                            frequency,
-                            fee,
-                            uniformFee,
-                            shuttle,
-                            motherName,
-                            fatherName,
-                            email,
-                            uniformInfo: finalUniformInfo,
-                            phone,
-                            address,
-                            memo,
-                            stats,
-                            avatar: 'fa-user',
-                            joinDate: startDate || excelJoinDate || new Date().toLocaleDateString(),
-                            membershipStart: historyEntry.startDate,
-                            membershipEnd: historyEntry.endDate,
-                            history: [historyEntry] // 각 행마다 개별 히스토리 시작
-                        };
+                            // Firebase 동기화
+                            if (db) {
+                                const cleanUpdate = JSON.parse(JSON.stringify(existingUser));
+                                await db.collection("users").doc(existingUser.id).set(cleanUpdate);
+                            }
+                        } else {
+                            // 신규 유저 생성
+                            let finalId = baseIdStr || ('new_' + Date.now().toString().slice(-6));
 
-                        // Firebase는 undefined(빈 공간) 값을 허용하지 않으므로 구조 깊숙한 곳까지 완전히 제거
-                        const cleanNewUser = JSON.parse(JSON.stringify(newUser));
-                        if (cleanNewUser.history) {
-                            cleanNewUser.history = cleanNewUser.history.map(item => item || {});
-                        }
+                            // ID 중복 체크 (완전 신규 아이디일 경우)
+                            if (state.users.some(u => u.id === finalId)) {
+                                finalId = finalId + '_' + Date.now().toString().slice(-4);
+                            }
 
-                        state.users.push(cleanNewUser);
-                        if (db) {
-                            try {
+                            const newUser = {
+                                id: finalId,
+                                pw,
+                                name: name || '이름없음',
+                                role,
+                                duration,
+                                group,
+                                gender,
+                                gradeLevel,
+                                birthDate,
+                                school,
+                                height,
+                                weight,
+                                excelJoinDate,
+                                startDate,
+                                endDate,
+                                frequency,
+                                fee,
+                                uniformFee,
+                                shuttle,
+                                motherName,
+                                fatherName,
+                                email,
+                                uniformInfo: finalUniformInfo,
+                                phone,
+                                address,
+                                memo,
+                                stats,
+                                avatar: 'fa-user',
+                                joinDate: startDate || excelJoinDate || new Date().toLocaleDateString(),
+                                membershipStart: historyEntry.startDate,
+                                membershipEnd: historyEntry.endDate,
+                                history: [historyEntry]
+                            };
+
+                            const cleanNewUser = JSON.parse(JSON.stringify(newUser));
+                            state.users.push(cleanNewUser);
+                            if (db) {
                                 await db.collection("users").doc(finalId).set(cleanNewUser);
-                            } catch (syncErr) {
-                                console.error("Firebase Sync Set Error:", syncErr);
                             }
                         }
 
@@ -1890,9 +2009,31 @@
                                     </div>
                                 </div>
 
-                                <div style="padding: 16px; border-radius: 16px; background: rgba(242, 203, 79, 0.05); border: 1px solid rgba(242, 203, 79, 0.1);">
+                                <div style="padding: 16px; border-radius: 16px; background: rgba(242, 203, 79, 0.05); border: 1px solid rgba(242, 203, 79, 0.1); margin-bottom: 24px;">
                                     <div style="color: #f2cb4f; font-size: 0.8rem; font-weight: 800; margin-bottom: 8px;"><i class="fas fa-sticky-note"></i> 지도자 메모 / 특이사항</div>
                                     <p style="margin: 0; color: #cbd5e1; font-size: 0.85rem; line-height: 1.5; white-space: pre-wrap;">${user.memo || '기록된 내용이 없습니다.'}</p>
+                                </div>
+
+                                <h4 style="color: #00d2ff; font-size: 0.9rem; margin: 0 0 12px; display: flex; align-items: center; gap: 6px;"><i class="fas fa-history"></i> 수강 및 가입 이력 (History)</h4>
+                                <div style="background: rgba(255,255,255,0.02); border-radius: 16px; border: 1px solid rgba(255,255,255,0.04); overflow: hidden;">
+                                    ${user.history && user.history.length > 0 ?
+                `<div style="display: flex; flex-direction: column; max-height: 300px; overflow-y: auto;">
+                                            ${[...user.history].reverse().map((h, idx) => `
+                                                <div style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.03); border-left: 4px solid ${idx === 0 ? '#00d2ff' : 'transparent'}; background: ${idx === 0 ? 'rgba(0, 210, 255, 0.03)' : 'transparent'};">
+                                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                                        <span style="color: #fff; font-size: 0.85rem; font-weight: 700;">${h.role} (${h.duration || '1'}개월)</span>
+                                                        ${idx === 0 ? '<span style="font-size: 0.65rem; color: #00d2ff; border: 1px solid #00d2ff; padding: 1px 4px; border-radius: 4px; font-weight: 800;">LATEST</span>' : ''}
+                                                    </div>
+                                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                        <span style="color: #94a3b8; font-size: 0.8rem;">${h.startDate} ~ ${h.endDate || ''}</span>
+                                                        ${h.group ? `<span style="color: #64748b; font-size: 0.75rem;">${h.group}</span>` : ''}
+                                                    </div>
+                                                    ${h.memo ? `<div style="color: #7bc2b7; font-size: 0.7rem; margin-top: 4px; font-style: italic;">* ${h.memo}</div>` : ''}
+                                                </div>
+                                            `).join('')}
+                                        </div>` :
+                `<div style="padding: 20px; text-align: center; color: #64748b; font-size: 0.85rem;">기록된 이력이 없습니다.</div>`
+            }
                                 </div>
                             </div>
                             
@@ -2719,6 +2860,9 @@
                         <button onclick="window.adminAddNewMember()" style="background: rgba(0, 210, 255, 0.1); border: 1px solid var(--primary); color: var(--text-white); font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; cursor: pointer;">
                             <i class="fas fa-user-plus"></i> 수동 등록
                         </button>
+                        <button onclick="window.mergeDuplicateUsers()" title="이름과 연락처가 같은 중복 데이터를 하나로 합칩니다" style="background: rgba(123, 194, 183, 0.1); border: 1px solid #7bc2b7; color: #7bc2b7; font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; cursor: pointer;">
+                            <i class="fas fa-object-group"></i> 데이터 병합
+                        </button>
                         <button onclick="window.triggerExcelImport()" style="background: rgba(255,255,255,0.1); border: 1px solid var(--border-glass); color: var(--text-white); font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; cursor: pointer;">
                             <i class="fas fa-file-excel"></i> <span id="excel-import-status">엑셀 임포트</span>
                         </button>
@@ -2734,17 +2878,8 @@
                 </div>
 
                 ${warningHtml}
-                <!-- 엑셀 데이터 임포트 영역 -->
-                <div class="card" style="background: rgba(0, 210, 255, 0.05); border: 1px dashed var(--primary); padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; align-items: center; text-align: center;">
-                    <div style="font-size: 0.85rem; color: var(--text-white);">
-                        <i class="fas fa-file-excel" style="color: #217346; margin-right: 5px;"></i>
-                        엑셀/CSV 파일을 이용해 회원을 일괄 등록하세요.<br>
-                        <span style="font-size: 0.75rem; color: var(--text-gray);">(필수 헤더: 이름, 아이디, 비밀번호, 역할, 기간)</span>
-                    </div>
-                    <button class="btn-primary" onclick="window.triggerExcelImport()" style="font-size: 0.8rem; padding: 8px 15px; background: rgba(0, 210, 255, 0.2); border: 1px solid var(--primary); color: var(--primary);">
-                        <i class="fas fa-upload"></i> 파일 선택하기
-                    </button>
-                </div>
+
+                <div style="background: rgba(0,0,0,0.3); border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid var(--border-glass);">
 
                 <div style="background: rgba(0,0,0,0.3); border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid var(--border-glass);">
                     <div style="display: flex; justify-content: space-around; text-align: center;">
