@@ -2713,7 +2713,9 @@
         const labelStr = document.getElementById('fit-label').value.trim() || '시즌 체력 테스트';
 
         const parseNum = (id) => {
-            const val = document.getElementById(id).value;
+            const el = document.getElementById(id);
+            if (!el) return null;
+            const val = el.value;
             return val === '' ? null : Number(val);
         };
 
