@@ -10,7 +10,7 @@
         measurementId: "G-RG6G5VT085"
     };
 
-    const APP_VERSION = "v4.0.1 (Build 0308)";
+    const APP_VERSION = "v4.1.0 (Build 0308)";
     console.log("%c 지트캠 Soccer Academy " + APP_VERSION + " 로드됨 ", "background: #7bc2b7; color: #000; font-weight: bold;");
     const CURRENT_THEME = {
         primary: "#7bc2b7",
@@ -2075,8 +2075,8 @@
             console.log("Rendering modal for:", user.name);
 
             const modalHtml = `
-            <div id="member-detail-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.85); z-index: 9999; display: flex; justify-content: center; align-items: center; padding: 15px; backdrop-filter: blur(12px);">
-                <div class="modal-content premium-card fade-in" style="width: 100%; max-width: 600px; height: 85vh; display: flex; flex-direction: column; overflow: hidden; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);">
+            <div id="member-detail-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 99999; display: flex; justify-content: center; align-items: center; padding: 10px; backdrop-filter: blur(20px);">
+                <div class="modal-content premium-card fade-in" style="width: 100%; max-width: 600px; height: 90vh; display: flex; flex-direction: column; overflow: hidden; background: #0b1120; border: 1px solid rgba(255,255,255,0.15); border-radius: 28px; box-shadow: 0 0 40px rgba(0,0,0,1);">
                     
                     <div style="padding: 24px 24px 16px; background: ${theme.isPremium ? `linear-gradient(180deg, rgba(240, 105, 88, 0.2) 0%, ${theme.bg} 100%)` : `linear-gradient(180deg, rgba(123, 194, 183, 0.1) 0%, transparent 100%)`}; flex-shrink: 0; border-bottom: 1px solid ${theme.border};">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
@@ -2088,6 +2088,7 @@
                                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
                                         <h2 style="margin: 0; font-size: 1.5rem; color: #fff; letter-spacing: -0.5px;">${user.name}</h2>
                                         <span style="background: ${roleColor}; color: ${role.includes('semi') || role.includes('pro') || theme.isPremium ? '#fff' : '#000'}; padding: 3px 10px; border-radius: 8px; font-size: 0.7rem; font-weight: 900; text-transform: uppercase;">${user.role || 'Basic'}</span>
+                                        <span style="color: #64748b; font-size: 0.6rem; font-weight: 800;">v4.1.0</span>
                                     </div>
                                     <p style="margin: 0; font-size: 0.85rem; color: #94a3b8;">ID: <span style="color: ${theme.main}; font-weight: 700;">${user.id}</span> | 가입: ${user.joinDate || '-'}</p>
                                 </div>
@@ -3073,7 +3074,7 @@
         let html = `
             <div class="fade-in">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-                    <h3 style="color: var(--text-white); font-size: 1.1rem; margin: 0;">지트캠 회원 관리 (CRM) <span style="background: #ffcc00; color: #000; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 800; margin-left: 8px;">v4.0.1</span></h3>
+                    <h3 style="color: var(--text-white); font-size: 1.1rem; margin: 0;">지트캠 회원 관리 (CRM) <span style="background: #ffcc00; color: #000; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 800; margin-left: 8px;">v4.1.0</span></h3>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                         <button onclick="window.syncLocalToFirebase()" title="로컬 데이터를 서버(DB)로 강제 전송합니다" style="background: rgba(255,165,0,0.1); border: 1px solid #ffa500; color: #ffa500; font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; cursor: pointer;">
                             <i class="fas fa-sync-alt"></i> DB 강제 동기화
