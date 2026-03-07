@@ -2019,6 +2019,7 @@
         }, 2000);
     };
 
+    // === 관리자용 전역 함수 바인딩 ===
     window.showMemberDetail = (userId) => {
         const user = state.users.find(u => u.id === userId);
         if (!user) return;
@@ -2942,7 +2943,14 @@
         });
 
         const allCount = sortedUsers.filter(u => u.id !== 'admin').length;
-        const expiredCount = expiringUsers.filter(u => u.dDay < 0).length;
+
+        // 전체 유저 중 만료된 유저 수 계산 (expiringUsers 부분집합이 아닌 전체 기준)
+        const expiredCount = sortedUsers.filter(u => {
+            if (u.id === 'admin' || !u.membershipEnd) return false;
+            const end = new Date(u.membershipEnd.replace(/-/g, '/')); // 모바일 호환성
+            return end < today;
+        }).length;
+
         const activeCount = allCount - expiredCount;
 
         let displayUsers = sortedUsers.filter(u => u.id !== 'admin');
@@ -2996,7 +3004,7 @@
         let html = `
             <div class="fade-in">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-                    <h3 style="color: var(--text-white); font-size: 1.1rem; margin: 0;">지트캠 회원 관리 (CRM) <span style="font-size: 0.7rem; color: var(--primary); opacity: 0.7;">v3.0.0 (Build 0307)</span></h3>
+                    <h3 style="color: var(--text-white); font-size: 1.1rem; margin: 0;">지트캠 회원 관리 (CRM) <span style="background: var(--primary); color: #000; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 800; margin-left: 8px;">v3.0.0</span></h3>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                         <button onclick="window.syncLocalToFirebase()" title="로컬 데이터를 서버(DB)로 강제 전송합니다" style="background: rgba(255,165,0,0.1); border: 1px solid #ffa500; color: #ffa500; font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; cursor: pointer;">
                             <i class="fas fa-sync-alt"></i> DB 강제 동기화
