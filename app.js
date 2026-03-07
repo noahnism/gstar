@@ -2293,6 +2293,7 @@
 
                         <!-- 체력 검정 편집 모드 -->
                         <div id="fitness-edit-mode" style="display: none;">
+                            <input type="hidden" id="edit-fitness-season" value="new">
                             <div style="background: rgba(255,255,255,0.02); border-radius: 20px; padding: 20px; border: 1px solid rgba(255,255,255,0.05);">
                                 <h5 style="color: #7bc2b7; font-size: 0.85rem; margin: 0 0 16px;"><i class="fas fa-plus-circle"></i> 측정 데이터 입력</h5>
                                 
@@ -2373,16 +2374,16 @@
                                     </div>
                                 </div>
 
-                                <h5 style="color: #64748b; font-size: 0.75rem; font-weight: 800; margin-bottom: 12px; text-transform: uppercase;">Radar Chart Analysis (Auto-Calculated)</h5>
-                                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 25px;">
-                                    <label style="color: #94a3b8; font-size: 0.65rem; text-align: center;">스피드 <input type="number" id="fit-score-speed" min="0" max="5" step="0.1" style="width: 100%; padding: 8px; border-radius: 8px; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); color: var(--primary); text-align: center; margin-top: 4px; font-weight: 800;"></label>
-                                    <label style="color: #94a3b8; font-size: 0.65rem; text-align: center;">드리블 <input type="number" id="fit-score-dribble" min="0" max="5" step="0.1" style="width: 100%; padding: 8px; border-radius: 8px; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); color: var(--primary); text-align: center; margin-top: 4px; font-weight: 800;"></label>
-                                    <label style="color: #94a3b8; font-size: 0.65rem; text-align: center;">공감각 <input type="number" id="fit-score-agility" min="0" max="5" step="0.1" style="width: 100%; padding: 8px; border-radius: 8px; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); color: var(--primary); text-align: center; margin-top: 4px; font-weight: 800;"></label>
-                                    <label style="color: #94a3b8; font-size: 0.65rem; text-align: center;">근력 <input type="number" id="fit-score-power" min="0" max="5" step="0.1" style="width: 100%; padding: 8px; border-radius: 8px; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); color: var(--primary); text-align: center; margin-top: 4px; font-weight: 800;"></label>
-                                    <label style="color: #94a3b8; font-size: 0.65rem; text-align: center;">밸런스 <input type="number" id="fit-score-balance" min="0" max="5" step="0.1" style="width: 100%; padding: 8px; border-radius: 8px; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); color: var(--primary); text-align: center; margin-top: 4px; font-weight: 800;"></label>
+                                <h5 style="color: #64748b; font-size: 0.8rem; font-weight: 800; margin-bottom: 12px; text-transform: uppercase;">Radar Chart Analysis (Auto-Calculated)</h5>
+                                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 25px;">
+                                    <label style="color: #cbd5e1; font-size: 0.75rem; text-align: center; font-weight: 700;">스피드 <input type="number" id="fit-score-speed" min="0" max="5" step="0.1" style="width: 100%; padding: 12px; border-radius: 10px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.1); color: #00d2ff; text-align: center; margin-top: 8px; font-weight: 900; font-size: 1.1rem; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);"></label>
+                                    <label style="color: #cbd5e1; font-size: 0.75rem; text-align: center; font-weight: 700;">드리블 <input type="number" id="fit-score-dribble" min="0" max="5" step="0.1" style="width: 100%; padding: 12px; border-radius: 10px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.1); color: #00d2ff; text-align: center; margin-top: 8px; font-weight: 900; font-size: 1.1rem; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);"></label>
+                                    <label style="color: #cbd5e1; font-size: 0.75rem; text-align: center; font-weight: 700;">공감각 <input type="number" id="fit-score-agility" min="0" max="5" step="0.1" style="width: 100%; padding: 12px; border-radius: 10px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.1); color: #00d2ff; text-align: center; margin-top: 8px; font-weight: 900; font-size: 1.1rem; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);"></label>
+                                    <label style="color: #cbd5e1; font-size: 0.75rem; text-align: center; font-weight: 700;">근력 <input type="number" id="fit-score-power" min="0" max="5" step="0.1" style="width: 100%; padding: 12px; border-radius: 10px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.1); color: #00d2ff; text-align: center; margin-top: 8px; font-weight: 900; font-size: 1.1rem; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);"></label>
+                                    <label style="color: #cbd5e1; font-size: 0.75rem; text-align: center; font-weight: 700;">밸런스 <input type="number" id="fit-score-balance" min="0" max="5" step="0.1" style="width: 100%; padding: 12px; border-radius: 10px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.1); color: #00d2ff; text-align: center; margin-top: 8px; font-weight: 900; font-size: 1.1rem; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);"></label>
                                 </div>
 
-                                <button onclick="window.saveFitnessData('${user.id}')" style="width: 100%; padding: 12px; border-radius: 12px; border: none; background: linear-gradient(135deg, #7bc2b7, #1a6aa3); color: #fff; font-weight: 700; cursor: pointer; margin-bottom: 8px;">시즌 데이터 저장</button>
+                                <button onclick="window.saveFitnessData('${user.id}')" style="width: 100%; padding: 14px; border-radius: 12px; border: none; background: linear-gradient(135deg, #7bc2b7, #1a6aa3); color: #fff; font-weight: 800; font-size: 1.05rem; cursor: pointer; margin-bottom: 12px; box-shadow: 0 4px 15px rgba(0, 210, 255, 0.3);">시즌 데이터 저장</button>
                                 <button onclick="window.toggleFitnessEditMode()" style="width: 100%; padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: transparent; color: #64748b; font-weight: 600; cursor: pointer;">취소</button>
                             </div>
                         </div>
@@ -2660,6 +2661,9 @@
     window.loadFitnessForm = (selectedVal, userId) => {
         const user = state.users.find(u => u.id === userId);
         const btnDelete = document.getElementById('btn-delete-fitness');
+        const seasonInput = document.getElementById('edit-fitness-season');
+
+        if (seasonInput) seasonInput.value = selectedVal;
 
         if (selectedVal === 'new') {
             document.getElementById('fit-date').value = new Date().toISOString().split('T')[0];
