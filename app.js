@@ -20,6 +20,12 @@
             }
             db = firebase.firestore();
             console.log("Firebase Firestore Connected!");
+
+            // [추가] 익명 인증을 통해 Firestore 읽기 권한 확보 (규칙 설정에 따라 필요함)
+            firebase.auth().signInAnonymously()
+                .then(() => console.log("Firebase Anonymous Auth Success"))
+                .catch(err => console.error("Firebase Auth Error:", err));
+
         } catch (err) {
             console.error("Firebase Init Error:", err);
         }
@@ -156,6 +162,7 @@
                 if (updatedUsers.length > 0) {
                     state.users = updatedUsers;
                     localStorage.setItem('soccer_users', JSON.stringify(state.users));
+                    console.log(`Synced ${state.users.length} users from Firebase.`);
 
                     // 현재 접속한 로그인 유저(currentUser) 정보도 실시간 동기화
                     if (state.currentUser && state.currentUser.id !== 'admin') {
@@ -173,6 +180,12 @@
                         // 현재 내 프로필 화면을 보고 있다면 갱신
                         if (!state.viewingUserId || state.viewingUserId === state.currentUser.id) renderTab('profile');
                     }
+                }
+            }, (error) => {
+                console.error("Users Snapshot Error:", error);
+                // 모바일에서 권한 문제 등이 생길 경우 알림
+                if (error.code === 'permission-denied') {
+                    console.warn("Firestore access denied. Please check security rules.");
                 }
             });
 
@@ -1455,17 +1468,63 @@
     // ==========================================
     // 엑셀 데이터 임포트 로직
     // ==========================================
-    window.triggerExcelImport = () => {
-        const input = document.getElementById('excel-import-input');
-        if (input) input.click();
+    window.syncLocalToFirebase = async () => {
+        if (!db) return alert('서버(Firebase)에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.');
+
+        const msg = document.getElementById('sync-status-msg');
+        if (msg) {
+            msg.style.display = 'block';
+            msg.textContent = '서버 데이터와 대조하며 누락된 회원을 업로드 중입니다...';
+        }
+
+        try {
+            // 1. 서버의 최신 ID 목록 가져오기
+            const snap = await db.collection("users").get();
+            const firebaseUserIds = new Set();
+            snap.forEach(doc => firebaseUserIds.add(doc.id));
+
+            let syncCount = 0;
+            // 2. 로컬 state.users 중 서버에 없는 데이터만 업로드
+            for (const u of state.users) {
+                if (!firebaseUserIds.has(String(u.id))) {
+                    // Firebase는 undefined 값을 허용하지 않으므로 정제
+                    const cleanU = JSON.parse(JSON.stringify(u));
+                    await db.collection("users").doc(String(u.id)).set(cleanU);
+                    syncCount++;
+                }
+            }
+
+            // 3. 반대로 서버에는 있는데 로컬에 없는 데이터가 있을 수 있으므로 onSnapshot이 처리하겠지만
+            // 여기서 강제로 state를 교체해줄 수도 있음 (snap 데이터를 그대로 state.users에 반영)
+            if (snap.docs.length > state.users.length) {
+                const allUsers = [];
+                snap.forEach(doc => allUsers.push(doc.data()));
+                state.users = allUsers;
+                localStorage.setItem('soccer_users', JSON.stringify(state.users));
+            }
+
+            alert(`동기화 완료!\n- 서버로 업로드: ${syncCount}명\n- 전체 회원 수: ${state.users.length}명`);
+            if (window.renderAdminTab) window.renderAdminTab('admin-users');
+        } catch (err) {
+            console.error("Manual Sync Error:", err);
+            alert('동기화 중 오류가 발생했습니다: ' + err.message);
+        } finally {
+            if (msg) msg.style.display = 'none';
+        }
     };
 
-    window.handleExcelImport = (event) => {
+    window.handleExcelImport = async (event) => {
         const file = event.target.files[0];
         if (!file) return;
 
+        const importStatus = document.getElementById('excel-import-status');
+        const importButton = document.querySelector('#admin-tab-content .btn-primary');
+
+        if (importStatus) importStatus.textContent = '파일 읽는 중...';
+        if (importButton) importButton.disabled = true;
+
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             try {
                 if (typeof XLSX === 'undefined') {
                     alert("시스템 오류: 엑셀 처리 라이브러리(SheetJS)가 로드되지 않았습니다. index.html 파일도 깃허브에 함께 올리셨는지 확인해주세요.");
@@ -1484,7 +1543,10 @@
                 const arrayOfArrays = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
                 console.log("Raw Excel Data:", arrayOfArrays);
 
-                if (!arrayOfArrays || arrayOfArrays.length === 0) return alert('엑셀 데이터가 비어있거나 읽을 수 없습니다.');
+                if (!arrayOfArrays || arrayOfArrays.length === 0) {
+                    alert('엑셀 데이터가 비어있거나 읽을 수 없습니다.');
+                    return;
+                }
 
                 // 진짜 헤더(제목)가 있는 행 찾기 (이름, 번호, 성함 등이 포함된 행)
                 let headerRowIndex = -1;
@@ -1524,7 +1586,8 @@
                 let successCount = 0;
                 let failReason = "";
 
-                validRows.forEach((row, index) => {
+                for (const [index, row] of validRows.entries()) {
+                    if (importStatus) importStatus.textContent = `회원 ${index + 1}/${validRows.length}명 처리 중...`;
                     try {
                         // --- [유연한 헤더 매핑 로직] ---
                         // 1. 이름 찾기
@@ -1532,7 +1595,7 @@
                         // 2. 기본 아이디 찾기
                         let baseId = String(row['아이디'] || row['ID'] || row['Id'] || row['id'] || row['번호'] || row['No'] || '');
 
-                        if (!name && !baseId) return; // 이름과 아이디 둘 다 없으면 스킵
+                        if (!name && !baseId) continue; // 이름과 아이디 둘 다 없으면 스킵
 
                         // 3. 비밀번호 등 기본 정보
                         const pw = String(row['비밀번호'] || row['비번'] || row['password'] || row['pw'] || '1234');
@@ -1599,7 +1662,7 @@
 
                         // --- [지능형 아이디 관리 & 차수(Sequence) 부여 로직] ---
                         // 이름과 연락처가 모두 일치하는 유저가 이미 있는지 확인
-                        const baseIdStr = String(pureBaseId || baseId || '');
+                        const baseIdStr = String(baseId || '');
                         const samePersonUsers = state.users.filter(u =>
                             (u.name === name && u.phone === phone && name !== '이름없음') ||
                             (baseIdStr && u.id.split('-')[0] === baseIdStr && u.name === name)
@@ -1672,7 +1735,7 @@
                         state.users.push(cleanNewUser);
                         if (db) {
                             try {
-                                db.collection("users").doc(finalId).set(cleanNewUser).catch(e => console.error(e));
+                                await db.collection("users").doc(finalId).set(cleanNewUser);
                             } catch (syncErr) {
                                 console.error("Firebase Sync Set Error:", syncErr);
                             }
@@ -1682,7 +1745,7 @@
                     } catch (rowErr) {
                         console.error('Error parsing row at index', index, row, rowErr);
                     }
-                });
+                }
 
                 // 최종 저장 및 알림
                 if (successCount > 0) {
@@ -1696,6 +1759,9 @@
             } catch (err) {
                 console.error("Excel Read Error:", err);
                 alert('엑셀 파일 읽기에 실패했습니다. 오류 내용: ' + err.message);
+            } finally {
+                if (importStatus) importStatus.textContent = '파일 선택하기';
+                if (importButton) importButton.disabled = false;
             }
         };
         reader.readAsArrayBuffer(file);
@@ -2636,18 +2702,30 @@
 
         let html = `
             <div class="fade-in">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h3 style="color: var(--text-white); font-size: 1.2rem; margin: 0;">👨‍💻 회원 관리 (CRM) <span style="font-size: 0.7rem; color: var(--primary); opacity: 0.7;">v2.8.5</span></h3>
-                    <div style="display: flex; gap: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                    <h3 style="color: var(--text-white); font-size: 1.1rem; margin: 0;">지트캠 회원 관리 (CRM) <span style="font-size: 0.7rem; color: var(--primary); opacity: 0.7;">v2.8.7 (Build 0307)</span></h3>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button onclick="window.syncLocalToFirebase()" title="로컬 데이터를 서버(DB)로 강제 전송합니다" style="background: rgba(255,165,0,0.1); border: 1px solid #ffa500; color: #ffa500; font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; cursor: pointer;">
+                            <i class="fas fa-sync-alt"></i> DB 강제 동기화
+                        </button>
                         <button onclick="window.adminAddNewMember()" style="background: rgba(0, 210, 255, 0.1); border: 1px solid var(--primary); color: var(--text-white); font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; cursor: pointer;">
                             <i class="fas fa-user-plus"></i> 수동 등록
+                        </button>
+                        <button onclick="window.triggerExcelImport()" style="background: rgba(255,255,255,0.1); border: 1px solid var(--border-glass); color: var(--text-white); font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; cursor: pointer;">
+                            <i class="fas fa-file-excel"></i> <span id="excel-import-status">엑셀 임포트</span>
                         </button>
                         <button onclick="window.adminResetUsers()" style="background: rgba(255, 59, 48, 0.1); border: 1px solid #ff3b30; color: #ff3b30; font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; cursor: pointer;">
                             <i class="fas fa-trash-alt"></i> 초기화
                         </button>
                     </div>
+                    <input type="file" id="excel-import-input" accept=".xlsx, .xls, .csv" style="display: none;" onchange="window.handleExcelImport(event)">
                 </div>
-                
+
+                <div id="sync-status-msg" style="display:none; background: rgba(0,210,255,0.1); color: var(--primary); padding: 8px; border-radius: 8px; font-size: 0.8rem; margin-bottom: 15px; border: 1px solid var(--primary); text-align: center;">
+                    서버와 데이터를 동기화 중입니다...
+                </div>
+
+                ${warningHtml}
                 <!-- 엑셀 데이터 임포트 영역 -->
                 <div class="card" style="background: rgba(0, 210, 255, 0.05); border: 1px dashed var(--primary); padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; align-items: center; text-align: center;">
                     <div style="font-size: 0.85rem; color: var(--text-white);">
