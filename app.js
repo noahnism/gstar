@@ -741,27 +741,21 @@
                     <div class="badges-section fade-in" style="margin-bottom: 20px; background: rgba(20, 30, 48, 0.6); border: 1px solid rgba(255, 215, 0, 0.2); border-radius: 15px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                             <h4 style="font-size: 0.95rem; color: var(--text-white); margin: 0;"><i class="fas fa-medal" style="color: var(--accent-gold); margin-right: 6px;"></i>획득 뱃지 콜렉션</h4>
-                            <span style="font-size: 0.75rem; color: var(--primary); font-weight: 700;">총 3개</span>
+                            <span style="font-size: 0.75rem; color: var(--primary); font-weight: 700;">총 ${state.currentUser && state.currentUser.badges ? state.currentUser.badges.length : 0}개</span>
                         </div>
                         <div style="display: flex; gap: 15px; overflow-x: auto; padding-bottom: 5px;">
-                            <div style="min-width: 70px; text-align: center;">
-                                <div style="width: 55px; height: 55px; border-radius: 50%; background: linear-gradient(135deg, #ffd700, #b8860b); margin: 0 auto 8px; display: flex; justify-content: center; align-items: center; font-size: 1.6rem; color: #000; box-shadow: 0 5px 15px rgba(255, 215, 0, 0.3);">
-                                    <i class="fas fa-fire"></i>
+                            ${(state.currentUser && state.currentUser.badges && state.currentUser.badges.length > 0) ? state.currentUser.badges.map(bId => {
+                    const bInfo = BADGE_TYPES.find(bt => bt.id === bId);
+                    if (!bInfo) return '';
+                    return `
+                                <div style="min-width: 70px; text-align: center;">
+                                    <div style="width: 55px; height: 55px; border-radius: 50%; background: ${bInfo.bgColor}; margin: 0 auto 8px; display: flex; justify-content: center; align-items: center; font-size: 1.6rem; color: ${bInfo.color}; box-shadow: ${bInfo.shadow}; border: 1px solid rgba(255,255,255,0.1);">
+                                        <i class="fas ${bInfo.icon}"></i>
+                                    </div>
+                                    <span style="font-size: 0.75rem; color: var(--text-white); font-weight: 600;">${bInfo.label}</span>
                                 </div>
-                                <span style="font-size: 0.75rem; color: var(--text-white); font-weight: 600;">개근왕</span>
-                            </div>
-                            <div style="min-width: 70px; text-align: center;">
-                                <div style="width: 55px; height: 55px; border-radius: 50%; background: linear-gradient(135deg, #00d2ff, #3a7bd5); margin: 0 auto 8px; display: flex; justify-content: center; align-items: center; font-size: 1.6rem; color: #fff; box-shadow: 0 5px 15px rgba(0, 210, 255, 0.3);">
-                                    <i class="fas fa-tachometer-alt"></i>
-                                </div>
-                                <span style="font-size: 0.75rem; color: var(--text-white); font-weight: 600;">스프린터</span>
-                            </div>
-                            <div style="min-width: 70px; text-align: center;">
-                                <div style="width: 55px; height: 55px; border-radius: 50%; background: linear-gradient(135deg, #c0c0c0, #808080); margin: 0 auto 8px; display: flex; justify-content: center; align-items: center; font-size: 1.6rem; color: #fff;">
-                                    <i class="fas fa-shoe-prints"></i>
-                                </div>
-                                <span style="font-size: 0.75rem; color: var(--text-white); font-weight: 600;">패스 마스터</span>
-                            </div>
+                                `;
+                }).join('') : '<p style="color: var(--text-gray); font-size: 0.8rem; width: 100%; text-align: center; padding: 10px 0;">아직 획득한 뱃지가 없습니다.</p>'}
                         </div>
                     </div>
                     <div class="menu-list fade-in" style="margin-top: 20px;">
@@ -935,10 +929,22 @@
             tabContent.scrollTop = 0;
 
             if (tabId === 'profile') {
-                const myScores = (state.currentUser && state.currentUser.stats) ? state.currentUser.stats : [30, 30, 30, 30, 30];
+                let currentScores = [0, 0, 0, 0, 0];
+                let previousScores = null;
+                const ftList = state.currentUser?.fitnessTests || [];
+                if (ftList.length > 0) {
+                    currentScores = ftList[ftList.length - 1].scores || currentScores;
+                    if (ftList.length > 1) {
+                        previousScores = ftList[ftList.length - 2].scores;
+                    }
+                } else if (state.currentUser?.stats) {
+                    currentScores = state.currentUser.stats;
+                }
+                const avgScores = [3.5, 3.2, 3.8, 3.0, 3.6]; // 전체 모집단 통계 모의 연산
+
                 setTimeout(() => {
                     if (window.drawRadarChart) {
-                        window.drawRadarChart('myStatChart', myScores);
+                        window.drawRadarChart('myStatChart', currentScores, previousScores, avgScores);
                     }
                 }, 100);
             }
@@ -1092,26 +1098,20 @@
                     </div>
                 </div>
 
-                <h4 class="section-title" style="margin-bottom: 15px;">획득한 뱃지</h4>
+                <h4 class="section-title" style="margin-bottom: 15px;">획득한 명예 뱃지</h4>
                 <div style="display: flex; gap: 15px; margin-bottom: 25px; overflow-x: auto; padding-bottom: 10px;">
-                    <div style="min-width: 80px; text-align: center;">
-                        <div style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #ffd700, #b8860b); margin: 0 auto 10px; display: flex; justify-content: center; align-items: center; font-size: 1.8rem; color: #000; box-shadow: 0 5px 15px rgba(255, 215, 0, 0.3);">
-                            <i class="fas fa-fire"></i>
+                    ${(friend.badges && friend.badges.length > 0) ? friend.badges.map(bId => {
+                const bInfo = BADGE_TYPES.find(bt => bt.id === bId);
+                if (!bInfo) return '';
+                return `
+                        <div style="min-width: 80px; text-align: center;">
+                            <div style="width: 60px; height: 60px; border-radius: 50%; background: ${bInfo.bgColor}; margin: 0 auto 10px; display: flex; justify-content: center; align-items: center; font-size: 1.8rem; color: ${bInfo.color}; box-shadow: ${bInfo.shadow}; border: 1px solid rgba(255,255,255,0.1);">
+                                <i class="fas ${bInfo.icon}"></i>
+                            </div>
+                            <span style="font-size: 0.75rem; color: var(--text-gray); font-weight: bold;">${bInfo.label}</span>
                         </div>
-                        <span style="font-size: 0.75rem; color: var(--text-gray);">개근왕</span>
-                    </div>
-                    <div style="min-width: 80px; text-align: center;">
-                        <div style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #00d2ff, #3a7bd5); margin: 0 auto 10px; display: flex; justify-content: center; align-items: center; font-size: 1.8rem; color: #fff; box-shadow: 0 5px 15px rgba(0, 210, 255, 0.3);">
-                            <i class="fas fa-tachometer-alt"></i>
-                        </div>
-                        <span style="font-size: 0.75rem; color: var(--text-gray);">스프린터</span>
-                    </div>
-                    <div style="min-width: 80px; text-align: center;">
-                        <div style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #c0c0c0, #808080); margin: 0 auto 10px; display: flex; justify-content: center; align-items: center; font-size: 1.8rem; color: #fff;">
-                            <i class="fas fa-shoe-prints"></i>
-                        </div>
-                        <span style="font-size: 0.75rem; color: var(--text-gray);">패스 마스터</span>
-                    </div>
+                        `;
+            }).join('') : '<p style="color: var(--text-gray); font-size: 0.85rem; padding-left: 10px; font-style: italic;">아직 획득한 뱃지가 없습니다.</p>'}
                 </div>
 
                 <h4 class="section-title" style="margin-bottom: 15px;">최근 훈련 내역</h4>
@@ -1140,9 +1140,18 @@
         if (tabContent) {
             tabContent.innerHTML = html;
             tabContent.scrollTop = 0;
-            // 친구 스탯 (조금 더 좋은 스탯으로 예시 구성)
-            const friendScores = [35, 26, 32, 28, 30];
-            setTimeout(() => window.drawRadarChart('friendStatChart', friendScores), 50);
+            // 친구 스탯
+            let fCur = [3, 3, 3, 3, 3];
+            let fPrev = null;
+            if (friend.fitnessTests && friend.fitnessTests.length > 0) {
+                fCur = friend.fitnessTests[friend.fitnessTests.length - 1].scores || fCur;
+                if (friend.fitnessTests.length > 1) {
+                    fPrev = friend.fitnessTests[friend.fitnessTests.length - 2].scores;
+                }
+            } else if (friend.stats) {
+                fCur = friend.stats;
+            }
+            setTimeout(() => window.drawRadarChart('friendStatChart', fCur, fPrev, [3.5, 3.2, 3.8, 3.0, 3.6]), 50);
         }
     };
 
@@ -1273,47 +1282,62 @@
 
 
     // === 전역 함수: 레이더 차트 그리기 (성장성 비교 추가) ===
-    window.drawRadarChart = (canvasId, currentScores, previousScores = [28, 22, 26, 25, 30]) => {
+    window.drawRadarChart = (canvasId, currentScores, previousScores = null, avgScores = null) => {
         const ctx = document.getElementById(canvasId);
         if (!ctx) return;
 
-        // Chart.js 인스턴스가 이미 있으면 파괴 후 다시 그리기
-        // 기존 코드에서는 Chart.getChart(canvasId)를 사용했지만,
-        // 전역 변수 myChartInstance를 사용하여 특정 차트 인스턴스를 관리하는 방식으로 변경
-        if (window.myChartInstance && window.myChartInstance.canvas.id === canvasId) {
+        if (window.myChartInstance && window.myChartInstance.canvas && window.myChartInstance.canvas.id === canvasId) {
             window.myChartInstance.destroy();
         }
 
-        window.myChartInstance = new Chart(ctx, {
+        const datasets = [
+            {
+                label: '선택 시즌 (Current)',
+                data: currentScores,
+                backgroundColor: 'rgba(0, 210, 255, 0.4)',
+                borderColor: '#00d2ff',
+                borderWidth: 2,
+                pointBackgroundColor: '#fff',
+                pointBorderColor: '#00d2ff',
+                pointRadius: 3,
+                pointHoverRadius: 5,
+                zIndex: 3
+            }
+        ];
+
+        if (previousScores) {
+            datasets.push({
+                label: '직전 시즌 (Previous)',
+                data: previousScores,
+                backgroundColor: 'rgba(242, 203, 79, 0.15)',
+                borderColor: 'rgba(242, 203, 79, 0.8)',
+                borderWidth: 1.5,
+                borderDash: [5, 5],
+                pointBackgroundColor: 'transparent',
+                pointBorderColor: 'rgba(242, 203, 79, 0.5)',
+                pointRadius: 2,
+                zIndex: 2
+            });
+        }
+
+        if (avgScores) {
+            datasets.push({
+                label: '그룹 평균 (Average)',
+                data: avgScores,
+                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                borderColor: 'rgba(255, 255, 255, 0.3)',
+                borderWidth: 1,
+                borderDash: [2, 4],
+                pointRadius: 0,
+                zIndex: 1
+            });
+        }
+
+        const newChart = new Chart(ctx, {
             type: 'radar',
             data: {
-                labels: ['스피드', '유연성', '지구력', '근력', '반응속도'],
-                datasets: [
-                    {
-                        label: '최근 (Current)',
-                        data: currentScores,
-                        backgroundColor: 'rgba(0, 210, 255, 0.4)',  // 현재 능력치 (강조)
-                        borderColor: '#00d2ff',
-                        borderWidth: 2,
-                        pointBackgroundColor: '#fff',
-                        pointBorderColor: '#00d2ff',
-                        pointRadius: 3,
-                        pointHoverRadius: 5,
-                        zIndex: 2 // 앞쪽에 표시
-                    },
-                    {
-                        label: '이전 (Previous)',
-                        data: previousScores,
-                        backgroundColor: 'rgba(255, 255, 255, 0.05)', // 이전 능력치 (반투명 회색)
-                        borderColor: 'rgba(255, 255, 255, 0.3)',
-                        borderWidth: 1.5,
-                        borderDash: [5, 5], // 점선
-                        pointBackgroundColor: 'transparent',
-                        pointBorderColor: 'rgba(255, 255, 255, 0.5)',
-                        pointRadius: 2,
-                        zIndex: 1 // 뒤쪽에 표시
-                    }
-                ]
+                labels: ['스피드', '드리블', '공감각', '근력', '밸런스'],
+                datasets: datasets
             },
             options: {
                 responsive: true,
@@ -1341,13 +1365,19 @@
                         ticks: {
                             display: false,
                             min: 0,
-                            max: 35,
-                            stepSize: 7
+                            max: 5,
+                            stepSize: 1
                         }
                     }
                 }
             }
         });
+
+        if (canvasId === 'myStatChart' || canvasId === 'friendStatChart') {
+            window.myChartInstance = newChart;
+        } else {
+            window.fitnessRadarChartInstance = newChart;
+        }
     };
 
     // === 프로필 사진 업로드 처리 ===
@@ -1994,7 +2024,12 @@
                 'trunklift': 32,
                 'squat': 43,
                 'balanceL': 12.8,
-                'balanceR': 9.6
+                'balanceR': 9.6,
+                'shuttlerun': 54,
+                'situp': 42,
+                'pushup': 30,
+                'verticaljump': 48,
+                'flexibility': 15.5
             };
 
             for (const [key, val] of Object.entries(sampleData)) {
@@ -2069,6 +2104,23 @@
                         
                         <div id="tab-content-info">
                             <div id="member-view-mode">
+                                <!-- 뱃지 전시 영역 추가 -->
+                                <h4 style="color: #f2cb4f; font-size: 0.9rem; margin: 0 0 12px; display: flex; align-items: center; gap: 6px;"><i class="fas fa-medal"></i> 보유 명예 뱃지</h4>
+                                <div style="display: flex; gap: 10px; margin-bottom: 24px; overflow-x: auto; padding-bottom: 5px;">
+                                    ${(user.badges && user.badges.length > 0) ? user.badges.map(bId => {
+                const bInfo = BADGE_TYPES.find(bt => bt.id === bId);
+                if (!bInfo) return '';
+                return `
+                                        <div style="min-width: 60px; text-align: center;">
+                                            <div style="width: 48px; height: 48px; border-radius: 50%; background: ${bInfo.bgColor}; margin: 0 auto 6px; display: flex; justify-content: center; align-items: center; font-size: 1.4rem; color: ${bInfo.color}; box-shadow: ${bInfo.shadow}; border: 1px solid rgba(255,255,255,0.1);">
+                                                <i class="fas ${bInfo.icon}"></i>
+                                            </div>
+                                            <span style="font-size: 0.7rem; color: var(--text-gray); font-weight: bold;">${bInfo.label}</span>
+                                        </div>
+                                        `;
+            }).join('') : '<p style="color: #64748b; font-size: 0.8rem; margin: 0;">아직 획득한 뱃지가 없습니다.</p>'}
+                                </div>
+
                                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;">
                                     <div style="background: rgba(255,255,255,0.03); padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05);">
                                         <div style="color: #64748b; font-size: 0.75rem; margin-bottom: 4px;"><i class="fas fa-school"></i> 학교/학년</div>
@@ -2286,16 +2338,31 @@
                                         <label style="color: #cbd5e1; font-size: 0.75rem;">콘(10개) 드리블 (초)
                                             <input type="number" id="fit-rec-cone10m" step="0.001" style="width: 100%; padding: 10px; border-radius: 10px; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; margin-top: 5px;">
                                         </label>
+                                        <label style="color: #cbd5e1; font-size: 0.75rem;">왕복오래달리기 (회)
+                                            <input type="number" id="fit-rec-shuttlerun" style="width: 100%; padding: 10px; border-radius: 10px; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; margin-top: 5px;">
+                                        </label>
+                                        <label style="color: #cbd5e1; font-size: 0.75rem;">유연성 / 좌전굴 (cm)
+                                            <input type="number" id="fit-rec-flexibility" step="0.1" style="width: 100%; padding: 10px; border-radius: 10px; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; margin-top: 5px;">
+                                        </label>
+                                        <label style="color: #cbd5e1; font-size: 0.75rem;">윗몸일으키기 (1분/회)
+                                            <input type="number" id="fit-rec-situp" style="width: 100%; padding: 10px; border-radius: 10px; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; margin-top: 5px;">
+                                        </label>
                                     </div>
                                     <div style="display: flex; flex-direction: column; gap: 8px;">
                                         <label style="color: #cbd5e1; font-size: 0.75rem;">제자리 멀리뛰기 (cm)
                                             <input type="number" id="fit-rec-longjump" style="width: 100%; padding: 10px; border-radius: 10px; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; margin-top: 5px;">
                                         </label>
+                                        <label style="color: #cbd5e1; font-size: 0.75rem;">서전트 점프 (cm)
+                                            <input type="number" id="fit-rec-verticaljump" style="width: 100%; padding: 10px; border-radius: 10px; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; margin-top: 5px;">
+                                        </label>
                                         <label style="color: #cbd5e1; font-size: 0.75rem;">Trunk Lift (cm)
                                             <input type="number" id="fit-rec-trunklift" style="width: 100%; padding: 10px; border-radius: 10px; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; margin-top: 5px;">
                                         </label>
-                                        <label style="color: #cbd5e1; font-size: 0.75rem;">스쿼트 (1분당 횟수)
+                                        <label style="color: #cbd5e1; font-size: 0.75rem;">스쿼트 (1분/회)
                                             <input type="number" id="fit-rec-squat" style="width: 100%; padding: 10px; border-radius: 10px; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; margin-top: 5px;">
+                                        </label>
+                                        <label style="color: #cbd5e1; font-size: 0.75rem;">팔굽혀펴기 (1분/회)
+                                            <input type="number" id="fit-rec-pushup" style="width: 100%; padding: 10px; border-radius: 10px; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; margin-top: 5px;">
                                         </label>
                                         <label style="color: #cbd5e1; font-size: 0.75rem;">눈감고 균형잡기 왼발 (초)
                                             <input type="number" id="fit-rec-balanceL" step="0.001" style="width: 100%; padding: 10px; border-radius: 10px; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; margin-top: 5px;">
@@ -2329,8 +2396,9 @@
                     <button onclick="window.saveMemberDetail('${user.id}')" id="btn-save" style="display: none; flex: 2; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 14px; border: none; background: #7bc2b7; color: #000; font-weight: 800; cursor: pointer; transition: 0.3s;"><i class="fas fa-check-circle"></i> 변경내용 저장하기</button>
                     <button onclick="window.toggleEditMember()" id="btn-cancel" style="display: none; flex: 1; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #94a3b8; font-weight: 700; cursor: pointer;">취소</button>
                 </div>
+                </div>
             </div>
-        `;
+            `;
             document.body.insertAdjacentHTML('beforeend', modalHtml);
             console.log("Modal inserted into DOM");
         } catch (err) {
@@ -2523,10 +2591,15 @@
                 { label: '20m 스프린트', key: 'sprint20m', unit: '초', category: 'Speed' },
                 { label: '10m 드리블', key: 'dribble10m', unit: '초', category: 'Dribble' },
                 { label: '20m 드리블', key: 'dribble20m', unit: '초', category: 'Dribble' },
-                { label: 'T Test', key: 'ttest', unit: '초', category: 'Agility' },
+                { label: '콘 10개', key: 'cone10m', unit: '초', category: 'Agility' },
+                { label: '왕복오래달리기', key: 'shuttlerun', unit: '회', category: 'Stamina' },
+                { label: '유연성 (좌전굴)', key: 'flexibility', unit: 'cm', category: 'Flexibility' },
+                { label: '윗몸일으키기', key: 'situp', unit: '회', category: 'Stamina' },
                 { label: '제자리 멀리뛰기', key: 'longjump', unit: 'cm', category: 'Power' },
+                { label: '서전트 점프', key: 'verticaljump', unit: 'cm', category: 'Power' },
+                { label: 'Trunk Lift', key: 'trunklift', unit: 'cm', category: 'Flexibility' },
                 { label: '스쿼트', key: 'squat', unit: '회', category: 'Power' },
-                { label: '푸쉬업', key: 'pushup', unit: '회', category: 'Power' },
+                { label: '팔굽혀펴기', key: 'pushup', unit: '회', category: 'Power' },
                 { label: '눈감고 균형잡기(좌)', key: 'balanceL', unit: '초', category: 'Balance' },
                 { label: '눈감고 균형잡기(우)', key: 'balanceR', unit: '초', category: 'Balance' }
             ];
@@ -2557,43 +2630,9 @@
 
         // 3. 레이더 차트 업데이트
         const scores = ft.scores || [0, 0, 0, 0, 0];
-        const canvas = document.getElementById('fitnessRadarChart');
-        if (canvas) {
-            if (window.fitnessRadarChartInstance) {
-                window.fitnessRadarChartInstance.destroy();
-            }
-            const ctx = canvas.getContext('2d');
-            window.fitnessRadarChartInstance = new Chart(ctx, {
-                type: 'radar',
-                data: {
-                    labels: ['스피드', '드리블', '공감각', '근력', '밸런스'],
-                    datasets: [{
-                        label: ft.label || '체력 스탯',
-                        data: scores,
-                        backgroundColor: 'rgba(123, 194, 183, 0.2)',
-                        borderColor: '#7bc2b7',
-                        borderWidth: 2,
-                        pointBackgroundColor: '#7bc2b7',
-                        pointBorderColor: '#fff',
-                        pointHoverBackgroundColor: '#fff',
-                        pointHoverBorderColor: '#7bc2b7'
-                    }]
-                },
-                options: {
-                    scales: {
-                        r: {
-                            angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
-                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                            pointLabels: { color: '#94a3b8', font: { size: 11, weight: '600' } },
-                            ticks: { display: false, stepSize: 1 },
-                            suggestedMin: 0,
-                            suggestedMax: 5
-                        }
-                    },
-                    plugins: { legend: { display: false } }
-                }
-            });
-        }
+        const prevScores = idx > 0 ? (user.fitnessTests[idx - 1].scores || null) : null;
+        const avgScores = [3.5, 3.2, 3.8, 3.0, 3.6];
+        setTimeout(() => window.drawRadarChart('fitnessRadarChart', scores, prevScores, avgScores), 50);
     };
     window.toggleFitnessEditMode = () => {
         const viewMode = document.getElementById('fitness-view-mode');
@@ -2627,7 +2666,7 @@
             document.getElementById('fit-label').value = `시즌 ${(user?.fitnessTests?.length || 0) + 1} 체력 테스트`;
 
             ['speed', 'dribble', 'agility', 'power', 'balance'].forEach(k => document.getElementById(`fit-score-${k}`).value = '');
-            ['sprint10m', 'sprint20m', 'dribble10m', 'dribble20m', 'cone10m', 'longjump', 'trunklift', 'squat', 'balanceL', 'balanceR'].forEach(k => {
+            ['sprint10m', 'sprint20m', 'dribble10m', 'dribble20m', 'cone10m', 'shuttlerun', 'flexibility', 'situp', 'longjump', 'verticaljump', 'trunklift', 'squat', 'pushup', 'balanceL', 'balanceR'].forEach(k => {
                 const el = document.getElementById(`fit-rec-${k}`);
                 if (el) el.value = '';
             });
@@ -2650,7 +2689,7 @@
             document.getElementById('fit-score-balance').value = s[4];
 
             const r = ft.records || {};
-            ['sprint10m', 'sprint20m', 'dribble10m', 'dribble20m', 'cone10m', 'longjump', 'trunklift', 'squat', 'balanceL', 'balanceR'].forEach(k => {
+            ['sprint10m', 'sprint20m', 'dribble10m', 'dribble20m', 'cone10m', 'shuttlerun', 'flexibility', 'situp', 'longjump', 'verticaljump', 'trunklift', 'squat', 'pushup', 'balanceL', 'balanceR'].forEach(k => {
                 const el = document.getElementById(`fit-rec-${k}`);
                 if (el) el.value = r[k] !== undefined ? r[k] : '';
             });
@@ -2688,9 +2727,14 @@
             dribble10m: parseNum('fit-rec-dribble10m'),
             dribble20m: parseNum('fit-rec-dribble20m'),
             cone10m: parseNum('fit-rec-cone10m'),
+            shuttlerun: parseNum('fit-rec-shuttlerun'),
+            flexibility: parseNum('fit-rec-flexibility'),
+            situp: parseNum('fit-rec-situp'),
             longjump: parseNum('fit-rec-longjump'),
+            verticaljump: parseNum('fit-rec-verticaljump'),
             trunklift: parseNum('fit-rec-trunklift'),
             squat: parseNum('fit-rec-squat'),
+            pushup: parseNum('fit-rec-pushup'),
             balanceL: parseNum('fit-rec-balanceL'),
             balanceR: parseNum('fit-rec-balanceR')
         };
@@ -2971,12 +3015,12 @@
 
         if (window.adminUserFilter === 'active') {
             displayUsers = displayUsers.filter(u => {
-                const isExpired = u.membershipEnd && new Date(u.membershipEnd) < today;
+                const isExpired = u.membershipEnd && new Date(u.membershipEnd.replace(/-/g, '/')) < today;
                 return !isExpired;
             });
         } else if (window.adminUserFilter === 'expired') {
             displayUsers = displayUsers.filter(u => {
-                const isExpired = u.membershipEnd && new Date(u.membershipEnd) < today;
+                const isExpired = u.membershipEnd && new Date(u.membershipEnd.replace(/-/g, '/')) < today;
                 return isExpired;
             });
         }
@@ -3082,7 +3126,7 @@
 
         displayUsers.forEach(u => {
             const role = (u.role || 'Basic').toLowerCase();
-            const isExpired = u.membershipEnd && new Date(u.membershipEnd) < today;
+            const isExpired = u.membershipEnd && new Date(u.membershipEnd.replace(/-/g, '/')) < today;
 
             let roleColor = '#f06958'; // Basic (Red)
             if (role.includes('ultimate') || role.includes('vip')) roleColor = '#1a6aa3'; // Ultimate (Blue)
@@ -3250,20 +3294,136 @@
         return html;
     };
 
+    const BADGE_TYPES = [
+        { id: 'attendance', label: '개근상', icon: 'fa-calendar-check', bgColor: 'rgba(123, 194, 183, 0.2)', color: '#7bc2b7', shadow: '0 0 10px rgba(123,194,183,0.5)' },
+        { id: 'speedy1', label: '스피디 I', icon: 'fa-tachometer-alt', bgColor: 'rgba(255, 165, 0, 0.2)', color: '#ffa500', shadow: '0 0 10px rgba(255,165,0,0.5)' },
+        { id: 'speedy2', label: '스피디 II', icon: 'fa-tachometer-alt', bgColor: 'rgba(255, 140, 0, 0.2)', color: '#ff8c00', shadow: '0 0 10px rgba(255,140,0,0.5)' },
+        { id: 'speedy3', label: '스피디 III', icon: 'fa-tachometer-alt', bgColor: 'rgba(255, 100, 0, 0.2)', color: '#ff6400', shadow: '0 0 10px rgba(255,100,0,0.5)' },
+        { id: 'speedy4', label: '스피디 IV', icon: 'fa-tachometer-alt', bgColor: 'rgba(255, 60, 0, 0.2)', color: '#ff3c00', shadow: '0 0 10px rgba(255,60,0,0.5)' },
+        { id: 'speedy5', label: '스피디 V', icon: 'fa-tachometer-alt', bgColor: 'rgba(255, 0, 0, 0.2)', color: '#ff0000', shadow: '0 0 15px rgba(255,0,0,0.8)' },
+        { id: 'stamina', label: '체력짱', icon: 'fa-heartbeat', bgColor: 'rgba(240, 105, 88, 0.2)', color: '#f06958', shadow: '0 0 10px rgba(240,105,88,0.5)' },
+        { id: 'manner', label: '매너', icon: 'fa-handshake', bgColor: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', shadow: '0 0 10px rgba(56,189,248,0.5)' },
+        { id: 'seasonbest', label: '시즌베스트', icon: 'fa-trophy', bgColor: 'rgba(242, 203, 79, 0.2)', color: '#f2cb4f', shadow: '0 0 15px rgba(242,203,79,0.8)' },
+        { id: 'balance', label: '밸런스최강', icon: 'fa-balance-scale', bgColor: 'rgba(167, 139, 250, 0.2)', color: '#a78bfa', shadow: '0 0 10px rgba(167,139,250,0.5)' },
+        { id: 'messi', label: '메쉬', icon: 'fa-star', bgColor: 'rgba(250, 204, 21, 0.2)', color: '#facc15', shadow: '0 0 15px rgba(250,204,21,0.8)' },
+        { id: 'agility', label: '민첩왕', icon: 'fa-bolt', bgColor: 'rgba(251, 146, 60, 0.2)', color: '#fb923c', shadow: '0 0 10px rgba(251,146,60,0.5)' },
+        { id: 'parents', label: '페어런츠', icon: 'fa-user-friends', bgColor: 'rgba(244, 114, 182, 0.2)', color: '#f472b6', shadow: '0 0 10px rgba(244,114,182,0.5)' },
+        { id: 'shadow', label: '쉐도우', icon: 'fa-user-ninja', bgColor: 'rgba(148, 163, 184, 0.2)', color: '#94a3b8', shadow: '0 0 10px rgba(148,163,184,0.5)' },
+        { id: 'v3', label: 'V3', icon: 'fa-medal', bgColor: 'rgba(192, 192, 192, 0.2)', color: '#c0c0c0', shadow: '0 0 15px rgba(192,192,192,0.8)' },
+        { id: 'v5', label: 'V5', icon: 'fa-gem', bgColor: 'rgba(255, 215, 0, 0.2)', color: '#ffd700', shadow: '0 0 20px rgba(255,215,0,0.8)' }
+    ];
+
+    window.adminBadgeSearchQuery = window.adminBadgeSearchQuery || '';
+
     const renderAdminBadgesTab = () => {
-        return `
+        let html = `
             <div class="fade-in">
-                <h3 style="color: var(--text-white); margin-bottom: 20px; font-size: 1.25rem; display: flex; align-items: center; gap: 10px;"><i class="fas fa-medal" style="color: #f2cb4f;"></i> 유저 뱃지 부여 및 명예의 전당</h3>
-                <div class="card premium-card" style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(255,255,255,0.08); padding: 40px; border-radius: 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
-                    <div style="width: 80px; height: 80px; background: rgba(242, 203, 79, 0.1); border-radius: 50%; display: flex; justify-content: center; align-items: center; margin: 0 auto 20px; color: #f2cb4f; font-size: 2.5rem;">
-                        <i class="fas fa-tools"></i>
+                <h3 style="color: var(--text-white); margin-bottom: 20px; font-size: 1.25rem; display: flex; align-items: center; gap: 10px;"><i class="fas fa-medal" style="color: #f2cb4f;"></i> 회원 뱃지 부여 시스템</h3>
+        `;
+
+        // 좌우 레이아웃 구조 (왼쪽: 회원 검색 결과, 오른쪽: 선택된 회원의 뱃지 부여 화면)
+        const query = window.adminBadgeSearchQuery.toLowerCase();
+        let targetUsers = state.users.filter(u => u.id !== 'admin');
+        if (query) {
+            targetUsers = targetUsers.filter(u =>
+                (u.name && u.name.toLowerCase().includes(query)) ||
+                (u.id && String(u.id).toLowerCase().includes(query))
+            );
+        } else {
+            targetUsers = targetUsers.slice(0, 15); // 검색어 없을 땐 일부 렌더링
+        }
+
+        let searchListHtml = targetUsers.map(u => {
+            const totalBadges = u.badges ? u.badges.length : 0;
+            const isSelected = window.adminBadgeTargetId === u.id;
+            return `
+                <div class="card" onclick="window.selectAdminBadgeMember('${u.id}')" style="background: ${isSelected ? 'rgba(123,194,183,0.1)' : 'rgba(20,25,35,0.8)'}; border: 1px solid ${isSelected ? 'var(--primary)' : 'rgba(255,255,255,0.05)'}; padding: 12px; border-radius: 8px; margin-bottom: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s;">
+                    <div>
+                        <span style="color: #fff; font-weight: bold; display: block; margin-bottom: 4px;">${u.name} <span style="font-size: 0.75rem; color: var(--text-gray); font-weight: normal;">(${u.id})</span></span>
+                        <span style="color: ${u.role === 'Pro' ? '#7bc2b7' : u.role === 'Ultimate' ? '#1a6aa3' : '#f06958'}; font-size: 0.75rem;"><i class="fas ${u.avatar || 'fa-user'}"></i> ${u.role || 'Basic'}</span>
                     </div>
-                    <h4 style="color: #fff; margin-bottom: 10px; font-size: 1.1rem;">시스템 고도화 진행 중</h4>
-                    <p style="color: #94a3b8; font-size: 0.95rem; margin-bottom: 25px; line-height: 1.6;">선수들의 성과를 기반으로 한 자동 뱃지 부여 시스템 및<br/>명예의 전당 기능이 v3.1.0 업데이트에 포함될 예정입니다.</p>
-                    <div style="display: inline-block; padding: 6px 16px; background: rgba(255,255,255,0.05); border-radius: 20px; color: #64748b; font-size: 0.8rem; font-weight: 700;">Coming Soon</div>
+                    <div style="text-align: right;">
+                        <span style="background: rgba(242, 203, 79, 0.15); color: #f2cb4f; padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold;"><i class="fas fa-medal"></i> ${totalBadges}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        if (targetUsers.length === 0) searchListHtml = '<p style="color: var(--text-gray); font-size: 0.9rem; text-align: center; padding: 20px;">검색 결과가 없습니다.</p>';
+
+        let selectedUserHtml = `<div style="text-align: center; padding: 40px 20px; color: var(--text-gray);"><i class="fas fa-user-check" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.3;"></i><br/>좌측 명단에서 회원을 선택하세요.</div>`;
+
+        if (window.adminBadgeTargetId) {
+            const selectedUser = state.users.find(u => u.id === window.adminBadgeTargetId);
+            if (selectedUser) {
+                const userBadges = selectedUser.badges || [];
+
+                selectedUserHtml = `
+                    <div style="background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
+                            <div style="width: 50px; height: 50px; background: var(--glass-bg); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; color: var(--primary);">
+                                <i class="fas ${selectedUser.avatar || 'fa-user'}"></i>
+                            </div>
+                            <div>
+                                <h4 style="color: #fff; margin: 0 0 5px 0; font-size: 1.1rem;">${selectedUser.name} <span style="font-size: 0.8rem; color: var(--text-gray);">(${selectedUser.id})</span></h4>
+                                <span style="color: var(--primary); font-size: 0.8rem;">현재 뱃지: ${userBadges.length}개</span>
+                            </div>
+                        </div>
+
+                        <h5 style="color: #fff; margin-bottom: 12px; font-size: 0.95rem;">보유 현황 (클릭하여 회수)</h5>
+                        <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 25px; min-height: 40px;">
+                            ${userBadges.length === 0 ? '<span style="color: #64748b; font-size: 0.85rem;">보유한 뱃지가 없습니다.</span>' : userBadges.map(bId => {
+                    const bInfo = BADGE_TYPES.find(bt => bt.id === bId);
+                    if (!bInfo) return '';
+                    return `
+                                    <div onclick="window.adminRemoveBadge('${selectedUser.id}', '${bInfo.id}')" style="background: ${bInfo.bgColor}; border: 1px solid ${bInfo.color}; box-shadow: ${bInfo.shadow}; padding: 6px 12px; border-radius: 12px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: 0.2s;" onmouseover="this.style.opacity='0.6'" onmouseout="this.style.opacity='1'">
+                                        <i class="fas ${bInfo.icon}" style="color: ${bInfo.color}; font-size: 0.9rem;"></i>
+                                        <span style="color: #fff; font-size: 0.8rem; font-weight: bold;">${bInfo.label}</span>
+                                    </div>
+                                `;
+                }).join('')}
+                        </div>
+
+                        <h5 style="color: #fff; margin-bottom: 12px; font-size: 0.95rem;">새로운 뱃지 부여하기 (보유 뱃지 비활성화)</h5>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; max-height: 350px; overflow-y: auto; padding-right: 5px; scrollbar-width: thin;">
+                            ${BADGE_TYPES.map(bInfo => {
+                    const hasBadge = userBadges.includes(bInfo.id);
+                    return `
+                                    <div ${hasBadge ? '' : `onclick="window.adminAddBadge('${selectedUser.id}', '${bInfo.id}')"`} style="background: rgba(30,41,59,0.8); border: 1px solid ${hasBadge ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.1)'}; padding: 15px 10px; border-radius: 12px; text-align: center; cursor: ${hasBadge ? 'not-allowed' : 'pointer'}; opacity: ${hasBadge ? '0.3' : '1'}; transition: 0.2s;" ${!hasBadge ? 'onmouseover="this.style.background=\'rgba(255,255,255,0.05)\'" onmouseout="this.style.background=\'rgba(30,41,59,0.8)\'"' : ''}>
+                                        <div style="width: 40px; height: 40px; margin: 0 auto 10px; background: ${bInfo.bgColor}; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: ${bInfo.shadow};">
+                                            <i class="fas ${bInfo.icon}" style="color: ${bInfo.color}; font-size: 1.2rem;"></i>
+                                        </div>
+                                        <span style="color: #cbd5e1; font-size: 0.8rem; font-weight: bold; display:block;">${bInfo.label}</span>
+                                    </div>
+                                `;
+                }).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        html += `
+                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px; align-items: start;">
+                    <!-- 좌측: 유저 리스트 -->
+                    <div style="background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px solid var(--border-glass); padding: 15px; height: 600px; display: flex; flex-direction: column;">
+                        <div style="position: relative; margin-bottom: 15px;">
+                            <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-gray);"></i>
+                            <input type="text" id="admin-badge-search" value="${window.adminBadgeSearchQuery}" onkeyup="window.adminBadgeSearchQuery=this.value; if(event.key === 'Enter') renderAdminTab('admin-badges')" placeholder="이름/번호 검색" style="width: 100%; background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.1); padding: 10px 10px 10px 35px; border-radius: 8px; color: white; outline: none; font-size: 0.85rem;">
+                        </div>
+                        <div style="overflow-y: auto; flex: 1; padding-right: 5px; scrollbar-width: thin;">
+                            ${searchListHtml}
+                        </div>
+                    </div>
+
+                    <!-- 우측: 뱃지 관리 패널 -->
+                    <div style="background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px solid var(--border-glass); padding: 15px; min-height: 600px;">
+                        ${selectedUserHtml}
+                    </div>
                 </div>
             </div>
         `;
+        return html;
     };
 
     const renderAdminScheduleTab = () => {
@@ -3369,6 +3529,47 @@
             localStorage.setItem('soccer_users', JSON.stringify(state.users));
         } catch (e) { }
     }
+
+    // --- 뱃지 관리 시스템 로직 ---
+    window.selectAdminBadgeMember = (userId) => {
+        window.adminBadgeTargetId = userId;
+        renderAdminTab('admin-badges');
+    };
+
+    window.adminAddBadge = (userId, badgeId) => {
+        const user = state.users.find(u => u.id === userId);
+        if (!user) return;
+
+        if (!user.badges) user.badges = [];
+        if (!user.badges.includes(badgeId)) {
+            user.badges.push(badgeId);
+            saveAdminState();
+
+            // Firebase 동기화
+            if (db) {
+                db.collection("users").doc(userId).update({ badges: user.badges })
+                    .catch(e => console.error("Badge Update Error:", e));
+            }
+            renderAdminTab('admin-badges');
+        }
+    };
+
+    window.adminRemoveBadge = (userId, badgeId) => {
+        const user = state.users.find(u => u.id === userId);
+        if (!user || !user.badges) return;
+
+        if (confirm(`진짜로 이 뱃지를 회수하시겠습니까?`)) {
+            user.badges = user.badges.filter(b => b !== badgeId);
+            saveAdminState();
+
+            // Firebase 동기화
+            if (db) {
+                db.collection("users").doc(userId).update({ badges: user.badges })
+                    .catch(e => console.error("Badge Delete Error:", e));
+            }
+            renderAdminTab('admin-badges');
+        }
+    };
 
     window.adminSubmitSchedule = () => {
         const d = document.getElementById('admin-sched-date').value;
