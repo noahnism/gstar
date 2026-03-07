@@ -214,22 +214,34 @@
     }
 
     function checkAuth() {
+        // [수정] 모바일/새 탭 동기화를 위해 URL 파라미터가 있으면 우선 처리 (선택사항, 필요 없을 경우 생략 가능하나 안정성을 위해 추가)
+        const urlParams = new URLSearchParams(window.location.search);
+        const forceAdmin = urlParams.get('mode') === 'admin';
+
         let savedUser = null;
         try {
             savedUser = localStorage.getItem('soccer_session');
         } catch (e) { }
 
-        if (savedUser) {
+        if (savedUser || forceAdmin) {
             try {
-                const parsedUser = JSON.parse(savedUser);
+                let parsedUser = savedUser ? JSON.parse(savedUser) : null;
+                if (forceAdmin && !parsedUser) {
+                    parsedUser = { id: 'admin', name: '최고관리자', role: 'admin' };
+                }
+
                 state.isLoggedIn = true;
                 state.currentUser = parsedUser;
 
-                // --- [관리자 분기 추가] ---
-                if (parsedUser.id === 'admin' || parsedUser.role === 'admin') {
+                // --- [관리자 분기] ---
+                if (parsedUser && (parsedUser.id === 'admin' || parsedUser.role === 'admin')) {
+                    if (authView) authView.classList.add('hidden');
+                    if (appView) appView.classList.add('hidden');
                     if (adminView) adminView.classList.remove('hidden');
                     if (window.renderAdminTab) window.renderAdminTab('admin-users');
                 } else {
+                    if (authView) authView.classList.add('hidden');
+                    if (adminView) adminView.classList.add('hidden');
                     showApp();
                 }
             } catch (e) {
@@ -276,8 +288,6 @@
             else if (level === 'ultimate' || level === 'vip') duration = "12";
 
             signupDuration.value = duration;
-            // 베이직이 아니면 추가 기간 선택이 가능하도록 필드를 보여줄 수도 있으나, 
-            // 현재 요구사항은 "자동 등록"이므로 사용자에게 확신을 주기 위해 강제 설정함.
         });
     }
 
@@ -311,8 +321,10 @@
                 membershipStart: new Date().toISOString().split('T')[0]
             };
 
-            // 만료일 초기 계산
-            recalculateMembershipEnd(newUser);
+            // 만료일 초기 계산 (글로벌 함수 호출)
+            if (window.recalculateMembershipEnd) {
+                window.recalculateMembershipEnd(newUser);
+            }
             state.users.push(newUser);
 
             // Firebase 저장 (서버 연동)
@@ -342,7 +354,7 @@
     // === 로그아웃 로직 (관리자 뷰에서도 사용될 수 있도록 일반화) ===
     window.handleLogout = () => {
         if (!confirm('로그아웃 하시겠습니까?')) return;
-        localStorage.removeItem('soccer_session'); // 'soccer_user' 대신 'soccer_session' 사용
+        localStorage.removeItem('soccer_session');
         state.currentUser = null;
         state.isLoggedIn = false;
 
@@ -352,6 +364,11 @@
 
         // 관리자 뷰 가리기
         if (adminView) adminView.classList.add('hidden');
+
+        // URL 파라미터 날리기 (관리자 모드 리셋용)
+        if (window.history.replaceState) {
+            window.history.replaceState(null, null, window.location.pathname);
+        }
 
         // 로그인 뷰 표시
         if (authView) authView.classList.remove('hidden');
@@ -370,8 +387,8 @@
 
         if (!id || !pw) return alert('아이디와 비밀번호를 모두 입력하세요.');
 
-        // --- [관리자 분기 추가] ---
-        if (id.toLowerCase() === 'admin' && pw === 'admin123') { // 관리자 비밀번호는 임시로 'admin123'
+        // --- [관리자 분기] ---
+        if (id.toLowerCase() === 'admin' && pw === 'admin123') { // 관리자 비밀번호 임시 조건
             state.currentUser = { id: 'admin', name: '최고관리자', role: 'admin' };
             state.isLoggedIn = true;
             try {
@@ -379,19 +396,26 @@
             } catch (e) { console.error("LocalStorage save failed", e); }
 
             if (authView) authView.classList.add('hidden');
+            if (appView) appView.classList.add('hidden');
             if (adminView) adminView.classList.remove('hidden');
-            renderAdminTab('admin-users'); // 초기 탭 렌더링
+
+            // 모바일 새로고침 방어를 위한 파라미터 추가
+            if (window.history.replaceState) {
+                window.history.replaceState(null, null, "?mode=admin");
+            }
+
+            if (window.renderAdminTab) window.renderAdminTab('admin-users');
             return;
         }
 
-        // 1. 등록된 회원 검색 (관리자가 아닌 일반 사용자)
+        // 일반 회원 검색
         const user = state.users.find(u => u.id === id);
 
-        if (!user) { // user가 없으면 등록되지 않은 아이디
+        if (!user) {
             return alert('등록되지 않은 아이디입니다. 먼저 회원가입을 진행해 주세요.');
         }
 
-        // 2. 비밀번호 일치 확인
+        // 비밀번호 일치 확인
         if (user.pw !== pw) {
             return alert('비밀번호가 일치하지 않습니다.');
         }
@@ -405,6 +429,13 @@
         state.isLoggedIn = true;
 
         if (authView) authView.classList.add('hidden');
+        if (adminView) adminView.classList.add('hidden');
+
+        // 관리자 파라미터 초기화
+        if (window.history.replaceState) {
+            window.history.replaceState(null, null, window.location.pathname);
+        }
+
         showApp();
     };
 
@@ -767,8 +798,14 @@
                     };
                 });
 
-                // 모든 포스트 합치기 및 정렬 (최신 번호순)
-                const allFeed = [...internalPosts, ...externalSnsMock].sort((a, b) => b.id - a.id);
+                // 포스트 정렬 및 최상단 고정 로직 (isPriority 우선순위 적용)
+                const allFeed = [...internalPosts, ...externalSnsMock].sort((a, b) => {
+                    // 우선순위가 있는 공지가 무조건 맨 위
+                    if (a.isPriority && !b.isPriority) return -1;
+                    if (!a.isPriority && b.isPriority) return 1;
+                    // 나머지는 번호(순서) 역순
+                    return b.id - a.id;
+                });
 
                 html = `
                     <div class="social-header fade-in" style="display:flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
@@ -780,37 +817,50 @@
                         </div>
                     </div>
                     <div class="fade-in" style="display: flex; flex-direction: column; gap: 20px; padding-bottom: 30px;">
-                        ${allFeed.map(post => `
-                            <div class="card" style="background: rgba(20, 25, 35, 0.7); border: 1px solid var(--border-glass); border-radius: 15px; overflow: hidden; box-shadow: 0 10px 20px rgba(0,0,0,0.3);">
+                        ${allFeed.map(post => {
+                    const isNotice = post.type === 'notice' || post.authorName.includes('운영진');
+                    const borderStyle = post.isPriority ? '2px solid #ff3b30' : (isNotice ? '1px solid var(--primary)' : '1px solid var(--border-glass)');
+                    const bgStyle = post.isPriority ? 'rgba(40, 15, 15, 0.8)' : 'rgba(20, 25, 35, 0.7)';
+
+                    return `
+                            <div class="card" style="background: ${bgStyle}; border: ${borderStyle}; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 20px rgba(0,0,0,0.3);">
+                                ${post.isPriority ? `<div style="background: #ff3b30; color: white; text-align: center; padding: 4px 0; font-size: 0.8rem; font-weight: bold;"><i class="fas fa-bullhorn" style="margin-right: 5px;"></i>필독 공지사항입니다.</div>` : ''}
                                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.05);">
                                     <div style="display: flex; align-items: center; gap: 10px;">
-                                        <div style="width: 35px; height: 35px; border-radius: 50%; background: var(--bg-dark); display: flex; justify-content: center; align-items: center; color: var(--primary); font-size: 1rem; overflow: hidden; border: 1px solid var(--border-glass);">
+                                        <div style="width: 35px; height: 35px; border-radius: 50%; background: var(--bg-dark); display: flex; justify-content: center; align-items: center; color: ${isNotice ? 'var(--accent-gold)' : 'var(--primary)'}; font-size: 1rem; overflow: hidden; border: 1px solid var(--border-glass);">
                                             ${post.authorAvatarImg ? `<img src="${post.authorAvatarImg}" style="width:100%; height:100%; object-fit:cover;">` : `<i class="fas ${post.authorAvatar || 'fa-user'}"></i>`}
                                         </div>
                                         <div>
                                             <span style="font-weight: 700; font-size: 0.95rem; color: var(--text-white);">${post.authorName}</span>
-                                            ${post.isExternal ? '<span style="font-size: 0.65rem; color: #ff3b30; margin-left: 5px; background: rgba(255,59,48,0.1); padding: 2px 6px; border-radius: 10px; border: 1px solid rgba(255,59,48,0.3);">Instagram</span>' : '<span style="font-size: 0.65rem; color: var(--primary); margin-left: 5px; background: rgba(0,210,255,0.1); padding: 2px 6px; border-radius: 10px; border: 1px solid rgba(0,210,255,0.3);">G-STAR 멤버</span>'}
+                                            ${post.isExternal ? '<span style="font-size: 0.65rem; color: #ff3b30; margin-left: 5px; background: rgba(255,59,48,0.1); padding: 2px 6px; border-radius: 10px; border: 1px solid rgba(255,59,48,0.3);">Instagram</span>' :
+                            (isNotice ? '<span style="font-size: 0.65rem; color: var(--accent-gold); margin-left: 5px; background: rgba(255,215,0,0.1); padding: 2px 6px; border-radius: 10px; border: 1px solid rgba(255,215,0,0.3);">운영자</span>'
+                                : '<span style="font-size: 0.65rem; color: var(--primary); margin-left: 5px; background: rgba(0,210,255,0.1); padding: 2px 6px; border-radius: 10px; border: 1px solid rgba(0,210,255,0.3);">G-STAR 멤버</span>')}
                                         </div>
                                     </div>
                                     <i class="fas fa-ellipsis-h" style="color: var(--text-gray);"></i>
                                 </div>
+                                ${post.media ? `
                                 <div style="position: relative; width: 100%; aspect-ratio: 4/3; background: #000;">
                                     <img src="${post.media}" style="width: 100%; height: 100%; object-fit: cover;">
                                     ${post.isVideo ? '<div style="position: absolute; top:50%; left:50%; transform: translate(-50%, -50%); width: 50px; height: 50px; background: rgba(0,0,0,0.6); border-radius: 50%; display: flex; justify-content:center; align-items:center;"><i class="fas fa-play" style="color: white; font-size: 1.5rem; margin-left: 3px;"></i></div>' : ''}
-                                </div>
+                                </div>` : ''}
                                 <div style="padding: 15px;">
+                                    ${!isNotice ? `
                                     <div style="display: flex; gap: 15px; margin-bottom: 10px; font-size: 1.4rem; color: var(--text-white);">
                                         <i class="far fa-heart" style="cursor: pointer; transition: 0.2s;" onclick="this.classList.toggle('fas'); this.classList.toggle('far'); this.style.color = this.style.color === 'rgb(255, 59, 48)' ? 'var(--text-white)' : '#ff3b30';"></i>
                                         <i class="far fa-comment"></i>
                                         <i class="far fa-paper-plane"></i>
-                                    </div>
-                                    <p style="font-size: 0.95rem; line-height: 1.5; color: var(--text-gray); margin-bottom: 5px;">
-                                        <strong style="color: var(--text-white);">${post.authorName}</strong> ${post.content}
+                                    </div>` : ''}
+                                    ${post.category && !post.content.includes('[공지]') ? `<span style="color: var(--primary); font-weight: bold; margin-right: 5px; font-size: 0.9rem;">[${post.category}]</span>` : ''}
+                                    ${post.title ? `<h4 style="color: var(--text-white); font-size: 1.1rem; margin-bottom: 8px;">${post.title}</h4>` : ''}
+                                    <p style="font-size: 0.95rem; line-height: 1.6; color: var(--text-gray); margin-bottom: 5px; white-space: pre-wrap;">
+                                        ${!isNotice ? `<strong style="color: var(--text-white);">${post.authorName}</strong> ` : ''}${post.content}
                                     </p>
-                                    <span style="font-size: 0.75rem; color: #666;">방금 전</span>
+                                    <span style="font-size: 0.75rem; color: #666;">${post.date || '방금 전'}</span>
                                 </div>
                             </div>
-                        `).join('')}
+                        `;
+                }).join('')}
                     </div>
                 `;
                 break;
@@ -1730,6 +1780,69 @@
                                     <p style="margin: 0; color: #cbd5e1; font-size: 0.85rem; line-height: 1.5; white-space: pre-wrap;">${user.memo || '기록된 내용이 없습니다.'}</p>
                                 </div>
                             </div>
+                            
+                            <!-- [회원정보 수정 모드 폼 추가구현] -->
+                            <div id="member-edit-mode" style="display: none;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;">
+                                    <label style="color: #64748b; font-size: 0.75rem;">이름 <input type="text" id="edit-name" value="${user.name}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1e293b; color: #fff; margin-top: 4px;"></label>
+                                    <label style="color: #64748b; font-size: 0.75rem;">고유번호(ID) <input type="text" id="edit-id" value="${user.id}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1e293b; color: #fff; margin-top: 4px;"></label>
+                                </div>
+                                
+                                <h4 style="color: #7bc2b7; font-size: 0.9rem; margin: 0 0 12px;"><i class="fas fa-layer-group"></i> 소속 및 멤버십 정보</h4>
+                                <div style="background: rgba(255,255,255,0.02); padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.04); margin-bottom: 24px; display: grid; gap: 12px;">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                        <label style="color: #64748b; font-size: 0.75rem;">등급
+                                            <select id="edit-role" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1e293b; color: #fff; margin-top: 4px;">
+                                                <option value="Basic" ${role === 'basic' ? 'selected' : ''}>Basic</option>
+                                                <option value="Semi" ${role === 'semi' ? 'selected' : ''}>Semi</option>
+                                                <option value="Pro" ${role === 'pro' ? 'selected' : ''}>Pro</option>
+                                                <option value="Ultimate" ${role === 'ultimate' ? 'selected' : ''}>Ultimate</option>
+                                                <option value="admin" ${role === 'admin' ? 'selected' : ''}>Admin (관리자)</option>
+                                            </select>
+                                        </label>
+                                        <label style="color: #64748b; font-size: 0.75rem;">소속 그룹 <input type="text" id="edit-group" value="${user.group || ''}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1e293b; color: #fff; margin-top: 4px;"></label>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                        <label style="color: #64748b; font-size: 0.75rem;">최초 가입일 <input type="text" id="edit-joindate" value="${user.joinDate || ''}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1e293b; color: #fff; margin-top: 4px;"></label>
+                                        <label style="color: #64748b; font-size: 0.75rem;">멤버십 만료일 <input type="text" id="edit-enddate" value="${user.membershipEnd || ''}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1e293b; color: #fff; margin-top: 4px;"></label>
+                                    </div>
+                                </div>
+
+                                <h4 style="color: #7bc2b7; font-size: 0.9rem; margin: 0 0 12px;"><i class="fas fa-id-card"></i> 신체 및 개인 프로필 정보</h4>
+                                <div style="background: rgba(255,255,255,0.02); padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.04); margin-bottom: 24px; display: grid; gap: 12px;">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                        <label style="color: #64748b; font-size: 0.75rem;">성별 <input type="text" id="edit-gender" value="${user.gender || ''}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1e293b; color: #fff; margin-top: 4px;"></label>
+                                        <label style="color: #64748b; font-size: 0.75rem;">생년월일 <input type="text" id="edit-birth" value="${user.birthDate || ''}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1e293b; color: #fff; margin-top: 4px;"></label>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                        <label style="color: #64748b; font-size: 0.75rem;">학년 <input type="text" id="edit-grade" value="${user.gradeLevel || ''}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1e293b; color: #fff; margin-top: 4px;"></label>
+                                        <label style="color: #64748b; font-size: 0.75rem;">학교/어린이집 <input type="text" id="edit-school" value="${user.school || ''}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1e293b; color: #fff; margin-top: 4px;"></label>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                        <label style="color: #64748b; font-size: 0.75rem;">신장(cm) <input type="text" id="edit-height" value="${user.height || ''}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1e293b; color: #fff; margin-top: 4px;"></label>
+                                        <label style="color: #64748b; font-size: 0.75rem;">체중(kg) <input type="text" id="edit-weight" value="${user.weight || ''}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1e293b; color: #fff; margin-top: 4px;"></label>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                        <label style="color: #64748b; font-size: 0.75rem;">아버지 성함 <input type="text" id="edit-father" value="${user.fatherName || ''}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1e293b; color: #fff; margin-top: 4px;"></label>
+                                        <label style="color: #64748b; font-size: 0.75rem;">어머니 성함 <input type="text" id="edit-mother" value="${user.motherName || ''}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1e293b; color: #fff; margin-top: 4px;"></label>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                        <label style="color: #64748b; font-size: 0.75rem;">셔틀 이용 <input type="text" id="edit-shuttle" value="${user.shuttle || ''}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1e293b; color: #fff; margin-top: 4px;"></label>
+                                        <label style="color: #64748b; font-size: 0.75rem;">유니폼 지급 여부 <input type="text" id="edit-uniform" value="${user.uniformInfo || ''}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1e293b; color: #fff; margin-top: 4px;"></label>
+                                    </div>
+                                </div>
+
+                                <h4 style="color: #7bc2b7; font-size: 0.9rem; margin: 0 0 12px;"><i class="fas fa-map-marker-alt"></i> 거주지 및 연락처 수정</h4>
+                                <div style="background: rgba(255,255,255,0.02); padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.04); margin-bottom: 24px; display: grid; gap: 12px;">
+                                    <label style="color: #64748b; font-size: 0.75rem;">연락처 <input type="text" id="edit-phone" value="${user.phone || ''}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1e293b; color: #fff; margin-top: 4px;"></label>
+                                    <label style="color: #64748b; font-size: 0.75rem;">상세 주소 <input type="text" id="edit-address" value="${user.address || ''}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1e293b; color: #fff; margin-top: 4px;"></label>
+                                </div>
+                                
+                                <h4 style="color: #f2cb4f; font-size: 0.9rem; margin: 0 0 12px;"><i class="fas fa-sticky-note"></i> 메모 (관리자 전용)</h4>
+                                <div style="background: rgba(242, 203, 79, 0.05); padding: 16px; border-radius: 16px; border: 1px solid rgba(242, 203, 79, 0.1); margin-bottom: 24px;">
+                                    <textarea id="edit-memo" style="width: 100%; height: 80px; padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: #1e293b; color: #fff; resize: none;">${user.memo || ''}</textarea>
+                                </div>
+                            </div>
                         </div>
 
                         <div id="tab-content-fitness" style="display: none;">
@@ -1772,8 +1885,8 @@
                                 </div>
 
                                 <div style="background: rgba(242, 203, 79, 0.05); padding: 12px; border-radius: 12px; margin-bottom: 16px; border: 1px solid rgba(242, 203, 79, 0.1);">
-                                    <div style="color: #f2cb4f; font-size: 0.75rem; font-weight: 700; margin-bottom: 8px;"><i class="fas fa-file-pdf"></i> 스마트 핏 리포트 (PDF)</div>
-                                    <input type="file" id="fit-pdf-file" accept="application/pdf" style="font-size: 0.8rem; color: #cbd5e1; width: 100%;">
+                                    <div style="color: #f2cb4f; font-size: 0.75rem; font-weight: 700; margin-bottom: 8px;"><i class="fas fa-file-pdf"></i> 스마트 핏 리포트 (PDF/PPT/이미지)</div>
+                                    <input type="file" id="fit-pdf-file" accept=".pdf, .ppt, .pptx, image/*" style="font-size: 0.8rem; color: #cbd5e1; width: 100%;">
                                 </div>
 
                                 <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 20px;">
@@ -2177,8 +2290,11 @@
             pdfUrl: newPdfUrl
         };
 
+        // --- [핵심] 최신 체력 검정 스탯을 메인 유저 스탯에 동기화 ---
+        user.stats = [...scores];
+
         const fileInput = document.getElementById('fit-pdf-file');
-        const file = fileInput.files[0];
+        const file = fileInput ? fileInput.files[0] : null;
 
         // 파일 업로드 처리
         if (file && window.firebase) {
@@ -2192,49 +2308,59 @@
                 const snapshot = await fileRef.put(file);
                 newData.pdfUrl = await snapshot.ref.getDownloadURL();
             } catch (error) {
-                console.error("PDF Upload Error:", error);
-                alert("PDF 업로드 중 오류가 발생했습니다. 기록만 먼저 저장합니다.");
+                console.error("File Upload Error:", error);
+                alert("파일 업로드 중 오류가 발생했습니다. 기록만 먼저 저장합니다.");
             } finally {
                 document.getElementById('member-detail-modal').style.pointerEvents = 'auto';
                 document.getElementById('member-detail-modal').style.opacity = '1';
+                finalizeAndSave(user, currentUserId, selectedVal);
             }
-        }
-
-        if (!user.fitnessTests) user.fitnessTests = [];
-
-        if (selectedVal === 'new') {
-            user.fitnessTests.push(newData);
         } else {
-            const idx = parseInt(selectedVal);
-            if (!isNaN(idx)) {
-                user.fitnessTests[idx] = newData;
-            }
+            finalizeAndSave(user, currentUserId, selectedVal);
         }
 
-        // Firebase & LocalStorage 저장
-        localStorage.setItem('soccer_users', JSON.stringify(state.users));
-        if (db) {
-            db.collection("users").doc(currentUserId).update({ fitnessTests: user.fitnessTests }).catch(e => console.error(e));
-        }
+        function finalizeAndSave(user, currentUserId, selectedVal) {
+            if (!user.fitnessTests) user.fitnessTests = [];
 
-        alert("체력 검정 데이터가 성공적으로 반영되었습니다.");
-
-        document.getElementById('member-detail-modal').remove();
-        renderAdminTab('admin-users');
-        window.showMemberDetail(currentUserId);
-
-        // 다시 팝업 띄우고 피트니스 탭 개방
-        setTimeout(() => {
-            window.switchMemberDetailTab('fitness');
-            if (user.fitnessTests && user.fitnessTests.length > 0) {
-                const newIdx = selectedVal === 'new' ? (user.fitnessTests.length - 1).toString() : selectedVal;
-                const selectEl = document.getElementById('fitness-season-select');
-                if (selectEl) {
-                    selectEl.value = newIdx;
-                    window.changeFitnessSeason(newIdx, currentUserId);
+            if (selectedVal === 'new') {
+                user.fitnessTests.push(newData);
+            } else {
+                const idx = parseInt(selectedVal);
+                if (!isNaN(idx)) {
+                    user.fitnessTests[idx] = newData;
                 }
             }
-        }, 80);
+
+            // Firebase & LocalStorage 동시 업데이트
+            localStorage.setItem('soccer_users', JSON.stringify(state.users));
+            if (db) {
+                db.collection("users").doc(currentUserId.toString()).update({
+                    fitnessTests: user.fitnessTests,
+                    stats: user.stats
+                }).catch(e => console.error(e));
+            }
+
+            alert("체력 검정 데이터가 성공적으로 반영되었습니다.");
+
+            const modal = document.getElementById('member-detail-modal');
+            if (modal) modal.remove();
+
+            renderAdminTab('admin-users');
+            window.showMemberDetail(currentUserId);
+
+            // 다시 팝업 띄우고 피트니스 탭 개방
+            setTimeout(() => {
+                window.switchMemberDetailTab('fitness');
+                if (user.fitnessTests && user.fitnessTests.length > 0) {
+                    const newIdx = selectedVal === 'new' ? (user.fitnessTests.length - 1).toString() : selectedVal;
+                    const selectEl = document.getElementById('fitness-season-select');
+                    if (selectEl) {
+                        selectEl.value = newIdx;
+                        window.changeFitnessSeason(newIdx, currentUserId);
+                    }
+                }
+            }, 80);
+        }
     };
 
     window.deleteFitnessData = (currentUserId) => {
@@ -2618,16 +2744,85 @@
     };
 
     const renderAdminNoticesTab = () => {
-        return `
+        let html = `
             <div class="fade-in">
                 <h3 style="color: var(--text-white); margin-bottom: 20px; font-size: 1.2rem;">📢 공지사항 작성</h3>
-                <div class="card" style="background: rgba(20, 25, 35, 0.8); border: 1px solid var(--border-glass); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
-                    <input type="text" id="admin-notice-title" placeholder="제목을 입력하세요" style="width: 100%; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 12px; color: var(--text-white); margin-bottom: 15px; outline: none;">
+                <div class="card" style="background: rgba(20, 25, 35, 0.8); border: 1px solid var(--border-glass); padding: 15px; border-radius: 12px; margin-bottom: 25px;">
+                    
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <select id="admin-notice-category" style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; color: var(--text-white); outline: none; flex: 0.3;">
+                            <option value="공지" style="background: #0f172a;">[공지]</option>
+                            <option value="안내" style="background: #0f172a;">[안내]</option>
+                            <option value="수업스케치" style="background: #0f172a;">[수업스케치]</option>
+                            <option value="감독의 글" style="background: #0f172a;">[감독의 글]</option>
+                        </select>
+                        <input type="text" id="admin-notice-title" placeholder="제목을 입력하세요" style="width: 100%; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; color: var(--text-white); outline: none; flex: 0.7;">
+                    </div>
+
+                    <!-- 파일 첨부 추가 -->
+                    <div style="margin-bottom: 15px;">
+                        <input type="file" id="admin-notice-file" accept="image/*,video/*" style="display: none;" onchange="
+                            const file = this.files[0];
+                            if(file) {
+                                document.getElementById('admin-notice-file-name').textContent = file.name;
+                            } else {
+                                document.getElementById('admin-notice-file-name').textContent = '선택된 파일 없음';
+                            }
+                        ">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <button onclick="document.getElementById('admin-notice-file').click()" style="background: rgba(255,255,255,0.1); border: 1px solid var(--border-glass); color: var(--text-white); padding: 8px 12px; border-radius: 6px; font-size: 0.8rem; cursor: pointer;">
+                                <i class="fas fa-camera" style="margin-right: 5px;"></i> 사진/영상 첨부
+                            </button>
+                            <span id="admin-notice-file-name" style="font-size: 0.8rem; color: var(--text-gray);">선택된 파일 없음</span>
+                        </div>
+                    </div>
+
                     <textarea id="admin-notice-body" placeholder="공지할 내용을 작성하세요..." style="width: 100%; height: 150px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 12px; color: var(--text-white); resize: none; outline: none; margin-bottom: 15px;"></textarea>
-                    <button onclick="window.adminSubmitNotice()" class="btn-primary" style="width: 100%; padding: 12px;">공지 게시하기</button>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label style="display: flex; align-items: center; gap: 8px; color: var(--text-white); font-size: 0.9rem; cursor: pointer;">
+                            <input type="checkbox" id="admin-notice-priority" style="accent-color: var(--primary); width: 16px; height: 16px;">
+                            ⚠️ <span style="color: #ff3b30; font-weight: bold;">필독 (상단 고정/강조)</span>
+                        </label>
+                        <button id="btn-admin-submit-notice" onclick="window.adminSubmitNotice()" class="btn-primary" style="padding: 10px 20px;">게시하기</button>
+                    </div>
                 </div>
-            </div>
+                
+                <h4 style="color: var(--text-white); margin-bottom: 15px; font-size: 1.1rem;">📝 작성된 기본 공지 목록</h4>
+                <div style="display: flex; flex-direction: column; gap: 15px; max-height: 400px; overflow-y: auto;">
         `;
+
+        const adminPosts = state.posts.filter(p => String(p.authorId) === 'admin' || p.type === 'notice');
+
+        if (adminPosts.length === 0) {
+            html += `<p style="color: var(--text-gray); font-size: 0.9rem; text-align: center; padding: 20px;">작성된 공지가 없습니다.</p>`;
+        } else {
+            html += adminPosts.map(p => {
+                const isImportant = p.isPriority ? '<span style="background: #ff3b30; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; margin-right: 5px;">필독</span>' : '';
+                const categoryLabel = p.category ? `<span style="color: var(--primary); font-weight: bold; margin-right: 5px;">[${p.category}]</span>` : '';
+
+                return `
+                    <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid ${p.isPriority ? '#ff3b30' : 'var(--border-glass)'}; padding: 15px; border-radius: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                            <div style="flex: 1;">
+                                <div style="margin-bottom: 5px;">
+                                    ${isImportant} ${categoryLabel} <span style="font-size: 0.8rem; color: var(--text-gray);">${p.date || '방금 전'}</span>
+                                </div>
+                                <h4 style="color: var(--text-white); font-size: 1rem; margin-bottom: 8px; line-height: 1.3;">${p.title || '제목 없음'}</h4>
+                            </div>
+                            <i class="fas fa-trash-alt" onclick="window.adminDeleteNotice(${p.id})" style="color: #ff3b30; cursor: pointer; font-size: 1rem; padding: 5px; opacity: 0.8;" title="삭제"></i>
+                        </div>
+                        <p style="color: #cbd5e1; font-size: 0.85rem; line-height: 1.5; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; max-height: 80px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;">
+                            ${p.content}
+                        </p>
+                        ${p.media ? `<div style="margin-top: 10px;"><i class="fas fa-image" style="color: var(--primary); margin-right: 5px;"></i><span style="font-size: 0.8rem; color: var(--text-gray);">첨부파일 포함됨</span></div>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        html += `</div></div>`;
+        return html;
     };
 
     const renderAdminBadgesTab = () => {
@@ -2771,25 +2966,100 @@
     };
 
     window.adminSubmitNotice = () => {
+        const c = document.getElementById('admin-notice-category').value;
         const t = document.getElementById('admin-notice-title').value;
         const b = document.getElementById('admin-notice-body').value;
+        const p = document.getElementById('admin-notice-priority').checked;
+        const f = document.getElementById('admin-notice-file').files[0];
+
         if (!t || !b) return alert('제목과 내용을 모두 입력해주세요.');
 
-        // 목업: 최상단 소셜 피드 혹은 공지 배열에 주입
-        state.posts.unshift({
-            id: Date.now(),
-            author: '지트캠프 운영자',
-            avatar: 'fa-shield-alt',
-            type: 'notice',
-            time: '방금 전',
-            content: `[공지] ${t}\n\n${b}`,
-            likes: 0,
-            comments: []
-        });
+        const btn = document.getElementById('btn-admin-submit-notice');
+        btn.textContent = '업로드 중...';
+        btn.disabled = true;
 
-        alert('새 공지사항이 앱 전반에 성공적으로 게시되었습니다.');
-        document.getElementById('admin-notice-title').value = '';
-        document.getElementById('admin-notice-body').value = '';
+        const processSubmission = (mediaUrl = null) => {
+            const newNotice = {
+                id: Date.now(),
+                authorId: 'admin',
+                authorName: 'G-STAR 운영진',
+                avatar: 'fa-shield-alt',
+                type: 'notice', // 타입 유지 (소셜 탭 호환)
+                category: c,
+                title: t,
+                date: new Date().toLocaleDateString(),
+                time: '방금 전',
+                content: b,
+                isPriority: p,
+                media: mediaUrl, // 첨부파일 URL
+                likes: 0,
+                comments: []
+            };
+
+            // 상태 업데이트 및 소셜 피드 최상단 삽입 (isPriority에 따른 별도 정렬은 렌더링 시 처리)
+            state.posts.unshift(newNotice);
+
+            // Firebase 연동 (전역 동기화)
+            if (db) {
+                db.collection("posts").doc(newNotice.id.toString()).set(newNotice).then(() => {
+                    console.log("Notice posted to Firebase");
+                }).catch(e => console.error(e));
+            }
+
+            try {
+                localStorage.setItem('soccer_posts', JSON.stringify(state.posts));
+            } catch (e) { }
+
+            alert('새 공지사항이 성공적으로 게시되었습니다.');
+
+            // 폼 초기화
+            document.getElementById('admin-notice-title').value = '';
+            document.getElementById('admin-notice-body').value = '';
+            document.getElementById('admin-notice-priority').checked = false;
+            document.getElementById('admin-notice-file').value = '';
+            document.getElementById('admin-notice-file-name').textContent = '선택된 파일 없음';
+            btn.textContent = '게시하기';
+            btn.disabled = false;
+
+            renderAdminTab('admin-notices'); // 탭 리렌더링으로 목록 갱신
+        };
+
+        // 파일 첨부 시 Firebase Storage 처리
+        if (f && window.storage) {
+            const fileName = `notices/${Date.now()}_${f.name}`;
+            const storageRef = window.storage.ref(fileName);
+            storageRef.put(f).then(snapshot => {
+                return snapshot.ref.getDownloadURL();
+            }).then(downloadURL => {
+                processSubmission(downloadURL);
+            }).catch(e => {
+                console.warn('Storage Error:', e);
+                // 업로드 실패 시 로컬 더미 처리
+                const reader = new FileReader();
+                reader.onload = (e) => processSubmission(e.target.result);
+                reader.readAsDataURL(f);
+            });
+        } else if (f) {
+            // Storage 인스턴스가 없을 때 로컬 fallback 처리
+            const reader = new FileReader();
+            reader.onload = (e) => processSubmission(e.target.result);
+            reader.readAsDataURL(f);
+        } else {
+            processSubmission(null);
+        }
+    };
+
+    window.adminDeleteNotice = (id) => {
+        if (!confirm('정말 이 공지사항/게시물을 삭제하시겠습니까?')) return;
+
+        state.posts = state.posts.filter(p => p.id !== id);
+        try { localStorage.setItem('soccer_posts', JSON.stringify(state.posts)); } catch (e) { }
+
+        if (db) {
+            db.collection("posts").doc(id.toString()).delete().catch(e => console.error(e));
+        }
+
+        renderAdminTab('admin-notices');
     };
 
     // 하단 내비게이션 탭 이벤트 핸들러
