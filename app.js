@@ -10,7 +10,7 @@
         measurementId: "G-RG6G5VT085"
     };
 
-    const APP_VERSION = "v4.1.3 (Build 0308)";
+    const APP_VERSION = "v4.1.4 (Build 0308)";
     console.log("%c 지트캠 Soccer Academy " + APP_VERSION + " 로드됨 ", "background: #7bc2b7; color: #000; font-weight: bold;");
     const CURRENT_THEME = {
         primary: "#7bc2b7",
@@ -2074,8 +2074,8 @@
             console.log("Rendering modal for:", user.name);
 
             const modalHtml = `
-            <div id="member-detail-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 99999; display: flex; justify-content: center; align-items: center; padding: 10px; backdrop-filter: blur(35px);">
-                <div class="modal-content premium-card fade-in" style="width: 100%; max-width: 600px; height: 90vh; display: flex; flex-direction: column; overflow: hidden; background: #0b1120; border: 1px solid rgba(255,255,255,0.25); border-radius: 28px; box-shadow: 0 0 80px rgba(0,0,0,1);">
+            <div id="member-detail-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 99999; display: flex; justify-content: center; align-items: center; padding: 10px; backdrop-filter: blur(40px);">
+                <div class="modal-content premium-card fade-in" style="width: 100%; max-width: 600px; height: 90vh; display: flex; flex-direction: column; overflow: hidden; background: #070b14; border: 1px solid rgba(255,255,255,0.3); border-radius: 28px; box-shadow: 0 0 100px rgba(0,0,0,1);">
                     
                     <div style="padding: 24px 24px 16px; background: ${theme.isPremium ? `linear-gradient(180deg, rgba(240, 105, 88, 0.2) 0%, ${theme.bg} 100%)` : `linear-gradient(180deg, rgba(123, 194, 183, 0.1) 0%, transparent 100%)`}; flex-shrink: 0; border-bottom: 1px solid ${theme.border};">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
@@ -2085,9 +2085,9 @@
                                 </div>
                                 <div>
                                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
-                                        <h2 style="margin: 0; font-size: 1.5rem; color: #fff; letter-spacing: -0.5px; white-space: nowrap;">${user.name}</h2>
+                                        <h2 id="modal-member-name" style="margin: 0; font-size: 1.5rem; color: #fff; letter-spacing: -0.5px; white-space: nowrap;">${user.name} (${user.id})</h2>
                                         <span style="background: ${roleColor}; color: ${role.includes('semi') || role.includes('pro') || theme.isPremium ? '#fff' : '#000'}; padding: 3px 10px; border-radius: 8px; font-size: 0.7rem; font-weight: 900; text-transform: uppercase; white-space: nowrap;">${user.role || 'Basic'}</span>
-                                        <span style="color: #64748b; font-size: 0.6rem; font-weight: 800; white-space: nowrap; margin-left: auto;">v4.1.3</span>
+                                        <span style="color: #64748b; font-size: 0.6rem; font-weight: 800; white-space: nowrap; margin-left: auto;">v4.1.4</span>
                                     </div>
                                     <p style="margin: 0; font-size: 0.85rem; color: #94a3b8;">ID: <span style="color: ${theme.main}; font-weight: 700;">${user.id}</span> | 가입: ${user.joinDate || '-'}</p>
                                 </div>
@@ -2802,46 +2802,61 @@
         }
 
         function finalizeAndSave(user, currentUserId, selectedVal) {
-            if (!user.fitnessTests) user.fitnessTests = [];
+            try {
+                console.log("Finalizing save for:", currentUserId, "SelectedVal:", selectedVal);
+                if (!user.fitnessTests) user.fitnessTests = [];
 
-            if (selectedVal === 'new') {
-                user.fitnessTests.push(newData);
-            } else {
-                const idx = parseInt(selectedVal);
-                if (!isNaN(idx)) {
-                    user.fitnessTests[idx] = newData;
-                }
-            }
-
-            // Firebase & LocalStorage 동시 업데이트
-            localStorage.setItem('soccer_users', JSON.stringify(state.users));
-            if (db) {
-                db.collection("users").doc(currentUserId.toString()).update({
-                    fitnessTests: user.fitnessTests,
-                    stats: user.stats
-                }).catch(e => console.error(e));
-            }
-
-            alert("체력 검정 데이터가 성공적으로 반영되었습니다.");
-
-            const modal = document.getElementById('member-detail-modal');
-            if (modal) modal.remove();
-
-            renderAdminTab('admin-users');
-            window.showMemberDetail(currentUserId);
-
-            // 다시 팝업 띄우고 피트니스 탭 개방
-            setTimeout(() => {
-                window.switchMemberDetailTab('fitness');
-                if (user.fitnessTests && user.fitnessTests.length > 0) {
-                    const newIdx = selectedVal === 'new' ? (user.fitnessTests.length - 1).toString() : selectedVal;
-                    const selectEl = document.getElementById('fitness-season-select');
-                    if (selectEl) {
-                        selectEl.value = newIdx;
-                        window.changeFitnessSeason(newIdx, currentUserId);
+                if (selectedVal === 'new') {
+                    user.fitnessTests.push(newData);
+                } else {
+                    const idx = parseInt(selectedVal);
+                    if (!isNaN(idx)) {
+                        user.fitnessTests[idx] = newData;
                     }
                 }
-            }, 80);
+
+                // LocalStorage & Firebase 동시 업데이트 보장
+                localStorage.setItem('soccer_users', JSON.stringify(state.users));
+                if (db) {
+                    db.collection("users").doc(currentUserId.toString()).update({
+                        fitnessTests: user.fitnessTests,
+                        stats: user.stats
+                    }).catch(e => {
+                        console.error("Firebase Update Logic Error:", e);
+                        alert("서버 저장에 실패했지만 로컬에는 저장되었습니다.");
+                    });
+                }
+
+                alert("체력 검정 데이터가 성공적으로 반영되었습니다.");
+
+                // 모달 제거 및 UI 갱신 (전역 스코프 명시)
+                document.querySelectorAll('#member-detail-modal').forEach(m => m.remove());
+                if (window.renderAdminTab) window.renderAdminTab('admin-users');
+
+                // 상세 모달 다시 열기 (딜레이 부여)
+                setTimeout(() => {
+                    if (window.showMemberDetail) window.showMemberDetail(currentUserId);
+                    setTimeout(() => {
+                        if (window.switchMemberDetailTab) window.switchMemberDetailTab('fitness');
+
+                        const ftLen = user.fitnessTests ? user.fitnessTests.length : 0;
+                        if (ftLen > 0) {
+                            const newIdx = selectedVal === 'new' ? (ftLen - 1).toString() : selectedVal;
+                            const selectEl = document.getElementById('fitness-season-select');
+                            if (selectEl) {
+                                selectEl.value = newIdx;
+                                if (window.changeFitnessSeason) window.changeFitnessSeason(newIdx, currentUserId);
+                            }
+                        }
+                    }, 150);
+                }, 100);
+            } catch (err) {
+                console.error("Critical error in finalizeAndSave:", err);
+                alert("처리 중 예기치 못한 오류가 발생했습니다. 화면을 새로고침 해주세요.");
+            } finally {
+                const modal = document.getElementById('member-detail-modal');
+                if (modal) modal.style.pointerEvents = 'auto';
+            }
         }
     };
 
@@ -3082,7 +3097,7 @@
         let html = `
             <div class="fade-in">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-                    <h3 style="color: var(--text-white); font-size: 1.1rem; margin: 0;">지트캠 회원 관리 (CRM) <span style="background: #ffcc00; color: #000; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 800; margin-left: 8px;">v4.1.3</span></h3>
+                    <h3 style="color: var(--text-white); font-size: 1.1rem; margin: 0;">지트캠 회원 관리 (CRM) <span style="background: #ffcc00; color: #000; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 800; margin-left: 8px;">v4.1.4</span></h3>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                         <button onclick="window.syncLocalToFirebase()" title="로컬 데이터를 서버(DB)로 강제 전송합니다" style="background: rgba(255,165,0,0.1); border: 1px solid #ffa500; color: #ffa500; font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; cursor: pointer;">
                             <i class="fas fa-sync-alt"></i> DB 강제 동기화
