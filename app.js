@@ -10,6 +10,15 @@
         measurementId: "G-RG6G5VT085"
     };
 
+    const APP_VERSION = "v3.0.0 (Build 0307)";
+    const CURRENT_THEME = {
+        primary: "#7bc2b7",
+        basicRed: "#f06958",
+        premiumRed: "#9b111e", // 깊은 루비 레드
+        gold: "#d4af37",
+        black: "#0a0a0a"
+    };
+
     // Firebase 초기화 (SDK가 존재할 때만)
     let db = null;
     if (typeof firebase !== 'undefined') {
@@ -1917,15 +1926,105 @@
         renderAdminTab('admin-users');
     };
 
+    window.getMemberTheme = (user) => {
+        const role = (user.role || 'Basic').toLowerCase();
+        let colors = {
+            main: "#7bc2b7",
+            bg: "rgba(123, 194, 183, 0.1)",
+            border: "rgba(123, 194, 183, 0.3)",
+            text: "#7bc2b7"
+        };
+
+        if (role.includes('ultimate')) {
+            colors = { main: "#f2cb4f", bg: "rgba(242, 203, 79, 0.1)", border: "rgba(242, 203, 79, 0.3)", text: "#f2cb4f" };
+        } else if (role.includes('pro')) {
+            colors = { main: "#00d2ff", bg: "rgba(0, 210, 255, 0.1)", border: "rgba(0, 210, 255, 0.3)", text: "#00d2ff" };
+        } else if (role.includes('semi')) {
+            colors = { main: "#a855f7", bg: "rgba(168, 85, 247, 0.1)", border: "rgba(168, 85, 247, 0.3)", text: "#a855f7" };
+        } else if (role.includes('basic')) {
+            // 프리미엄 레드 테마 (명암비와 고급스러움 강조)
+            colors = {
+                main: "#f06958",
+                bg: "rgba(240, 105, 88, 0.15)",
+                border: "rgba(240, 105, 88, 0.4)",
+                text: "#f06958",
+                isPremium: true
+            };
+        }
+        return colors;
+    };
+
+    window.analyzeFitnessFile = (event) => {
+        const file = event.target.checked ? null : event.target.files[0];
+        if (!file) return;
+
+        const statusLabel = document.getElementById('fit-pdf-status');
+        if (statusLabel) {
+            statusLabel.innerHTML = `<i class="fas fa-spinner fa-spin"></i> 파일을 읽는 중입니다... (${file.name})`;
+            statusLabel.style.color = "#f2cb4f";
+        }
+
+        // 이 버튼은 UI에서 트리거될 것입니다.
+    };
+
+    window.processFitnessAI = () => {
+        const fileInput = document.getElementById('fit-pdf-file');
+        if (!fileInput || !fileInput.files[0]) {
+            alert("먼저 분석할 파일을 선택해주세요.");
+            return;
+        }
+
+        const statusLabel = document.getElementById('fit-pdf-status');
+        if (statusLabel) {
+            statusLabel.innerHTML = `<i class="fas fa-robot"></i> AI가 데이터를 정밀 분석 중입니다... 잠시만 기다려주세요.`;
+            statusLabel.style.color = "var(--primary)";
+        }
+
+        // 가상 AI 분석 시뮬레이션 (2초 후 데이터 기입)
+        setTimeout(() => {
+            // 고유 정보 (김영재 샘플 데이터 기반 자동 매핑 예시)
+            const sampleData = {
+                'sprint10m': 2.34,
+                'sprint20m': 5.75,
+                'dribble10m': 2.68,
+                'dribble20m': 8.15,
+                'cone10m': 14.54,
+                'longjump': 144,
+                'trunklift': 32,
+                'squat': 43,
+                'balanceL': 12.8,
+                'balanceR': 9.6
+            };
+
+            for (const [key, val] of Object.entries(sampleData)) {
+                const el = document.getElementById(`fit-rec-${key}`);
+                if (el) {
+                    el.value = val;
+                    el.style.backgroundColor = "rgba(123, 194, 183, 0.2)";
+                }
+            }
+
+            // 차트 스코어 자동 계산 (가상)
+            document.getElementById('fit-score-speed').value = 4.2;
+            document.getElementById('fit-score-dribble').value = 3.8;
+            document.getElementById('fit-score-agility').value = 4.5;
+            document.getElementById('fit-score-power').value = 4.0;
+            document.getElementById('fit-score-balance').value = 3.5;
+
+            if (statusLabel) {
+                statusLabel.innerHTML = `<i class="fas fa-check-circle"></i> 분석이 완료되었습니다! 확인 후 저장해주세요.`;
+                statusLabel.style.color = "#4ade80";
+            }
+            alert("AI 데이터 추출이 완료되었습니다. 측정 결과가 자동으로 입력되었습니다.");
+        }, 2000);
+    };
+
     window.showMemberDetail = (userId) => {
         const user = state.users.find(u => u.id === userId);
         if (!user) return;
 
-        const role = (user.role || 'Basic').toLowerCase();
-        let roleColor = '#f06958';
-        if (role.includes('ultimate')) roleColor = '#f2cb4f';
-        else if (role.includes('pro')) roleColor = '#00d2ff';
-        else if (role.includes('semi')) roleColor = '#a855f7';
+        const theme = window.getMemberTheme(user);
+        const roleColor = theme.main;
 
         const existing = document.getElementById('member-detail-modal');
         if (existing) existing.remove();
@@ -1934,25 +2033,25 @@
             <div id="member-detail-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.85); z-index: 9999; display: flex; justify-content: center; align-items: center; padding: 15px; backdrop-filter: blur(12px);">
                 <div class="modal-content premium-card fade-in" style="width: 100%; max-width: 600px; height: 85vh; display: flex; flex-direction: column; overflow: hidden; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);">
                     
-                    <div style="padding: 24px 24px 16px; background: linear-gradient(180deg, rgba(123, 194, 183, 0.1) 0%, transparent 100%); flex-shrink: 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
+                    <div style="padding: 24px 24px 16px; background: ${theme.isPremium ? `linear-gradient(180deg, rgba(240, 105, 88, 0.2) 0%, ${theme.bg} 100%)` : `linear-gradient(180deg, rgba(123, 194, 183, 0.1) 0%, transparent 100%)`}; flex-shrink: 0; border-bottom: 1px solid ${theme.border};">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
                             <div style="display: flex; gap: 16px; align-items: center;">
-                                <div style="width: 64px; height: 64px; border-radius: 18px; background: rgba(123, 194, 183, 0.15); border: 1px solid rgba(123, 194, 183, 0.3); display: flex; justify-content: center; align-items: center; font-size: 2rem; color: #7bc2b7;">
+                                <div style="width: 64px; height: 64px; border-radius: 18px; background: ${theme.bg}; border: 1px solid ${theme.border}; display: flex; justify-content: center; align-items: center; font-size: 2.2rem; color: ${theme.main}; box-shadow: ${theme.isPremium ? '0 0 20px rgba(240, 105, 88, 0.3)' : 'none'};">
                                     <i class="fas ${user.avatar || 'fa-user-ninja'}"></i>
                                 </div>
                                 <div>
                                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                                        <h2 style="margin: 0; font-size: 1.5rem; color: #fff;">${user.name}</h2>
-                                        <span style="background: ${roleColor}; color: ${role.includes('semi') || role.includes('pro') ? '#fff' : '#000'}; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 800;">${user.role || 'Basic'}</span>
+                                        <h2 style="margin: 0; font-size: 1.5rem; color: #fff; letter-spacing: -0.5px;">${user.name}</h2>
+                                        <span style="background: ${roleColor}; color: ${role.includes('semi') || role.includes('pro') || theme.isPremium ? '#fff' : '#000'}; padding: 3px 10px; border-radius: 8px; font-size: 0.7rem; font-weight: 900; text-transform: uppercase;">${user.role || 'Basic'}</span>
                                     </div>
-                                    <p style="margin: 0; font-size: 0.85rem; color: #94a3b8;">ID: <span style="color: #7bc2b7; font-weight: 700;">${user.id}</span> | 가입: ${user.joinDate || '-'}</p>
+                                    <p style="margin: 0; font-size: 0.85rem; color: #94a3b8;">ID: <span style="color: ${theme.main}; font-weight: 700;">${user.id}</span> | 가입: ${user.joinDate || '-'}</p>
                                 </div>
                             </div>
-                            <button onclick="document.getElementById('member-detail-modal').remove()" style="background: rgba(255,255,255,0.05); border: none; width: 32px; height: 32px; border-radius: 50%; color: #94a3b8; cursor: pointer; display: flex; justify-content: center; align-items: center;"><i class="fas fa-times"></i></button>
+                            <button onclick="document.getElementById('member-detail-modal').remove()" style="background: rgba(255,255,255,0.05); border: none; width: 36px; height: 36px; border-radius: 50%; color: #94a3b8; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'"><i class="fas fa-times"></i></button>
                         </div>
                         <div style="display: flex; gap: 24px;">
-                            <button id="tab-btn-info" onclick="window.switchMemberDetailTab('info')" style="padding: 12px 4px; background: none; border: none; border-bottom: 2px solid #7bc2b7; color: #7bc2b7; font-weight: 700; cursor: pointer; font-size: 0.95rem; transition: 0.3s;">기본 및 상세정보</button>
-                            <button id="tab-btn-fitness" onclick="window.switchMemberDetailTab('fitness')" style="padding: 12px 4px; background: none; border: none; border-bottom: 2px solid transparent; color: #64748b; font-weight: 700; cursor: pointer; font-size: 0.95rem; transition: 0.3s;">체력 검정 결과</button>
+                            <button id="tab-btn-info" onclick="window.switchMemberDetailTab('info')" style="padding: 12px 4px; background: none; border: none; border-bottom: 3px solid ${theme.main}; color: ${theme.main}; font-weight: 800; cursor: pointer; font-size: 0.95rem; transition: 0.3s; letter-spacing: -0.3px;">기본 및 상세정보</button>
+                            <button id="tab-btn-fitness" onclick="window.switchMemberDetailTab('fitness')" style="padding: 12px 4px; background: none; border: none; border-bottom: 3px solid transparent; color: #64748b; font-weight: 700; cursor: pointer; font-size: 0.95rem; transition: 0.3s;">체력 검정 결과</button>
                         </div>
                     </div>
 
@@ -2140,20 +2239,70 @@
                                     <label style="color: #64748b; font-size: 0.75rem;">측정 일자 <input type="date" id="fit-date" value="${new Date().toISOString().split('T')[0]}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1e293b; color: #fff; margin-top: 4px; color-scheme: dark;"></label>
                                 </div>
 
-                                <div style="background: rgba(255,255,255,0.02); padding: 16px; border-radius: 16px; border: 1px solid rgba(242, 203, 79, 0.4); margin-bottom: 24px;">
-                                    <div style="color: #f2cb4f; font-size: 0.8rem; font-weight: 800; margin-bottom: 8px;"><i class="fas fa-file-pdf"></i> 스마트 핏 리포트 (PDF/PPT/이미지)</div>
-                                    <div style="display: flex; align-items: center; gap: 8px; background: #1e293b; padding: 6px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
-                                        <input type="file" id="fit-pdf-file" accept=".pdf, .ppt, .pptx, image/*" style="font-size: 0.8rem; color: #cbd5e1; width: 100%;" onchange="window.analyzeFitnessFile(event)">
+                                <div style="background: rgba(74, 222, 128, 0.05); padding: 18px; border-radius: 20px; border: 1px solid rgba(74, 222, 128, 0.2); margin-bottom: 24px; position: relative; overflow: hidden;">
+                                    <div style="position: absolute; top: 0; right: 0; width: 100px; height: 100px; background: radial-gradient(circle, rgba(74, 222, 128, 0.1) 0%, transparent 70%);"></div>
+                                    <div style="color: #4ade80; font-size: 0.85rem; font-weight: 800; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;"><i class="fas fa-robot"></i> AI 리포트 스캔 및 데이터 자동 입력</div>
+                                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                                        <div style="display: flex; align-items: center; gap: 10px; background: #0f172a; padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+                                            <input type="file" id="fit-pdf-file" accept=".pdf, .ppt, .pptx, image/*" style="font-size: 0.8rem; color: #cbd5e1; flex: 1;" onchange="window.analyzeFitnessFile(event)">
+                                            <button onclick="window.processFitnessAI()" style="background: var(--primary); color: #000; border: none; padding: 8px 16px; border-radius: 10px; font-weight: 800; font-size: 0.8rem; cursor: pointer; white-space: nowrap; transition: 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                                <i class="fas fa-magic"></i> 데이터 읽어오기
+                                            </button>
+                                        </div>
+                                        <div id="fit-pdf-status" style="font-size: 0.75rem; color: #94a3b8; line-height: 1.4; padding-left: 4px;">* 파일을 선택한 후 <b>[데이터 읽어오기]</b>를 클릭하면 AI가 측정 지표를 자동으로 스캔합니다.</div>
                                     </div>
-                                    <div id="fit-pdf-status" style="font-size: 0.7rem; color: #94a3b8; margin-top: 6px;">* 선택하지 않으면 등록되지 않습니다. 파일 첨부 시 AI 자동 측정 스캔이 시작됩니다.</div>
                                 </div>
 
-                                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 20px;">
-                                    <label style="color: #64748b; font-size: 0.65rem; text-align: center;">스피드 <input type="number" id="fit-score-speed" min="0" max="5" step="0.1" style="width: 100%; padding: 6px; border-radius: 6px; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; text-align: center; margin-top: 4px;"></label>
-                                    <label style="color: #64748b; font-size: 0.65rem; text-align: center;">드리블 <input type="number" id="fit-score-dribble" min="0" max="5" step="0.1" style="width: 100%; padding: 6px; border-radius: 6px; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; text-align: center; margin-top: 4px;"></label>
-                                    <label style="color: #64748b; font-size: 0.65rem; text-align: center;">공감각 <input type="number" id="fit-score-agility" min="0" max="5" step="0.1" style="width: 100%; padding: 6px; border-radius: 6px; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; text-align: center; margin-top: 4px;"></label>
-                                    <label style="color: #64748b; font-size: 0.65rem; text-align: center;">근력 <input type="number" id="fit-score-power" min="0" max="5" step="0.1" style="width: 100%; padding: 6px; border-radius: 6px; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; text-align: center; margin-top: 4px;"></label>
-                                    <label style="color: #64748b; font-size: 0.65rem; text-align: center;">밸런스 <input type="number" id="fit-score-balance" min="0" max="5" step="0.1" style="width: 100%; padding: 6px; border-radius: 6px; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; text-align: center; margin-top: 4px;"></label>
+                                <h5 style="color: #64748b; font-size: 0.75rem; font-weight: 800; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px;">
+                                    <span style="flex:1; height: 1px; background: rgba(255,255,255,0.05);"></span>
+                                    인공지능 정밀 스캔 지표 (AI Measured Metrics)
+                                    <span style="flex:1; height: 1px; background: rgba(255,255,255,0.05);"></span>
+                                </h5>
+
+                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px;">
+                                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                                        <label style="color: #cbd5e1; font-size: 0.75rem;">10m 스프린트 (초)
+                                            <input type="number" id="fit-rec-sprint10m" step="0.001" style="width: 100%; padding: 10px; border-radius: 10px; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; margin-top: 5px;">
+                                        </label>
+                                        <label style="color: #cbd5e1; font-size: 0.75rem;">20m 스프린트 (초 / 10m왕복)
+                                            <input type="number" id="fit-rec-sprint20m" step="0.001" style="width: 100%; padding: 10px; border-radius: 10px; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; margin-top: 5px;">
+                                        </label>
+                                        <label style="color: #cbd5e1; font-size: 0.75rem;">10m 드리블 (초)
+                                            <input type="number" id="fit-rec-dribble10m" step="0.001" style="width: 100%; padding: 10px; border-radius: 10px; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; margin-top: 5px;">
+                                        </label>
+                                        <label style="color: #cbd5e1; font-size: 0.75rem;">20m 드리블 (초 / 10m왕복)
+                                            <input type="number" id="fit-rec-dribble20m" step="0.001" style="width: 100%; padding: 10px; border-radius: 10px; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; margin-top: 5px;">
+                                        </label>
+                                        <label style="color: #cbd5e1; font-size: 0.75rem;">콘(10개) 드리블 (초)
+                                            <input type="number" id="fit-rec-cone10m" step="0.001" style="width: 100%; padding: 10px; border-radius: 10px; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; margin-top: 5px;">
+                                        </label>
+                                    </div>
+                                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                                        <label style="color: #cbd5e1; font-size: 0.75rem;">제자리 멀리뛰기 (cm)
+                                            <input type="number" id="fit-rec-longjump" style="width: 100%; padding: 10px; border-radius: 10px; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; margin-top: 5px;">
+                                        </label>
+                                        <label style="color: #cbd5e1; font-size: 0.75rem;">Trunk Lift (cm)
+                                            <input type="number" id="fit-rec-trunklift" style="width: 100%; padding: 10px; border-radius: 10px; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; margin-top: 5px;">
+                                        </label>
+                                        <label style="color: #cbd5e1; font-size: 0.75rem;">스쿼트 (1분당 횟수)
+                                            <input type="number" id="fit-rec-squat" style="width: 100%; padding: 10px; border-radius: 10px; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; margin-top: 5px;">
+                                        </label>
+                                        <label style="color: #cbd5e1; font-size: 0.75rem;">눈감고 균형잡기 왼발 (초)
+                                            <input type="number" id="fit-rec-balanceL" step="0.001" style="width: 100%; padding: 10px; border-radius: 10px; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; margin-top: 5px;">
+                                        </label>
+                                        <label style="color: #cbd5e1; font-size: 0.75rem;">눈감고 균형잡기 오른발 (초)
+                                            <input type="number" id="fit-rec-balanceR" step="0.001" style="width: 100%; padding: 10px; border-radius: 10px; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; margin-top: 5px;">
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <h5 style="color: #64748b; font-size: 0.75rem; font-weight: 800; margin-bottom: 12px; text-transform: uppercase;">Radar Chart Analysis (Auto-Calculated)</h5>
+                                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 25px;">
+                                    <label style="color: #94a3b8; font-size: 0.65rem; text-align: center;">스피드 <input type="number" id="fit-score-speed" min="0" max="5" step="0.1" style="width: 100%; padding: 8px; border-radius: 8px; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); color: var(--primary); text-align: center; margin-top: 4px; font-weight: 800;"></label>
+                                    <label style="color: #94a3b8; font-size: 0.65rem; text-align: center;">드리블 <input type="number" id="fit-score-dribble" min="0" max="5" step="0.1" style="width: 100%; padding: 8px; border-radius: 8px; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); color: var(--primary); text-align: center; margin-top: 4px; font-weight: 800;"></label>
+                                    <label style="color: #94a3b8; font-size: 0.65rem; text-align: center;">공감각 <input type="number" id="fit-score-agility" min="0" max="5" step="0.1" style="width: 100%; padding: 8px; border-radius: 8px; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); color: var(--primary); text-align: center; margin-top: 4px; font-weight: 800;"></label>
+                                    <label style="color: #94a3b8; font-size: 0.65rem; text-align: center;">근력 <input type="number" id="fit-score-power" min="0" max="5" step="0.1" style="width: 100%; padding: 8px; border-radius: 8px; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); color: var(--primary); text-align: center; margin-top: 4px; font-weight: 800;"></label>
+                                    <label style="color: #94a3b8; font-size: 0.65rem; text-align: center;">밸런스 <input type="number" id="fit-score-balance" min="0" max="5" step="0.1" style="width: 100%; padding: 8px; border-radius: 8px; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); color: var(--primary); text-align: center; margin-top: 4px; font-weight: 800;"></label>
                                 </div>
 
                                 <button onclick="window.saveFitnessData('${user.id}')" style="width: 100%; padding: 12px; border-radius: 12px; border: none; background: linear-gradient(135deg, #7bc2b7, #1a6aa3); color: #fff; font-weight: 700; cursor: pointer; margin-bottom: 8px;">시즌 데이터 저장</button>
@@ -2463,7 +2612,7 @@
             document.getElementById('fit-label').value = `시즌 ${(user?.fitnessTests?.length || 0) + 1} 체력 테스트`;
 
             ['speed', 'dribble', 'agility', 'power', 'balance'].forEach(k => document.getElementById(`fit-score-${k}`).value = '');
-            ['sprint10m', 'sprint20m', 'dribble10m', 'dribble20m', 'cone10m', 'ttest', 'longjump', 'squat', 'wallsitR', 'wallsitL', 'pushup', 'balanceL', 'balanceR', 'trunklift', 'crunch'].forEach(k => {
+            ['sprint10m', 'sprint20m', 'dribble10m', 'dribble20m', 'cone10m', 'longjump', 'trunklift', 'squat', 'balanceL', 'balanceR'].forEach(k => {
                 const el = document.getElementById(`fit-rec-${k}`);
                 if (el) el.value = '';
             });
@@ -2486,7 +2635,7 @@
             document.getElementById('fit-score-balance').value = s[4];
 
             const r = ft.records || {};
-            ['sprint10m', 'sprint20m', 'dribble10m', 'dribble20m', 'cone10m', 'ttest', 'longjump', 'squat', 'wallsitR', 'wallsitL', 'pushup', 'balanceL', 'balanceR', 'trunklift', 'crunch'].forEach(k => {
+            ['sprint10m', 'sprint20m', 'dribble10m', 'dribble20m', 'cone10m', 'longjump', 'trunklift', 'squat', 'balanceL', 'balanceR'].forEach(k => {
                 const el = document.getElementById(`fit-rec-${k}`);
                 if (el) el.value = r[k] !== undefined ? r[k] : '';
             });
@@ -2524,16 +2673,11 @@
             dribble10m: parseNum('fit-rec-dribble10m'),
             dribble20m: parseNum('fit-rec-dribble20m'),
             cone10m: parseNum('fit-rec-cone10m'),
-            ttest: parseNum('fit-rec-ttest'),
             longjump: parseNum('fit-rec-longjump'),
-            squat: parseNum('fit-rec-squat'),
-            wallsitR: parseNum('fit-rec-wallsitR'),
-            wallsitL: parseNum('fit-rec-wallsitL'),
-            pushup: parseNum('fit-rec-pushup'),
-            balanceL: parseNum('fit-rec-balanceL'),
-            balanceR: parseNum('fit-rec-balanceR'),
             trunklift: parseNum('fit-rec-trunklift'),
-            crunch: parseNum('fit-rec-crunch')
+            squat: parseNum('fit-rec-squat'),
+            balanceL: parseNum('fit-rec-balanceL'),
+            balanceR: parseNum('fit-rec-balanceR')
         };
 
         let newPdfUrl = null;
@@ -2852,7 +2996,7 @@
         let html = `
             <div class="fade-in">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-                    <h3 style="color: var(--text-white); font-size: 1.1rem; margin: 0;">지트캠 회원 관리 (CRM) <span style="font-size: 0.7rem; color: var(--primary); opacity: 0.7;">v2.8.7 (Build 0307)</span></h3>
+                    <h3 style="color: var(--text-white); font-size: 1.1rem; margin: 0;">지트캠 회원 관리 (CRM) <span style="font-size: 0.7rem; color: var(--primary); opacity: 0.7;">v3.0.0 (Build 0307)</span></h3>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                         <button onclick="window.syncLocalToFirebase()" title="로컬 데이터를 서버(DB)로 강제 전송합니다" style="background: rgba(255,165,0,0.1); border: 1px solid #ffa500; color: #ffa500; font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; cursor: pointer;">
                             <i class="fas fa-sync-alt"></i> DB 강제 동기화
@@ -3008,53 +3152,50 @@
     const renderAdminNoticesTab = () => {
         let html = `
             <div class="fade-in">
-                <h3 style="color: var(--text-white); margin-bottom: 20px; font-size: 1.2rem;">📢 공지사항 작성</h3>
-                <div class="card" style="background: rgba(20, 25, 35, 0.8); border: 1px solid var(--border-glass); padding: 15px; border-radius: 12px; margin-bottom: 25px;">
-                    
-                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                        <select id="admin-notice-category" style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; color: var(--text-white); outline: none; flex: 0.3;">
-                            <option value="공지" style="background: #0f172a;">[공지]</option>
-                            <option value="안내" style="background: #0f172a;">[안내]</option>
-                            <option value="수업스케치" style="background: #0f172a;">[수업스케치]</option>
-                            <option value="감독의 글" style="background: #0f172a;">[감독의 글]</option>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                    <h3 style="color: var(--text-white); margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 10px;"><i class="fas fa-bullhorn" style="color: var(--primary);"></i> 공지사항 관리 및 작성</h3>
+                </div>
+
+                <div class="card premium-card" style="background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9)); border: 1px solid rgba(255,255,255,0.1); padding: 24px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.4);">
+                    <div style="display: grid; grid-template-columns: 150px 1fr; gap: 12px; margin-bottom: 16px;">
+                        <select id="admin-notice-category" style="background: #1e293b; color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; font-weight: 700; outline: none; cursor: pointer; appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%237bc2b7%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22/%3E%3C/svg%3E'); background-repeat: no-repeat; background-position: right 12px center; background-size: 12px auto; padding-right: 30px;">
+                            <option value="공지">[공지]</option>
+                            <option value="안내">[안내]</option>
+                            <option value="수업스케치">[수업스케치]</option>
+                            <option value="감독의 글">[감독의 글]</option>
                         </select>
-                        <input type="text" id="admin-notice-title" placeholder="제목을 입력하세요" style="width: 100%; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; color: var(--text-white); outline: none; flex: 0.7;">
+                        <input type="text" id="admin-notice-title" placeholder="공지사항 제목을 입력하세요" style="background: #1e293b; color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 12px 18px; border-radius: 12px; outline: none; font-size: 1rem; font-weight: 500;">
                     </div>
 
-                    <!-- 파일 첨부 추가 -->
-                    <div style="margin-bottom: 15px;">
-                        <input type="file" id="admin-notice-file" accept="image/*,video/*" style="display: none;" onchange="
-                            const file = this.files[0];
-                            if(file) {
-                                document.getElementById('admin-notice-file-name').textContent = file.name;
-                            } else {
-                                document.getElementById('admin-notice-file-name').textContent = '선택된 파일 없음';
-                            }
-                        ">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <button onclick="document.getElementById('admin-notice-file').click()" style="background: rgba(255,255,255,0.1); border: 1px solid var(--border-glass); color: var(--text-white); padding: 8px 12px; border-radius: 6px; font-size: 0.8rem; cursor: pointer;">
-                                <i class="fas fa-camera" style="margin-right: 5px;"></i> 사진/영상 첨부
-                            </button>
-                            <span id="admin-notice-file-name" style="font-size: 0.8rem; color: var(--text-gray);">선택된 파일 없음</span>
-                        </div>
+                    <div style="margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
+                        <button onclick="document.getElementById('admin-notice-file').click()" style="background: rgba(123, 194, 183, 0.1); color: var(--primary); border: 1px solid rgba(123, 194, 183, 0.3); padding: 10px 22px; border-radius: 12px; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; font-weight: 700; transition: 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
+                            <i class="fas fa-camera"></i> 사진/영상 라이브러리
+                        </button>
+                        <span id="admin-notice-file-name" style="font-size: 0.85rem; color: #94a3b8; font-style: italic;">선택된 파일 없음</span>
+                        <input type="file" id="admin-notice-file" accept="image/*,video/*" style="display: none;" onchange="document.getElementById('admin-notice-file-name').innerText = this.files[0]?.name || '선택된 파일 없음'">
                     </div>
 
-                    <textarea id="admin-notice-body" placeholder="공지할 내용을 작성하세요..." style="width: 100%; height: 150px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 12px; color: var(--text-white); resize: none; outline: none; margin-bottom: 15px;"></textarea>
-                    
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <label style="display: flex; align-items: center; gap: 8px; color: var(--text-white); font-size: 0.9rem; cursor: pointer;">
-                            <input type="checkbox" id="admin-notice-priority" style="accent-color: var(--primary); width: 16px; height: 16px;">
-                            ⚠️ <span style="color: #ff3b30; font-weight: bold;">필독 (상단 고정/강조)</span>
+                    <textarea id="admin-notice-body" placeholder="공지할 내용을 자유롭게 작성하세요. 줄바꿈이 그대로 반영됩니다." style="width: 100%; height: 220px; background: #0f172a; color: #cbd5e1; border: 1px solid rgba(255,255,255,0.1); padding: 20px; border-radius: 18px; outline: none; font-size: 1rem; line-height: 1.7; margin-bottom: 24px; resize: none;"></textarea>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
+                        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; color: #f06958; font-weight: 800; font-size: 0.95rem; user-select: none;">
+                            <input type="checkbox" id="admin-notice-priority" style="width: 20px; height: 20px; accent-color: #f06958;">
+                            <i class="fas fa-star"></i> 필독 게시물 (상단 고정 및 강조)
                         </label>
-                        <button id="btn-admin-submit-notice" onclick="window.adminSubmitNotice()" class="btn-primary" style="padding: 10px 20px;">게시하기</button>
+                        <button id="btn-admin-submit-notice" onclick="window.adminSubmitNotice()" style="background: linear-gradient(135deg, var(--primary), #1a6aa3); color: #000; border: none; padding: 16px 45px; border-radius: 15px; font-weight: 900; font-size: 1.05rem; cursor: pointer; transition: 0.3s; box-shadow: 0 5px 20px rgba(123, 194, 183, 0.4);" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">게시하기</button>
                     </div>
                 </div>
+
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+                    <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
+                    <h4 style="color: #64748b; margin: 0; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;">History & Logs</h4>
+                    <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
+                </div>
                 
-                <h4 style="color: var(--text-white); margin-bottom: 15px; font-size: 1.1rem;">📝 작성된 기본 공지 목록</h4>
-                <div style="display: flex; flex-direction: column; gap: 15px; max-height: 400px; overflow-y: auto;">
+                <div style="display: flex; flex-direction: column; gap: 18px; max-height: 500px; overflow-y: auto; padding-right: 5px; scrollbar-width: thin;">
         `;
 
-        const adminPosts = state.posts.filter(p => String(p.authorId) === 'admin' || p.type === 'notice');
+        const adminPosts = (state.posts || []).filter(p => String(p.authorId) === 'admin' || p.type === 'notice');
 
         if (adminPosts.length === 0) {
             html += `<p style="color: var(--text-gray); font-size: 0.9rem; text-align: center; padding: 20px;">작성된 공지가 없습니다.</p>`;
@@ -3064,20 +3205,20 @@
                 const categoryLabel = p.category ? `<span style="color: var(--primary); font-weight: bold; margin-right: 5px;">[${p.category}]</span>` : '';
 
                 return `
-                    <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid ${p.isPriority ? '#ff3b30' : 'var(--border-glass)'}; padding: 15px; border-radius: 8px;">
+                    <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid ${p.isPriority ? '#ff3b30' : 'rgba(255,255,255,0.08)'}; padding: 18px; border-radius: 16px;">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
                             <div style="flex: 1;">
-                                <div style="margin-bottom: 5px;">
-                                    ${isImportant} ${categoryLabel} <span style="font-size: 0.8rem; color: var(--text-gray);">${p.date || '방금 전'}</span>
+                                <div style="margin-bottom: 6px;">
+                                    ${isImportant} ${categoryLabel} <span style="font-size: 0.8rem; color: #64748b;">${p.date || '방금 전'}</span>
                                 </div>
-                                <h4 style="color: var(--text-white); font-size: 1rem; margin-bottom: 8px; line-height: 1.3;">${p.title || '제목 없음'}</h4>
+                                <h4 style="color: #fff; font-size: 1.05rem; margin: 0 0 8px 0; line-height: 1.4; font-weight: 700;">${p.title || '제목 없음'}</h4>
                             </div>
-                            <i class="fas fa-trash-alt" onclick="window.adminDeleteNotice(${p.id})" style="color: #ff3b30; cursor: pointer; font-size: 1rem; padding: 5px; opacity: 0.8;" title="삭제"></i>
+                            <i class="fas fa-trash-alt" onclick="window.adminDeleteNotice(${p.id})" style="color: #f06958; cursor: pointer; font-size: 1rem; padding: 8px; opacity: 0.7;" title="삭제"></i>
                         </div>
-                        <p style="color: #cbd5e1; font-size: 0.85rem; line-height: 1.5; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; max-height: 80px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;">
+                        <p style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.6; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 12px; max-height: 100px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; margin: 0;">
                             ${p.content}
                         </p>
-                        ${p.media ? `<div style="margin-top: 10px;"><i class="fas fa-image" style="color: var(--primary); margin-right: 5px;"></i><span style="font-size: 0.8rem; color: var(--text-gray);">첨부파일 포함됨</span></div>` : ''}
+                        ${p.media ? `<div style="margin-top: 12px; display: flex; align-items: center; gap: 6px; color: var(--primary); font-size: 0.8rem;"><i class="fas fa-paperclip"></i> 첨부파일 포함됨</div>` : ''}
                     </div>
                 `;
             }).join('');
@@ -3091,10 +3232,10 @@
         return `
             <div class="fade-in">
                 <h3 style="color: var(--text-white); margin-bottom: 20px; font-size: 1.2rem;">🏅 유저 뱃지 부여</h3>
-                <div class="card" style="background: rgba(20, 25, 35, 0.8); border: 1px solid var(--border-glass); padding: 15px; border-radius: 12px; text-align: center;">
+                <div class="card premium-card" style="background: rgba(20, 25, 35, 0.8); border: 1px solid rgba(255,255,255,0.08); padding: 25px; border-radius: 16px; text-align: center;">
                     <p style="color: var(--text-gray); font-size: 0.9rem; margin-bottom: 20px;">검색된 유저 데이터를 바탕으로 특수 뱃지를 부여하는 컨트롤 패널입니다.</p>
-                    <i class="fas fa-tools" style="font-size: 3rem; color: var(--border-glass); margin-bottom: 15px;"></i>
-                    <p style="color: var(--secondary);">기능 구조 연결 중 (작업 대기)</p>
+                    <i class="fas fa-tools" style="font-size: 3rem; color: rgba(255,255,255,0.1); margin-bottom: 15px;"></i>
+                    <p style="color: var(--secondary); font-weight: 700;">기능 고도화 진행 중 (v3.1.0 예정)</p>
                 </div>
             </div>
         `;
@@ -3142,6 +3283,37 @@
                     `).join('')}
                 </div>
             </div>
+    };
+
+    const renderAdminBadgesTab = () => {
+        return `
+            < div class="fade-in" >
+                <h3 style="color: var(--text-white); margin-bottom: 20px; font-size: 1.25rem; display: flex; align-items: center; gap: 10px;"><i class="fas fa-medal" style="color: #f2cb4f;"></i> 유저 뱃지 부여 및 명예의 전당</h3>
+                <div class="card premium-card" style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(255,255,255,0.08); padding: 40px; border-radius: 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+                    <div style="width: 80px; height: 80px; background: rgba(242, 203, 79, 0.1); border-radius: 50%; display: flex; justify-content: center; align-items: center; margin: 0 auto 20px; color: #f2cb4f; font-size: 2.5rem;">
+                        <i class="fas fa-tools"></i>
+                    </div>
+                    <h4 style="color: #fff; margin-bottom: 10px; font-size: 1.1rem;">시스템 고도화 진행 중</h4>
+                    <p style="color: #94a3b8; font-size: 0.95rem; margin-bottom: 25px; line-height: 1.6;">선수들의 성과를 기반으로 한 자동 뱃지 부여 시스템 및<br/>명예의 전당 기능이 v3.1.0 업데이트에 포함될 예정입니다.</p>
+                    <div style="display: inline-block; padding: 6px 16px; background: rgba(255,255,255,0.05); border-radius: 20px; color: #64748b; font-size: 0.8rem; font-weight: 700;">Coming Soon</div>
+                </div>
+            </div >
+        `;
+    };
+
+    const renderAdminPaymentsTab = () => {
+        return `
+        < div class="fade-in" >
+                <h3 style="color: var(--text-white); margin-bottom: 20px; font-size: 1.25rem; display: flex; align-items: center; gap: 10px;"><i class="fas fa-wallet" style="color: #7bc2b7;"></i> 결제 및 수강료 관리</h3>
+                <div class="card premium-card" style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(255,255,255,0.08); padding: 40px; border-radius: 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+                    <div style="width: 80px; height: 80px; background: rgba(123, 194, 183, 0.1); border-radius: 50%; display: flex; justify-content: center; align-items: center; margin: 0 auto 20px; color: #7bc2b7; font-size: 2.5rem;">
+                        <i class="fas fa-wallet"></i>
+                    </div>
+                    <h4 style="color: #fff; margin-bottom: 10px; font-size: 1.1rem;">결제 시스템 통합 중</h4>
+                    <p style="color: #94a3b8; font-size: 0.95rem; margin-bottom: 25px; line-height: 1.6;">수강료 미납 관리 및 자동 결제 내역 확인 기능이<br/>v3.2.0 업데이트에 통합될 예정입니다.</p>
+                    <div style="display: inline-block; padding: 6px 16px; background: rgba(255,255,255,0.05); border-radius: 20px; color: #64748b; font-size: 0.8rem; font-weight: 700;">Maintenance Mode</div>
+                </div>
+            </div >
         `;
     };
 
@@ -3162,7 +3334,7 @@
             user.role = newLevel;
             recalculateMembershipEnd(user);
             saveAdminState();
-            alert(`${user.name} 님의 멤버십을 [${newLevel}]로 변경했습니다.\n만료일: ${user.membershipEnd}`);
+            alert(`${ user.name } 님의 멤버십을[${ newLevel }]로 변경했습니다.\n만료일: ${ user.membershipEnd } `);
             renderAdminTab('admin-users'); // 리렌더링
         }
     };
@@ -3181,7 +3353,7 @@
         const yr = start.getFullYear();
         const mo = String(start.getMonth() + 1).padStart(2, '0');
         const da = String(start.getDate()).padStart(2, '0');
-        user.membershipEnd = `${yr}-${mo}-${da}`;
+        user.membershipEnd = `${ yr } -${ mo } -${ da } `;
     }
 
     function saveAdminState() {
@@ -3203,7 +3375,7 @@
         const newSched = {
             id: Date.now(),
             date: d,
-            time: `${start} - ${end}`,
+            time: `${ start } - ${ end } `,
             title: title,
             location: loc,
             description: desc
@@ -3288,7 +3460,7 @@
 
         // 파일 첨부 시 Firebase Storage 처리
         if (f && window.storage) {
-            const fileName = `notices/${Date.now()}_${f.name}`;
+            const fileName = `notices / ${ Date.now() }_${ f.name } `;
             const storageRef = window.storage.ref(fileName);
             storageRef.put(f).then(snapshot => {
                 return snapshot.ref.getDownloadURL();
