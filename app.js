@@ -2390,7 +2390,7 @@
                     </div>
                 </div>
                 
-                <div style="padding: 20px 24px; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); display: flex; gap: 12px; border-top: 1px solid rgba(255,255,255,0.05); border-radius: 0 0 32px 32px;" id="member-action-btns">
+                <div style="padding: 20px 24px; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); display: flex; gap: 12px; border-top: 1px solid rgba(255,255,255,0.05); border-radius: 0 0 32px 32px; position: relative; z-index: 50;" id="member-action-btns">
                     <button onclick="window.toggleEditMember()" id="btn-toggle-edit" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 14px; border: 1px solid #7bc2b7; background: rgba(123, 194, 183, 0.05); color: #7bc2b7; font-weight: 700; cursor: pointer; transition: 0.3s;"><i class="fas fa-user-edit"></i> 회원정보 수정</button>
                     <button onclick="window.adminDeleteMember('${user.id}')" id="btn-delete" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 14px; border: 1px solid #ef4444; background: rgba(239, 68, 68, 0.05); color: #ef4444; font-weight: 700; cursor: pointer; transition: 0.3s;"><i class="fas fa-trash-alt"></i> 회원 삭제</button>
                     
@@ -2708,9 +2708,14 @@
         if (userIdx === -1) return;
         const user = state.users[userIdx];
 
-        const selectedVal = document.getElementById('edit-fitness-season').value;
-        const dateStr = document.getElementById('fit-date').value.replace(/-/g, '.');
-        const labelStr = document.getElementById('fit-label').value.trim() || '시즌 체력 테스트';
+        const seasonEl = document.getElementById('edit-fitness-season');
+        const selectedVal = seasonEl ? seasonEl.value : 'new';
+
+        const dateEl = document.getElementById('fit-date');
+        const dateStr = dateEl ? dateEl.value.replace(/-/g, '.') : new Date().toISOString().split('T')[0].replace(/-/g, '.');
+
+        const labelEl = document.getElementById('fit-label');
+        const labelStr = (labelEl ? labelEl.value.trim() : '') || '시즌 체력 테스트';
 
         const parseNum = (id) => {
             const el = document.getElementById(id);
