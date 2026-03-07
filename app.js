@@ -10,7 +10,7 @@
         measurementId: "G-RG6G5VT085"
     };
 
-    const APP_VERSION = "v3.1.6 (Build 0308)";
+    const APP_VERSION = "v4.0.0 (Build 0308)";
     console.log("%c 지트캠 Soccer Academy " + APP_VERSION + " 로드됨 ", "background: #7bc2b7; color: #000; font-weight: bold;");
     const CURRENT_THEME = {
         primary: "#7bc2b7",
@@ -3066,7 +3066,7 @@
         let html = `
             <div class="fade-in">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-                    <h3 style="color: var(--text-white); font-size: 1.1rem; margin: 0;">지트캠 회원 관리 (CRM) <span style="background: #ffcc00; color: #000; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 800; margin-left: 8px;">v3.1.6 [FIX]</span></h3>
+                    <h3 style="color: var(--text-white); font-size: 1.1rem; margin: 0;">지트캠 회원 관리 (CRM) <span style="background: #ffcc00; color: #000; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 800; margin-left: 8px;">v4.0.0</span></h3>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                         <button onclick="window.syncLocalToFirebase()" title="로컬 데이터를 서버(DB)로 강제 전송합니다" style="background: rgba(255,165,0,0.1); border: 1px solid #ffa500; color: #ffa500; font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; cursor: pointer;">
                             <i class="fas fa-sync-alt"></i> DB 강제 동기화
@@ -3482,7 +3482,7 @@
                         <i class="fas fa-wallet"></i>
                     </div>
                     <h4 style="color: #fff; margin-bottom: 10px; font-size: 1.1rem;">결제 시스템 통합 중</h4>
-                    <p style="color: #94a3b8; font-size: 0.95rem; margin-bottom: 25px; line-height: 1.6;">수강료 미납 관리 및 자동 결제 내역 확인 기능이<br/>v3.2.0 업데이트에 통합될 예정입니다.</p>
+                    <p style="color: #94a3b8; font-size: 0.95rem; margin-bottom: 25px; line-height: 1.6;">수강료 미납 관리 및 자동 결제 내역 확인 기능이<br/>v4.1.0 업데이트에 통합될 예정입니다.</p>
                     <div style="display: inline-block; padding: 6px 16px; background: rgba(255,255,255,0.05); border-radius: 20px; color: #64748b; font-size: 0.8rem; font-weight: 700;">Maintenance Mode</div>
                 </div>
             </div>
