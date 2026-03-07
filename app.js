@@ -10,7 +10,8 @@
         measurementId: "G-RG6G5VT085"
     };
 
-    const APP_VERSION = "v3.0.0 (Build 0307)";
+    const APP_VERSION = "v3.1.5 (Build 0308)";
+    console.log("%c 지트캠 Soccer Academy " + APP_VERSION + " 로드됨 ", "background: #7bc2b7; color: #000; font-weight: bold;");
     const CURRENT_THEME = {
         primary: "#7bc2b7",
         basicRed: "#f06958",
@@ -2021,16 +2022,23 @@
 
     // === 관리자용 전역 함수 바인딩 ===
     window.showMemberDetail = (userId) => {
+        console.log("showMemberDetail called for:", userId);
         const user = state.users.find(u => u.id === userId);
-        if (!user) return;
+        if (!user) {
+            console.error("User not found in state.users:", userId);
+            return;
+        }
 
-        const theme = window.getMemberTheme(user);
-        const roleColor = theme.main;
+        try {
+            const theme = window.getMemberTheme(user);
+            const roleColor = theme.main;
 
-        const existing = document.getElementById('member-detail-modal');
-        if (existing) existing.remove();
+            const existing = document.getElementById('member-detail-modal');
+            if (existing) existing.remove();
 
-        const modalHtml = `
+            console.log("Rendering modal for:", user.name);
+
+            const modalHtml = `
             <div id="member-detail-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.85); z-index: 9999; display: flex; justify-content: center; align-items: center; padding: 15px; backdrop-filter: blur(12px);">
                 <div class="modal-content premium-card fade-in" style="width: 100%; max-width: 600px; height: 85vh; display: flex; flex-direction: column; overflow: hidden; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);">
                     
@@ -2117,7 +2125,7 @@
                                 <h4 style="color: #00d2ff; font-size: 0.9rem; margin: 0 0 12px; display: flex; align-items: center; gap: 6px;"><i class="fas fa-history"></i> 수강 및 가입 이력 (History)</h4>
                                 <div style="background: rgba(255,255,255,0.02); border-radius: 16px; border: 1px solid rgba(255,255,255,0.04); overflow: hidden;">
                                     ${user.history && user.history.length > 0 ?
-                `<div style="display: flex; flex-direction: column; max-height: 300px; overflow-y: auto;">
+                    `<div style="display: flex; flex-direction: column; max-height: 300px; overflow-y: auto;">
                                             ${[...user.history].reverse().map((h, idx) => `
                                                 <div style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.03); border-left: 4px solid ${idx === 0 ? '#00d2ff' : 'transparent'}; background: ${idx === 0 ? 'rgba(0, 210, 255, 0.03)' : 'transparent'};">
                                                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
@@ -2132,8 +2140,8 @@
                                                 </div>
                                             `).join('')}
                                         </div>` :
-                `<div style="padding: 20px; text-align: center; color: #64748b; font-size: 0.85rem;">기록된 이력이 없습니다.</div>`
-            }
+                    `<div style="padding: 20px; text-align: center; color: #64748b; font-size: 0.85rem;">기록된 이력이 없습니다.</div>`
+                }
                                 </div>
                             </div>
                             
@@ -2322,7 +2330,12 @@
                 </div>
             </div>
         `;
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            console.log("Modal inserted into DOM");
+        } catch (err) {
+            console.error("Error in showMemberDetail:", err);
+            alert("상세 정보를 불러오는 중 오류가 발생했습니다. 콘솔을 확인해주세요.");
+        }
     };
 
     window.toggleEditMember = () => {
@@ -3004,7 +3017,7 @@
         let html = `
             <div class="fade-in">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-                    <h3 style="color: var(--text-white); font-size: 1.1rem; margin: 0;">지트캠 회원 관리 (CRM) <span style="background: var(--primary); color: #000; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 800; margin-left: 8px;">v3.0.0</span></h3>
+                    <h3 style="color: var(--text-white); font-size: 1.1rem; margin: 0;">지트캠 회원 관리 (CRM) <span style="background: #ffcc00; color: #000; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 800; margin-left: 8px;">v3.1.5 [NEW]</span></h3>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                         <button onclick="window.syncLocalToFirebase()" title="로컬 데이터를 서버(DB)로 강제 전송합니다" style="background: rgba(255,165,0,0.1); border: 1px solid #ffa500; color: #ffa500; font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; cursor: pointer;">
                             <i class="fas fa-sync-alt"></i> DB 강제 동기화
