@@ -3231,63 +3231,6 @@
     const renderAdminBadgesTab = () => {
         return `
             <div class="fade-in">
-                <h3 style="color: var(--text-white); margin-bottom: 20px; font-size: 1.2rem;">🏅 유저 뱃지 부여</h3>
-                <div class="card premium-card" style="background: rgba(20, 25, 35, 0.8); border: 1px solid rgba(255,255,255,0.08); padding: 25px; border-radius: 16px; text-align: center;">
-                    <p style="color: var(--text-gray); font-size: 0.9rem; margin-bottom: 20px;">검색된 유저 데이터를 바탕으로 특수 뱃지를 부여하는 컨트롤 패널입니다.</p>
-                    <i class="fas fa-tools" style="font-size: 3rem; color: rgba(255,255,255,0.1); margin-bottom: 15px;"></i>
-                    <p style="color: var(--secondary); font-weight: 700;">기능 고도화 진행 중 (v3.1.0 예정)</p>
-                </div>
-            </div>
-        `;
-    };
-
-    const renderAdminScheduleTab = () => {
-        return `
-            <div class="fade-in">
-                <h3 style="color: var(--text-white); margin-bottom: 20px; font-size: 1.2rem;">📅 클래스/훈련 일정 관리</h3>
-                <div class="card" style="background: rgba(20, 25, 35, 0.8); border: 1px solid var(--border-glass); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
-                    <p style="color: var(--text-gray); font-size: 0.85rem; margin-bottom: 15px;">새로운 훈련 또는 경기 일정을 추가합니다.</p>
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        <div style="display: flex; gap: 10px; align-items: center;">
-                            <span style="color: var(--text-gray); font-size: 0.8rem; min-width: 40px;">날짜:</span>
-                            <input type="date" id="admin-sched-date" style="flex: 1; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; color: var(--text-white); outline: none; color-scheme: dark;">
-                        </div>
-                        <div style="display: flex; gap: 10px; align-items: center;">
-                            <span style="color: var(--text-gray); font-size: 0.8rem; min-width: 40px;">시간:</span>
-                            <input type="time" id="admin-sched-start" style="flex: 1; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; color: var(--text-white); outline: none; color-scheme: dark;">
-                            <span style="color: var(--text-gray);">~</span>
-                            <input type="time" id="admin-sched-end" style="flex: 1; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; color: var(--text-white); outline: none; color-scheme: dark;">
-                        </div>
-                        <input type="text" id="admin-sched-title" placeholder="일정 제목 (예: A반 드리블 훈련)" style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; color: var(--text-white); outline: none;">
-                        <input type="text" id="admin-sched-loc" placeholder="장소 (예: 1호 메인 구장)" style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; color: var(--text-white); outline: none;">
-                        <textarea id="admin-sched-desc" placeholder="상세 내용 코멘트 (수업 특징, 준비물 등)" style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; color: var(--text-white); outline: none; height: 80px; resize: none;"></textarea>
-                        <button onclick="window.adminSubmitSchedule()" class="btn-primary" style="padding: 12px; margin-top: 5px;">일정 등록하기</button>
-                    </div>
-                </div>
-                
-                <h4 style="color: var(--text-white); margin-bottom: 10px; font-size: 1rem;">현재 등록된 일정</h4>
-                <div style="display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto;">
-                    ${state.schedules.slice().reverse().map(s => `
-                        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); padding: 12px; border-radius: 8px;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                                <span style="color: var(--primary); font-weight: bold; font-size: 0.9rem;">${s.date}</span>
-                                <i class="fas fa-trash-alt" onclick="window.adminDeleteSchedule(${s.id})" style="color: #ff3b30; cursor: pointer; font-size: 0.9rem;"></i>
-                            </div>
-                            <h4 style="color: var(--text-white); font-size: 0.95rem; margin-bottom: 4px;">${s.title}</h4>
-                            <div style="color: var(--text-gray); font-size: 0.8rem; display: flex; flex-direction: column; gap: 4px;">
-                                <span><i class="fas fa-clock"></i> ${s.time}</span>
-                                <span><i class="fas fa-map-marker-alt"></i> ${s.location}</span>
-                                ${s.description ? `<p style="margin-top:5px; padding-top:5px; border-top: 1px solid rgba(255,255,255,0.05); color: #8cf;">${s.description}</p>` : ''}
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-    };
-
-    const renderAdminBadgesTab = () => {
-        return `
-            < div class="fade-in" >
                 <h3 style="color: var(--text-white); margin-bottom: 20px; font-size: 1.25rem; display: flex; align-items: center; gap: 10px;"><i class="fas fa-medal" style="color: #f2cb4f;"></i> 유저 뱃지 부여 및 명예의 전당</h3>
                 <div class="card premium-card" style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(255,255,255,0.08); padding: 40px; border-radius: 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
                     <div style="width: 80px; height: 80px; background: rgba(242, 203, 79, 0.1); border-radius: 50%; display: flex; justify-content: center; align-items: center; margin: 0 auto 20px; color: #f2cb4f; font-size: 2.5rem;">
@@ -3297,13 +3240,56 @@
                     <p style="color: #94a3b8; font-size: 0.95rem; margin-bottom: 25px; line-height: 1.6;">선수들의 성과를 기반으로 한 자동 뱃지 부여 시스템 및<br/>명예의 전당 기능이 v3.1.0 업데이트에 포함될 예정입니다.</p>
                     <div style="display: inline-block; padding: 6px 16px; background: rgba(255,255,255,0.05); border-radius: 20px; color: #64748b; font-size: 0.8rem; font-weight: 700;">Coming Soon</div>
                 </div>
-            </div >
+            </div>
+        `;
+    };
+
+    const renderAdminScheduleTab = () => {
+        return `
+            <div class="fade-in">
+                <h3 style="color: var(--text-white); margin-bottom: 20px; font-size: 1.25rem; display: flex; align-items: center; gap: 10px;"><i class="fas fa-calendar-alt" style="color: var(--primary);"></i> 클래스/훈련 일정 관리</h3>
+                <div class="card" style="background: rgba(20, 25, 35, 0.8); border: 1px solid var(--border-glass); padding: 20px; border-radius: 12px; margin-bottom: 25px;">
+                    <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 15px;">새로운 훈련 또는 경기 일정을 추가합니다.</p>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <input type="date" id="admin-sched-date" style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 12px; color: #fff; outline: none; color-scheme: dark;">
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <input type="time" id="admin-sched-start" style="flex: 1; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 12px; color: #fff; outline: none; color-scheme: dark;">
+                                <span style="color: #64748b;">~</span>
+                                <input type="time" id="admin-sched-end" style="flex: 1; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 12px; color: #fff; outline: none; color-scheme: dark;">
+                            </div>
+                        </div>
+                        <input type="text" id="admin-sched-title" placeholder="일정 제목 (예: A반 드리블 훈련)" style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 12px; color: #fff; outline: none;">
+                        <input type="text" id="admin-sched-loc" placeholder="장소 (예: 1호 메인 구장)" style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 12px; color: #fff; outline: none;">
+                        <textarea id="admin-sched-desc" placeholder="상세 내용 코멘트" style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 12px; color: #fff; outline: none; height: 80px; resize: none;"></textarea>
+                        <button onclick="window.adminSubmitSchedule()" class="btn-primary" style="padding: 15px; font-weight: 700; border-radius: 10px;">일정 등록하기</button>
+                    </div>
+                </div>
+                
+                <h4 style="color: var(--text-white); margin-bottom: 12px; font-size: 1rem;">현재 등록된 일정</h4>
+                <div style="display: flex; flex-direction: column; gap: 12px; max-height: 400px; overflow-y: auto; padding-right: 5px;">
+                    ${(state.schedules || []).slice().reverse().map(s => `
+                        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); padding: 15px; border-radius: 12px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span style="color: var(--primary); font-weight: bold; font-size: 0.9rem;">${s.date}</span>
+                                <i class="fas fa-trash-alt" onclick="window.adminDeleteSchedule(${s.id})" style="color: #f06958; cursor: pointer; font-size: 1rem; opacity: 0.8;"></i>
+                            </div>
+                            <h4 style="color: #fff; font-size: 1rem; margin-bottom: 6px;">${s.title}</h4>
+                            <div style="color: #94a3b8; font-size: 0.85rem; display: flex; flex-direction: column; gap: 4px;">
+                                <span><i class="fas fa-clock" style="width: 18px;"></i> ${s.time}</span>
+                                <span><i class="fas fa-map-marker-alt" style="width: 18px;"></i> ${s.location}</span>
+                                ${s.description ? `<p style="margin-top:8px; padding-top:8px; border-top: 1px solid rgba(255,255,255,0.05); color: #8cf;">${s.description}</p>` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
         `;
     };
 
     const renderAdminPaymentsTab = () => {
         return `
-        < div class="fade-in" >
+            <div class="fade-in">
                 <h3 style="color: var(--text-white); margin-bottom: 20px; font-size: 1.25rem; display: flex; align-items: center; gap: 10px;"><i class="fas fa-wallet" style="color: #7bc2b7;"></i> 결제 및 수강료 관리</h3>
                 <div class="card premium-card" style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(255,255,255,0.08); padding: 40px; border-radius: 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
                     <div style="width: 80px; height: 80px; background: rgba(123, 194, 183, 0.1); border-radius: 50%; display: flex; justify-content: center; align-items: center; margin: 0 auto 20px; color: #7bc2b7; font-size: 2.5rem;">
@@ -3313,7 +3299,7 @@
                     <p style="color: #94a3b8; font-size: 0.95rem; margin-bottom: 25px; line-height: 1.6;">수강료 미납 관리 및 자동 결제 내역 확인 기능이<br/>v3.2.0 업데이트에 통합될 예정입니다.</p>
                     <div style="display: inline-block; padding: 6px 16px; background: rgba(255,255,255,0.05); border-radius: 20px; color: #64748b; font-size: 0.8rem; font-weight: 700;">Maintenance Mode</div>
                 </div>
-            </div >
+            </div>
         `;
     };
 
@@ -3334,7 +3320,7 @@
             user.role = newLevel;
             recalculateMembershipEnd(user);
             saveAdminState();
-            alert(`${ user.name } 님의 멤버십을[${ newLevel }]로 변경했습니다.\n만료일: ${ user.membershipEnd } `);
+            alert(`${user.name} 님의 멤버십을 [${newLevel}]로 변경했습니다.\n만료일: ${user.membershipEnd}`);
             renderAdminTab('admin-users'); // 리렌더링
         }
     };
@@ -3353,7 +3339,7 @@
         const yr = start.getFullYear();
         const mo = String(start.getMonth() + 1).padStart(2, '0');
         const da = String(start.getDate()).padStart(2, '0');
-        user.membershipEnd = `${ yr } -${ mo } -${ da } `;
+        user.membershipEnd = `${yr}-${mo}-${da}`;
     }
 
     function saveAdminState() {
@@ -3375,7 +3361,7 @@
         const newSched = {
             id: Date.now(),
             date: d,
-            time: `${ start } - ${ end } `,
+            time: `${start} - ${end}`,
             title: title,
             location: loc,
             description: desc
@@ -3460,7 +3446,7 @@
 
         // 파일 첨부 시 Firebase Storage 처리
         if (f && window.storage) {
-            const fileName = `notices / ${ Date.now() }_${ f.name } `;
+            const fileName = `notices/${Date.now()}_${f.name}`;
             const storageRef = window.storage.ref(fileName);
             storageRef.put(f).then(snapshot => {
                 return snapshot.ref.getDownloadURL();
