@@ -1,14 +1,14 @@
 (() => {
     // --- [Firebase Configuration] ---
     const firebaseConfig = {
-  apiKey: "AIzaSyCGEc8bi3bzg404IasYJDfnUTHnmbuCg3s",
-  authDomain: "gstar-4ca45.firebaseapp.com",
-  projectId: "gstar-4ca45",
-  storageBucket: "gstar-4ca45.firebasestorage.app",
-  messagingSenderId: "384784496891",
-  appId: "1:384784496891:web:9950ff06e22598f8bad85e",
-  measurementId: "G-RG6G5VT085"
-};
+        apiKey: "AIzaSyCGEc8bi3bzg404IasYJDfnUTHnmbuCg3s",
+        authDomain: "gstar-4ca45.firebaseapp.com",
+        projectId: "gstar-4ca45",
+        storageBucket: "gstar-4ca45.firebasestorage.app",
+        messagingSenderId: "384784496891",
+        appId: "1:384784496891:web:9950ff06e22598f8bad85e",
+        measurementId: "G-RG6G5VT085"
+    };
 
     // Firebase 초기화 (SDK가 존재할 때만)
     let db = null;
@@ -1471,6 +1471,11 @@
     // ==========================================
     // 엑셀 데이터 임포트 로직
     // ==========================================
+    window.triggerExcelImport = () => {
+        const input = document.getElementById('excel-import-input');
+        if (input) input.click();
+    };
+
     window.syncLocalToFirebase = async () => {
         if (!db) return alert('서버(Firebase)에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.');
 
@@ -2739,10 +2744,7 @@
                     <button class="btn-primary" onclick="window.triggerExcelImport()" style="font-size: 0.8rem; padding: 8px 15px; background: rgba(0, 210, 255, 0.2); border: 1px solid var(--primary); color: var(--primary);">
                         <i class="fas fa-upload"></i> 파일 선택하기
                     </button>
-                    <input type="file" id="excel-import-input" accept=".xlsx, .xls, .csv" style="display: none;" onchange="window.handleExcelImport(event)">
                 </div>
-
-                ${warningHtml}
 
                 <div style="background: rgba(0,0,0,0.3); border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid var(--border-glass);">
                     <div style="display: flex; justify-content: space-around; text-align: center;">
