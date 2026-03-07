@@ -198,12 +198,17 @@
                 }
             });
 
-            // [추가] 초기 데이터 마이그레이션 (Firestore가 비어있을 경우)
+            // [수정] 데이터 동기화 강화: 로컬에만 있는 사용자 정보를 백그라운드에서 Firebase로 자동 업로드
             db.collection("users").get().then(snap => {
-                if (snap.empty && state.users.length > 0) {
-                    console.log("Migrating users to Firebase...");
-                    state.users.forEach(u => db.collection("users").doc(u.id).set(u));
-                }
+                const firebaseUserIds = new Set();
+                snap.forEach(doc => firebaseUserIds.add(doc.id));
+
+                state.users.forEach(u => {
+                    if (!firebaseUserIds.has(u.id)) {
+                        console.log(`Syncing missing user to Firebase: ${u.name} (${u.id})`);
+                        db.collection("users").doc(u.id).set(u).catch(e => console.error(e));
+                    }
+                });
             });
             db.collection("posts").get().then(snap => {
                 if (snap.empty && state.posts.length > 0) {
@@ -510,20 +515,37 @@
         let html = '';
         switch (tabId) {
             case 'notice':
-                html = `
-                    <div class="card notice fade-in">
-                        <span class="tag" style="background:var(--primary); color:#000;">필독</span>
-                        <h4>이번 주 동계 훈련 특별 일정안내</h4>
-                        <p>우천 시 인근 실내 돔 경기장으로 장소가 변경됩니다.</p>
-                        <p style="font-size: 0.8rem; color: var(--text-gray); margin-top: 10px;">관리자 • 2시간 전</p>
-                    </div>
-                    <div class="card notice fade-in" style="background: var(--glass-bg);">
-                        <span class="tag" style="background:var(--accent-gold); color:#000;">안내</span>
-                        <h4>12월 신규 가입자 웰컴 패키지 배부</h4>
-                        <p>새로 오신 회원분들께 공식 유니폼과 양말 세트를 지급합니다.</p>
-                        <p style="font-size: 0.8rem; color: var(--text-gray); margin-top: 10px;">운영팀 • 1일 전</p>
-                    </div>
-                `;
+                const notices = state.posts.filter(p => p.type === 'notice' || p.isPriority);
+                if (notices.length === 0) {
+                    html = `
+                        <div style="text-align: center; padding: 60px 20px; color: var(--text-gray);">
+                            <i class="fas fa-bullhorn" style="font-size: 3rem; margin-bottom: 20px; opacity: 0.2;"></i>
+                            <p>등록된 공지사항이 없습니다.</p>
+                        </div>
+                    `;
+                } else {
+                    html = notices.map(n => {
+                        const isPriority = n.isPriority;
+                        const tagColor = isPriority ? 'var(--secondary)' : 'var(--primary)';
+                        const tagName = isPriority ? '필독' : (n.category || '공지');
+                        return `
+                            <div class="card notice fade-in" style="${isPriority ? 'border-left: 5px solid var(--secondary); background: rgba(212, 175, 55, 0.05);' : ''}">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                                    <span class="tag" style="background:${tagColor}; color:#000; font-weight:800; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem;">${tagName}</span>
+                                    <span style="font-size: 0.75rem; color: var(--text-gray);">${n.date || '방금 전'}</span>
+                                </div>
+                                <h4 style="font-size: 1.15rem; color: var(--text-white); margin-bottom: 10px; line-height: 1.4;">${n.content.split('\n')[0]}</h4>
+                                <p style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.6;">${n.content.split('\n').slice(1).join('<br>') || n.content}</p>
+                                <div style="margin-top: 15px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 8px;">
+                                    <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; color: #000; font-size: 0.7rem;">
+                                        <i class="fas fa-user-shield"></i>
+                                    </div>
+                                    <span style="font-size: 0.8rem; color: var(--text-gray); font-weight: 600;">G-STAR 운영팀</span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
                 break;
             case 'academy':
             case 'schedule':
@@ -835,7 +857,7 @@
                     </div>
                     <div class="fade-in" style="display: flex; flex-direction: column; gap: 20px; padding-bottom: 30px;">
                         ${allFeed.map(post => {
-                    const isNotice = post.type === 'notice' || post.authorName.includes('운영진');
+                    const isNotice = post.type === 'notice' || post.authorName.includes('운영팀');
                     const borderStyle = post.isPriority ? '2px solid #ff3b30' : (isNotice ? '1px solid var(--primary)' : '1px solid var(--border-glass)');
                     const bgStyle = post.isPriority ? 'rgba(40, 15, 15, 0.8)' : 'rgba(20, 25, 35, 0.7)';
 
@@ -961,39 +983,40 @@
         const btnBack = `<button onclick="renderTab('profile')" style="background:none;border:none;color:white;font-size:1.2rem;margin-right:15px;cursor:pointer;"><i class="fas fa-arrow-left"></i></button>`;
         if (viewTitle) viewTitle.innerHTML = btnBack + '친구 관리';
 
-        // 목업 데이터
-        const following = [
-            { id: '1', name: '김태환', avatar: 'fa-user-ninja', role: '스트라이커', currentClass: 'A반 전술 훈련' },
-            { id: '2', name: '이청용', avatar: 'fa-user-secret', role: '미드필더', currentClass: 'B반 피지컬 트레이닝' }
-        ];
+        // 실제 데이터 연동 (state.users에서 나를 제외한 인원들 및 팔로잉 필터링)
+        const myId = state.currentUser ? String(state.currentUser.id) : '';
+        const allOtherUsers = state.users.filter(u => String(u.id) !== myId && u.id !== 'admin');
 
-        const followers = [
-            { id: '3', name: '박지성', avatar: 'fa-user-tie', role: '수비수', currentClass: 'C반 기본기 훈련' },
-            { id: '1', name: '김태환', avatar: 'fa-user-ninja', role: '스트라이커', currentClass: 'A반 전술 훈련' }
-        ];
-
-        const list = tab === 'following' ? following : followers;
+        let displayList = [];
+        if (tab === 'following') {
+            displayList = allOtherUsers.filter(u => state.following.includes(String(u.id)));
+        } else if (tab === 'followers') {
+            displayList = allOtherUsers.filter(u => state.followers.includes(String(u.id)));
+        } else {
+            // 'discovery' 탭 등 추가 시 전체 명단 노출
+            displayList = allOtherUsers;
+        }
 
         let html = `
             <div class="fade-in" style="padding-top: 10px; padding-bottom: 20px;">
                 <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                    <button class="btn-check" onclick="showFriends('following')" style="${tab === 'following' ? 'background: var(--primary); color: #000;' : ''} flex: 1;">내가 팔로우 (${following.length})</button>
-                    <button class="btn-check" onclick="showFriends('followers')" style="${tab === 'followers' ? 'background: var(--primary); color: #000;' : ''} flex: 1;">나를 팔로우 (${followers.length})</button>
+                    <button class="btn-check" onclick="showFriends('following')" style="${tab === 'following' ? 'background: var(--primary); color: #000;' : ''} flex: 1;">팔로잉 (${state.following.length})</button>
+                    <button class="btn-check" onclick="showFriends('discovery')" style="${tab === 'discovery' ? 'background: var(--primary); color: #000;' : ''} flex: 1;">멤버 찾기 (${allOtherUsers.length})</button>
                 </div>
                 
                 <div class="user-list">
-                    ${list.map(friend => `
-                        <div class="card" onclick="showFriendProfile('${friend.id}')" style="background: linear-gradient(to right, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9)); border: 1px solid var(--border-glass); padding: 15px; border-radius: 15px; margin-bottom: 15px; cursor: pointer; display: flex; align-items: center; gap: 15px; transition: 0.3s;">
-                            <div style="width: 50px; height: 50px; border-radius: 50%; background: var(--glass-bg); display: flex; justify-content: center; align-items: center; font-size: 1.5rem; color: var(--primary); border: 2px solid var(--border-glass);">
-                                <i class="fas ${friend.avatar}"></i>
+                    ${displayList.length > 0 ? displayList.map(u => `
+                        <div class="card" onclick="window.showFriendProfile('${u.id}')" style="background: linear-gradient(to right, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9)); border: 1px solid var(--border-glass); padding: 15px; border-radius: 15px; margin-bottom: 15px; cursor: pointer; display: flex; align-items: center; gap: 15px; transition: 0.3s;">
+                            <div style="width: 50px; height: 50px; border-radius: 50%; background: var(--glass-bg); display: flex; justify-content: center; align-items: center; font-size: 1.5rem; color: var(--primary); border: 2px solid var(--border-glass); overflow: hidden;">
+                                ${u.avatar && u.avatar.includes('http') ? `<img src="${u.avatar}" style="width:100%; height:100%; object-fit:cover;">` : `<i class="fas ${u.avatar || 'fa-user-astronaut'}"></i>`}
                             </div>
                             <div style="flex: 1;">
-                                <h4 style="color: var(--text-white); margin-bottom: 5px;">${friend.name}</h4>
-                                <p style="font-size: 0.8rem; color: var(--text-gray);">${friend.role} | ${friend.currentClass}</p>
+                                <h4 style="color: var(--text-white); margin-bottom: 5px;">${u.name}</h4>
+                                <p style="font-size: 0.8rem; color: var(--text-gray);">${u.role || 'G-STAR 멤버'} | ${u.grade || ''} ${u.school || '지트캠프'}</p>
                             </div>
                             <i class="fas fa-chevron-right" style="color: var(--text-gray);"></i>
                         </div>
-                    `).join('')}
+                    `).join('') : `<p style="text-align:center; padding: 40px; color: var(--text-gray);">표시할 멤버가 없습니다.</p>`}
                 </div>
             </div>
         `;
@@ -1006,8 +1029,9 @@
 
     // === 서브 뷰: 친구 상세 프로필 ===
     window.showFriendProfile = (friendId) => {
-        // 임시 데이터
-        const friend = { id: friendId, name: friendId === '1' ? '김태환' : (friendId === '2' ? '이청용' : '박지성'), avatar: 'fa-user-ninja' };
+        // 실제 데이터에서 검색
+        const friend = state.users.find(u => String(u.id) === String(friendId));
+        if (!friend) return alert('존재하지 않는 회원입니다.');
 
         const btnBack = `<button onclick="showFriends('following')" style="background:none;border:none;color:white;font-size:1.2rem;margin-right:15px;cursor:pointer;"><i class="fas fa-arrow-left"></i></button>`;
         if (viewTitle) viewTitle.innerHTML = btnBack + `${friend.name}님의 프로필`;
