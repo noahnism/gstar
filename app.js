@@ -1688,7 +1688,7 @@
         if (!user) return;
 
         const role = (user.role || 'Basic').toLowerCase();
-        let roleColor = '#7bc2b7';
+        let roleColor = '#f06958';
         if (role.includes('ultimate')) roleColor = '#f2cb4f';
         else if (role.includes('pro')) roleColor = '#00d2ff';
         else if (role.includes('semi')) roleColor = '#a855f7';
@@ -1884,9 +1884,12 @@
                                     <label style="color: #64748b; font-size: 0.75rem;">측정 일자 <input type="date" id="fit-date" value="${new Date().toISOString().split('T')[0]}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1e293b; color: #fff; margin-top: 4px; color-scheme: dark;"></label>
                                 </div>
 
-                                <div style="background: rgba(242, 203, 79, 0.05); padding: 12px; border-radius: 12px; margin-bottom: 16px; border: 1px solid rgba(242, 203, 79, 0.1);">
-                                    <div style="color: #f2cb4f; font-size: 0.75rem; font-weight: 700; margin-bottom: 8px;"><i class="fas fa-file-pdf"></i> 스마트 핏 리포트 (PDF/PPT/이미지)</div>
-                                    <input type="file" id="fit-pdf-file" accept=".pdf, .ppt, .pptx, image/*" style="font-size: 0.8rem; color: #cbd5e1; width: 100%;">
+                                <div style="background: rgba(255,255,255,0.02); padding: 16px; border-radius: 16px; border: 1px solid rgba(242, 203, 79, 0.4); margin-bottom: 24px;">
+                                    <div style="color: #f2cb4f; font-size: 0.8rem; font-weight: 800; margin-bottom: 8px;"><i class="fas fa-file-pdf"></i> 스마트 핏 리포트 (PDF/PPT/이미지)</div>
+                                    <div style="display: flex; align-items: center; gap: 8px; background: #1e293b; padding: 6px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+                                        <input type="file" id="fit-pdf-file" accept=".pdf, .ppt, .pptx, image/*" style="font-size: 0.8rem; color: #cbd5e1; width: 100%;" onchange="window.analyzeFitnessFile(event)">
+                                    </div>
+                                    <div id="fit-pdf-status" style="font-size: 0.7rem; color: #94a3b8; margin-top: 6px;">* 선택하지 않으면 등록되지 않습니다. 파일 첨부 시 AI 자동 측정 스캔이 시작됩니다.</div>
                                 </div>
 
                                 <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 20px;">
