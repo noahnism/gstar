@@ -1,15 +1,14 @@
 (() => {
     // --- [Firebase Configuration] ---
-    // 사용자께서 실제 Firebase 콘솔에서 발급받은 설정으로 교체해주셔야 합니다.
-    // 아래는 프로토타입 동작을 위한 가상 설정 샘플입니다.
     const firebaseConfig = {
-        apiKey: "demo-api-key",
-        authDomain: "gstar-soccer.firebaseapp.com",
-        projectId: "gstar-soccer", // 실제 프로젝트 ID로 교체 필요
-        storageBucket: "gstar-soccer.appspot.com",
-        messagingSenderId: "123456789",
-        appId: "1:123456789:web:abcdefghij"
-    };
+  apiKey: "AIzaSyCGEc8bi3bzg404IasYJDfnUTHnmbuCg3s",
+  authDomain: "gstar-4ca45.firebaseapp.com",
+  projectId: "gstar-4ca45",
+  storageBucket: "gstar-4ca45.firebasestorage.app",
+  messagingSenderId: "384784496891",
+  appId: "1:384784496891:web:9950ff06e22598f8bad85e",
+  measurementId: "G-RG6G5VT085"
+};
 
     // Firebase 초기화 (SDK가 존재할 때만)
     let db = null;
@@ -24,7 +23,10 @@
             // [추가] 익명 인증을 통해 Firestore 읽기 권한 확보 (규칙 설정에 따라 필요함)
             firebase.auth().signInAnonymously()
                 .then(() => console.log("Firebase Anonymous Auth Success"))
-                .catch(err => console.error("Firebase Auth Error:", err));
+                .catch(err => {
+                    console.error("Firebase Auth Error:", err);
+                    alert("Firebase 인증 오류: " + err.message + "\n(콘솔에서 Anonymous Auth가 활성화되어 있는지 확인해 주세요.)");
+                });
 
         } catch (err) {
             console.error("Firebase Init Error:", err);
@@ -183,9 +185,10 @@
                 }
             }, (error) => {
                 console.error("Users Snapshot Error:", error);
-                // 모바일에서 권한 문제 등이 생길 경우 알림
+                // 모바일에서 권한 문제 등이 생길 경우 시각적으로 알림
                 if (error.code === 'permission-denied') {
                     console.warn("Firestore access denied. Please check security rules.");
+                    alert("서버 데이터 접근 거부: Firestore 보안 규칙을 확인해 주세요.\n(Anonymous 유저의 읽기 권한이 필요합니다.)");
                 }
             });
 
