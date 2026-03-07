@@ -156,6 +156,10 @@
                 if (updatedUsers.length > 0) {
                     state.users = updatedUsers;
                     localStorage.setItem('soccer_users', JSON.stringify(state.users));
+                    // 상태가 업데이트되면 현재 보고 있는 관리자 뷰(회원 목록)를 갱신
+                    if (adminView && !adminView.classList.contains('hidden')) {
+                        if (window.renderAdminTab) window.renderAdminTab('admin-users');
+                    }
                 }
             });
 
