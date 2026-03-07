@@ -156,9 +156,22 @@
                 if (updatedUsers.length > 0) {
                     state.users = updatedUsers;
                     localStorage.setItem('soccer_users', JSON.stringify(state.users));
+
+                    // 현재 접속한 로그인 유저(currentUser) 정보도 실시간 동기화
+                    if (state.currentUser && state.currentUser.id !== 'admin') {
+                        const syncedMe = state.users.find(u => u.id === state.currentUser.id);
+                        if (syncedMe) {
+                            state.currentUser = syncedMe;
+                            localStorage.setItem('soccer_session', JSON.stringify(state.currentUser));
+                        }
+                    }
+
                     // 상태가 업데이트되면 현재 보고 있는 관리자 뷰(회원 목록)를 갱신
                     if (adminView && !adminView.classList.contains('hidden')) {
                         if (window.renderAdminTab) window.renderAdminTab('admin-users');
+                    } else if (appView && !appView.classList.contains('hidden') && state.activeTab === 'profile') {
+                        // 현재 내 프로필 화면을 보고 있다면 갱신
+                        if (!state.viewingUserId || state.viewingUserId === state.currentUser.id) renderTab('profile');
                     }
                 }
             });
@@ -728,9 +741,9 @@
                         </div>
                     </div>
 
-                    <!-- 내 게시물 갤러리 렌더링 -->
+                    <!-- 소셜 통합 피드 갤러리 렌더링 -->
                     <div class="social-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
-                        ${state.posts.filter(p => p.authorId === (state.currentUser ? state.currentUser.id : '')).reverse().map(post => `
+                        ${state.posts.reverse().map(post => `
                             <div class="social-item" style="aspect-ratio: 1; border-radius: 15px; overflow:hidden; position:relative; cursor:pointer;" onclick="alert('게시물 내용:\\n${post.content}')">
                                 <img src="${post.media}" alt="Post image" style="width:100%; height:100%; object-fit:cover;">
                                 ${post.isVideo ? '<i class="fas fa-play" style="position:absolute; top:10px; right:10px; color:white; text-shadow: 0 0 5px rgba(0,0,0,0.8);"></i>' : ''}
