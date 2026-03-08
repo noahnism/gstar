@@ -552,22 +552,30 @@
                 } else {
                     html = notices.map(n => {
                         const isPriority = n.isPriority;
-                        const tagColor = isPriority ? 'var(--secondary)' : 'var(--primary)';
+                        const tagColor = isPriority ? '#f06958' : 'var(--primary)';
                         const tagName = isPriority ? '필독' : (n.category || '공지');
                         return `
-                            <div class="card notice fade-in" style="${isPriority ? 'border-left: 5px solid var(--secondary); background: rgba(212, 175, 55, 0.05);' : ''}">
+                            <div class="card notice fade-in" onclick="window.showNoticeDetail('${n.id}')" style="cursor: pointer; position: relative; overflow: hidden; transition: 0.3s; ${isPriority ? 'border-left: 5px solid #f06958; background: linear-gradient(135deg, rgba(240, 105, 88, 0.08), rgba(15, 23, 42, 0.6));' : 'background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(255,255,255,0.05);'}" onmouseover="this.style.transform='translateY(-3px)'; this.style.borderColor='var(--primary)';" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='${isPriority ? '#f06958' : 'rgba(255,255,255,0.05)'}';">
                                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-                                    <span class="tag" style="background:${tagColor}; color:#000; font-weight:800; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem;">${tagName}</span>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span class="tag" style="background:${tagColor}; color:${isPriority ? '#fff' : '#000'}; font-weight:900; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem;">${tagName}</span>
+                                        ${n.category ? `<span style="color: var(--primary); font-size: 0.75rem; font-weight: bold;">[${n.category}]</span>` : ''}
+                                    </div>
                                     <span style="font-size: 0.75rem; color: var(--text-gray);">${n.date || '방금 전'}</span>
                                 </div>
-                                <h4 style="font-size: 1.15rem; color: var(--text-white); margin-bottom: 10px; line-height: 1.4;">${n.content.split('\n')[0]}</h4>
-                                <p style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.6;">${n.content.split('\n').slice(1).join('<br>') || n.content}</p>
-                                <div style="margin-top: 15px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 8px;">
-                                    <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; color: #000; font-size: 0.7rem;">
-                                        <i class="fas fa-user-shield"></i>
+                                <h4 style="font-size: 1.1rem; color: var(--text-white); margin-bottom: 10px; line-height: 1.4; font-weight: 700;">${n.title || n.content.split('\n')[0]}</h4>
+                                <p style="color: #94a3b8; font-size: 0.85rem; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; margin-bottom: 0;">${n.content}</p>
+                                
+                                <div style="margin-top: 15px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; color: #000; font-size: 0.7rem;">
+                                            <i class="fas fa-user-shield"></i>
+                                        </div>
+                                        <span style="font-size: 0.8rem; color: var(--text-gray); font-weight: 600;">G-STAR 운영팀</span>
                                     </div>
-                                    <span style="font-size: 0.8rem; color: var(--text-gray); font-weight: 600;">G-STAR 운영팀</span>
+                                    <i class="fas fa-chevron-right" style="color: var(--primary); font-size: 0.8rem; opacity: 0.5;"></i>
                                 </div>
+                                ${isPriority ? '<div style="position: absolute; top: -10px; right: -10px; width: 40px; height: 40px; background: #f06958; transform: rotate(45deg); opacity: 0.2;"></div>' : ''}
                             </div>
                         `;
                     }).join('');
@@ -617,26 +625,39 @@
                     </div>
                     
                     ${!isMonth ? `
-                        <h4 class="section-title fade-in" style="font-size: 1.1rem; color: var(--text-white); margin-bottom: 15px;">전체 훈련 일정 목록</h4>
+                        <h4 class="section-title fade-in" style="font-size: 1.1rem; color: var(--text-white); margin-bottom: 20px; display: flex; align-items: center; gap: 8px;"><i class="fas fa-clock" style="color: var(--primary);"></i> 전체 훈련 일정 목록 <span style="background: rgba(0,210,255,0.1); color: var(--primary); font-size: 0.7rem; padding: 2px 8px; border-radius: 10px;">Ongoing</span></h4>
                         <div class="schedule-list fade-in">
-                            ${state.schedules.length > 0 ? state.schedules.slice().sort((a, b) => new Date(a.date) - new Date(b.date)).map((s, idx) => `
-                                <div class="schedule-item" style="border-left: 3px solid ${new Date(s.date) >= new Date(todayStr) ? 'var(--primary)' : 'rgba(255,255,255,0.2)'}; background: rgba(30, 41, 59, 0.4); margin-bottom: 12px; padding: 18px; border-radius: 15px;">
-                                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
-                                        <div class="day" style="font-weight: 800; color: ${new Date(s.date) >= new Date(todayStr) ? 'var(--primary)' : 'var(--text-gray)'}; font-size: 1rem;">${s.date}</div>
-                                        <span style="font-size: 0.75rem; background: ${new Date(s.date) >= new Date(todayStr) ? 'rgba(0,210,255,0.1)' : 'rgba(255,255,255,0.05)'}; color: ${new Date(s.date) >= new Date(todayStr) ? 'var(--primary)' : '#666'}; padding:3px 8px; border-radius:10px;">
-                                            ${new Date(s.date) < new Date(todayStr) ? '종료됨' : '예정'}
+                            ${state.schedules.length > 0 ? state.schedules.slice().sort((a, b) => new Date(a.date) - new Date(b.date)).map((s, idx) => {
+                    const isFuture = new Date(s.date) >= new Date(todayStr);
+                    return `
+                                <div class="schedule-item premium-card" style="position: relative; overflow: hidden; border-left: 4px solid ${isFuture ? 'var(--primary)' : 'rgba(255,255,255,0.1)'}; background: linear-gradient(135deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.9)); margin-bottom: 16px; padding: 20px; border-radius: 18px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); transition: 0.3s;" onmouseover="this.style.transform='translateX(5px)'" onmouseout="this.style.transform='translateX(0)'">
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <div style="background: ${isFuture ? 'rgba(0,210,255,0.1)' : 'rgba(255,255,255,0.05)'}; width: 42px; height: 42px; border-radius: 12px; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1px solid ${isFuture ? 'rgba(0,210,255,0.2)' : 'rgba(255,255,255,0.05)'};">
+                                                <span style="font-size: 0.65rem; color: ${isFuture ? 'var(--primary)' : '#666'}; font-weight: 800; text-transform: uppercase;">${new Date(s.date).toLocaleString('ko-KR', { month: 'short' })}</span>
+                                                <span style="font-size: 1.1rem; color: ${isFuture ? '#fff' : '#666'}; font-weight: 900;">${s.date.split('-')[2]}</span>
+                                            </div>
+                                            <div>
+                                                <div class="day" style="font-weight: 800; color: ${isFuture ? '#fff' : 'var(--text-gray)'}; font-size: 0.95rem;">${s.date}</div>
+                                                <div style="font-size: 0.7rem; color: var(--primary); font-weight: 700;">${new Date(s.date).toLocaleDateString('ko-KR', { weekday: 'long' })}</div>
+                                            </div>
+                                        </div>
+                                        <span style="font-size: 0.7rem; background: ${isFuture ? 'linear-gradient(90deg, #7bc2b7, #00d2ff)' : 'rgba(255,255,255,0.1)'}; color: ${isFuture ? '#000' : '#666'}; padding: 4px 10px; border-radius: 12px; font-weight: 800; text-transform: uppercase; box-shadow: ${isFuture ? '0 0 10px rgba(0,210,255,0.3)' : 'none'};">
+                                            ${isFuture ? 'Upcoming' : 'Completed'}
                                         </span>
                                     </div>
                                     <div class="info">
-                                        <strong style="font-size: 1.1rem; color: var(--text-white); display:block; margin-bottom: 8px;">${s.title}</strong>
-                                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                                            <span style="color:var(--text-gray); font-size: 0.85rem;"><i class="fas fa-clock" style="margin-right:5px; color:var(--primary);"></i> ${s.time}</span>
-                                            <span style="color:var(--text-gray); font-size: 0.85rem;"><i class="fas fa-map-marker-alt" style="margin-right:5px; color:var(--primary);"></i> ${s.location}</span>
+                                        <h4 style="font-size: 1.15rem; color: var(--text-white); font-weight: 800; margin-bottom: 12px; letter-spacing: -0.5px;">${s.title}</h4>
+                                        <div style="display: flex; flex-wrap: wrap; gap: 15px;">
+                                            <span style="color:#cbd5e1; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;"><i class="fas fa-clock" style="color:var(--primary);"></i> ${s.time}</span>
+                                            <span style="color:#cbd5e1; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;"><i class="fas fa-map-marker-alt" style="color:var(--primary);"></i> ${s.location}</span>
                                         </div>
-                                        ${s.description ? `<p style="margin-top: 12px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px; color: #cbd5e1; font-size: 0.85rem; line-height: 1.5;">${s.description}</p>` : ''}
+                                        ${s.description ? `<p style="margin-top: 15px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 12px; color: #94a3b8; font-size: 0.85rem; line-height: 1.5; border: 1px solid rgba(255,255,255,0.03);">${s.description}</p>` : ''}
                                     </div>
+                                    ${isFuture ? '<div style="position: absolute; bottom: -20px; right: -20px; width: 80px; height: 80px; background: radial-gradient(circle, rgba(0, 210, 255, 0.1) 0%, transparent 70%);"></div>' : ''}
                                 </div>
-                            `).join('') : '<p style="color:var(--text-gray); text-align:center; padding: 40px;">훈련 일정이 아직 없습니다.</p>'}
+                            `;
+                }).join('') : '<p style="color:var(--text-gray); text-align:center; padding: 40px;">훈련 일정이 아직 없습니다.</p>'}
                         </div>
                     ` : `
                         <div class="fade-in" style="background: rgba(20, 25, 35, 0.6); border: 1px solid var(--border-glass); border-radius: 20px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
@@ -664,19 +685,23 @@
                                 <span style="font-size: 0.8rem; color: var(--text-gray);">${filteredSchedules.length}건 검색됨</span>
                             </div>
                             
-                            ${filteredSchedules.length > 0 ? filteredSchedules.map(s => `
-                                <div class="card" style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9)); border: 1px solid rgba(0,210,255,0.2); padding: 18px; border-radius: 15px; margin-bottom: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.2);">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                        <span style="font-size: 0.75rem; color: var(--primary); font-weight: 700; background: rgba(0,210,255,0.1); padding: 3px 8px; border-radius: 8px;">${s.time}</span>
-                                        <span style="font-size: 0.75rem; color: var(--text-gray);"><i class="fas fa-map-marker-alt" style="margin-right: 4px;"></i>${s.location}</span>
+                            ${filteredSchedules.length > 0 ? filteredSchedules.map(s => {
+                    const isFuture = new Date(s.date) >= new Date(todayStr);
+                    return `
+                                <div class="card premium-card" style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9)); border: 1px solid ${isFuture ? 'rgba(0,210,255,0.3)' : 'rgba(255,255,255,0.08)'}; padding: 20px; border-radius: 18px; margin-bottom: 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.4); position: relative; overflow: hidden;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                        <span style="font-size: 0.75rem; color: var(--primary); font-weight: 800; background: rgba(0,210,255,0.1); padding: 4px 10px; border-radius: 10px; border: 1px solid rgba(0,210,255,0.2);"><i class="fas fa-clock" style="margin-right:5px;"></i>${s.time}</span>
+                                        <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;"><i class="fas fa-map-marker-alt" style="margin-right: 5px; color: var(--primary);"></i>${s.location}</span>
                                     </div>
-                                    <h4 style="font-size: 1.1rem; color: var(--text-white); margin-bottom: 8px;">${s.title}</h4>
-                                    ${s.description ? `<p style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.4; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px; margin-top: 5px;">${s.description}</p>` : ''}
+                                    <h4 style="font-size: 1.15rem; color: var(--text-white); margin-bottom: 10px; font-weight: 800; letter-spacing: -0.5px;">${s.title}</h4>
+                                    ${s.description ? `<p style="font-size: 0.85rem; color: #94a3b8; line-height: 1.6; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; margin-top: 8px;">${s.description}</p>` : ''}
+                                    ${isFuture ? '<div style="position: absolute; top:0; right:0; width: 4px; height: 100%; background: var(--primary);"></div>' : ''}
                                 </div>
-                            `).join('') : `
-                                <div style="text-align: center; padding: 40px 20px; background: rgba(255,255,255,0.02); border-radius: 15px; border: 1px dashed rgba(255,255,255,0.1);">
-                                    <i class="fas fa-calendar-times" style="font-size: 2rem; color: rgba(255,255,255,0.1); margin-bottom: 10px;"></i>
-                                    <p style="color: var(--text-gray); font-size: 0.9rem;">해당 날짜에 예정된 일정이 없습니다.</p>
+                            `;
+                }).join('') : `
+                                <div style="text-align: center; padding: 60px 20px; background: rgba(15, 23, 42, 0.3); border-radius: 20px; border: 1px dashed rgba(255,255,255,0.08);">
+                                    <i class="fas fa-calendar-times" style="font-size: 3rem; color: rgba(255,255,255,0.05); margin-bottom: 15px;"></i>
+                                    <p style="color: var(--text-gray); font-size: 0.95rem;">해당 날짜에 예정된 일정이 없습니다.</p>
                                 </div>
                             `}
                         </div>
@@ -2424,6 +2449,57 @@
         }
     }
 
+    // --- [공지사항 상세 보기 모달 구현 (v4.2.0)] ---
+    window.showNoticeDetail = (noticeId) => {
+        const notice = state.posts.find(p => String(p.id) === String(noticeId));
+        if (!notice) return;
+
+        // 기존 모달 제거
+        document.querySelectorAll('#notice-detail-modal').forEach(m => m.remove());
+
+        const isPriority = notice.isPriority;
+        const tagColor = isPriority ? '#f06958' : 'var(--primary)';
+        const tagName = isPriority ? '필독' : (notice.category || '공지');
+
+        const modalHtml = `
+        <div id="notice-detail-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100000; display: flex; justify-content: center; align-items: center; padding: 15px; backdrop-filter: blur(15px);">
+            <div class="modal-content premium-card fade-in" style="width: 100%; max-width: 550px; max-height: 85vh; background: #070b14; border: 1px solid rgba(255,255,255,0.15); border-radius: 28px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+                
+                <div style="padding: 24px; border-bottom: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; position: relative; background: ${isPriority ? 'linear-gradient(180deg, rgba(240, 105, 88, 0.1) 0%, transparent 100%)' : 'transparent'};">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                        <span style="background: ${tagColor}; color: ${isPriority ? '#fff' : '#000'}; padding: 4px 14px; border-radius: 20px; font-size: 0.75rem; font-weight: 900; box-shadow: ${isPriority ? '0 0 15px rgba(240, 105, 88, 0.4)' : 'none'};">${tagName}</span>
+                        <button onclick="document.getElementById('notice-detail-modal').remove()" style="background: rgba(255,255,255,0.05); border: none; width: 32px; height: 32px; border-radius: 50%; color: #94a3b8; cursor: pointer; display: flex; justify-content: center; align-items: center;"><i class="fas fa-times"></i></button>
+                    </div>
+                    <h2 style="margin: 0; font-size: 1.35rem; color: #fff; line-height: 1.4; letter-spacing: -0.5px; font-weight: 800;">${notice.title || notice.content.split('\n')[0]}</h2>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-top: 15px; color: #64748b; font-size: 0.85rem;">
+                        <i class="fas fa-calendar-alt"></i> ${notice.date || '날짜 미상'}
+                        <span style="width: 1px; height: 10px; background: rgba(255,255,255,0.1);"></span>
+                        <i class="fas fa-eye"></i> 확인 완료
+                    </div>
+                </div>
+
+                <div style="padding: 24px; flex: 1; overflow-y: auto; scrollbar-width: thin; line-height: 1.8; color: #cbd5e1; font-size: 1rem;">
+                    ${notice.media ? (notice.isVideo ? `<video src="${notice.media}" controls style="width: 100%; border-radius: 12px; margin-bottom: 20px;"></video>` : `<img src="${notice.media}" style="width: 100%; border-radius: 12px; margin-bottom: 20px; display: block;">`) : ''}
+                    <div style="white-space: pre-wrap; font-family: 'Pretendard', sans-serif;">${notice.content}</div>
+                </div>
+
+                <div style="padding: 20px 24px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.5);">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; color: #000; font-size: 0.8rem;">
+                            <i class="fas fa-user-shield"></i>
+                        </div>
+                        <div style="display: flex; flex-direction: column;">
+                            <span style="font-size: 0.85rem; color: #fff; font-weight: 700;">G-STAR 운영팀</span>
+                            <span style="font-size: 0.75rem; color: #64748b;">Official Academy Team</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    };
+
     window.toggleEditMember = () => {
         const viewMode = document.getElementById('member-view-mode');
         const editMode = document.getElementById('member-edit-mode');
@@ -2730,7 +2806,7 @@
             }
             console.log("Saving fitness data for ID:", currentUserId);
             const userIdx = state.users.findIndex(u => u.id == currentUserId);
-            if (userIdx === -1) return;
+            if (userIdx === -1) throw new Error("User not found");
             const user = state.users[userIdx];
 
             const seasonEl = document.getElementById('edit-fitness-season');
@@ -2779,7 +2855,7 @@
 
             let newPdfUrl = null;
             if (selectedVal !== 'new' && !isNaN(parseInt(selectedVal)) && user.fitnessTests[parseInt(selectedVal)].pdfUrl) {
-                newPdfUrl = user.fitnessTests[parseInt(selectedVal)].pdfUrl; // 기존 파일 유지
+                newPdfUrl = user.fitnessTests[parseInt(selectedVal)].pdfUrl;
             }
 
             const newData = {
@@ -2790,19 +2866,13 @@
                 pdfUrl: newPdfUrl
             };
 
-            // --- [핵심] 최신 체력 검정 스탯을 메인 유저 스탯에 동기화 ---
             user.stats = [...scores];
 
             const fileInput = document.getElementById('fit-pdf-file');
             const file = fileInput ? fileInput.files[0] : null;
 
-            // 파일 업로드 처리
             if (file && window.firebase) {
                 try {
-                    // UI 블락 (로딩)
-                    document.getElementById('member-detail-modal').style.pointerEvents = 'none';
-                    // 투명도 조절 제거 (더 선명하게 유지)
-
                     const storageRef = firebase.storage().ref();
                     const fileRef = storageRef.child(`fitness_reports/${currentUserId}/${Date.now()}_${file.name}`);
                     const snapshot = await fileRef.put(file);
@@ -2810,66 +2880,45 @@
                 } catch (error) {
                     console.error("File Upload Error:", error);
                     alert("파일 업로드 중 오류가 발생했습니다. 기록만 먼저 저장합니다.");
-                } finally {
-                    finalizeAndSave(user, currentUserId, selectedVal);
                 }
-            } else {
-                finalizeAndSave(user, currentUserId, selectedVal);
             }
 
-            function finalizeAndSave(user, currentUserId, selectedVal) {
-                try {
-                    console.log("Finalizing save (In-place) for:", currentUserId);
-                    if (!user.fitnessTests) user.fitnessTests = [];
+            // finalize logic moved into the same block to ensure outer catch handles it
+            if (!user.fitnessTests) user.fitnessTests = [];
+            if (selectedVal === 'new') {
+                user.fitnessTests.push(newData);
+            } else {
+                const idx = parseInt(selectedVal);
+                if (!isNaN(idx)) {
+                    user.fitnessTests[idx] = newData;
+                }
+            }
 
-                    if (selectedVal === 'new') {
-                        user.fitnessTests.push(newData);
-                    } else {
-                        const idx = parseInt(selectedVal);
-                        if (!isNaN(idx)) {
-                            user.fitnessTests[idx] = newData;
-                        }
-                    }
+            localStorage.setItem('soccer_users', JSON.stringify(state.users));
+            if (db) {
+                await db.collection("users").doc(currentUserId.toString()).update({
+                    fitnessTests: user.fitnessTests,
+                    stats: user.stats
+                });
+            }
 
-                    // LocalStorage & Firebase 동시 업데이트
-                    localStorage.setItem('soccer_users', JSON.stringify(state.users));
-                    if (db) {
-                        db.collection("users").doc(currentUserId.toString()).update({
-                            fitnessTests: user.fitnessTests,
-                            stats: user.stats
-                        }).catch(e => console.error("Firebase Sync Error:", e));
-                    }
+            alert("체력 검정 데이터가 성공적으로 반영되었습니다.");
+            if (window.renderAdminTab) window.renderAdminTab('admin-users');
+            if (window.toggleFitnessEditMode) window.toggleFitnessEditMode();
 
-                    alert("체력 검정 데이터가 성공적으로 반영되었습니다.");
-
-                    // [In-place Update] 모달을 닫지 않고 내부 데이터만 갱신
-                    if (window.renderAdminTab) window.renderAdminTab('admin-users');
-
-                    // 뷰 모드로 전환 및 데이터 로드
-                    if (window.toggleFitnessEditMode) window.toggleFitnessEditMode();
-
-                    const ftLen = user.fitnessTests ? user.fitnessTests.length : 0;
-                    if (ftLen > 0) {
-                        const newIdx = selectedVal === 'new' ? (ftLen - 1).toString() : selectedVal;
-                        const selectEl = document.getElementById('fitness-season-select');
-                        if (selectEl) {
-                            selectEl.value = newIdx;
-                            if (window.changeFitnessSeason) window.changeFitnessSeason(newIdx, currentUserId);
-                        }
-                    }
-                } catch (err) {
-                    console.error("Critical error in finalizeAndSave:", err);
-                    alert("처리 중 예기치 못한 오류가 발생했습니다.");
-                } finally {
-                    if (saveBtn) {
-                        saveBtn.disabled = false;
-                        saveBtn.innerText = originalText;
-                    }
+            const ftLen = user.fitnessTests ? user.fitnessTests.length : 0;
+            if (ftLen > 0) {
+                const newIdx = selectedVal === 'new' ? (ftLen - 1).toString() : selectedVal;
+                const selectEl = document.getElementById('fitness-season-select');
+                if (selectEl) {
+                    selectEl.value = newIdx;
+                    if (window.changeFitnessSeason) window.changeFitnessSeason(newIdx, currentUserId);
                 }
             }
         } catch (err) {
             console.error("Critical Save Flow Error:", err);
-            alert("저장 과정에서 오류가 발생했습니다.");
+            alert("저장 과정에서 오류가 발생했습니다: " + err.message);
+        } finally {
             if (saveBtn) {
                 saveBtn.disabled = false;
                 saveBtn.innerText = originalText;
@@ -3459,10 +3508,9 @@
         html += `
                 <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px; align-items: start;">
                     <!-- 좌측: 유저 리스트 -->
-                    <div style="background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px solid var(--border-glass); padding: 15px; height: 600px; display: flex; flex-direction: column;">
                         <div style="position: relative; margin-bottom: 15px;">
-                            <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-gray);"></i>
-                            <input type="text" id="admin-badge-search" value="${window.adminBadgeSearchQuery}" onkeyup="window.adminBadgeSearchQuery=this.value; if(event.key === 'Enter') renderAdminTab('admin-badges')" placeholder="이름/번호 검색" style="width: 100%; background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.1); padding: 10px 10px 10px 35px; border-radius: 8px; color: white; outline: none; font-size: 0.85rem;">
+                            <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-gray); pointer-events: none;"></i>
+                            <input type="text" id="admin-badge-search" value="${window.adminBadgeSearchQuery}" oninput="window.adminBadgeSearchQuery=this.value; renderAdminTab('admin-badges')" placeholder="이름/번호 실시간 검색" style="width: 100%; background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.1); padding: 12px 12px 12px 38px; border-radius: 10px; color: white; outline: none; font-size: 0.85rem; transition: 0.3s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
                         </div>
                         <div style="overflow-y: auto; flex: 1; padding-right: 5px; scrollbar-width: thin;">
                             ${searchListHtml}
