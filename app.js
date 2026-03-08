@@ -10,7 +10,7 @@
         measurementId: "G-RG6G5VT085"
     };
 
-    const APP_VERSION = "v4.4.0 (Build 0308)";
+    const APP_VERSION = "v4.4.2 (Build 0308)";
     console.log("%c 지트캠 Soccer Academy " + APP_VERSION + " 로드됨 ", "background: #7bc2b7; color: #000; font-weight: bold;");
     const CURRENT_THEME = {
         primary: "#7bc2b7",
@@ -169,6 +169,28 @@
     const progressBar = document.querySelector('.progress');
 
     // === 초기화 로직 ===
+    const getRoleColor = (role) => {
+        const r = String(role || 'Basic').toLowerCase();
+        if (r.includes('ultimate') || r.includes('vip')) return "#00d2ff"; // Blue
+        if (r.includes('pro') || r.includes('player')) return "#7bc2b7"; // Mint
+        if (r.includes('semi')) return "#f2cb4f"; // Yellow
+        return "#f06958"; // Red (Basic)
+    };
+
+    const getMemberTheme = (user) => {
+        const role = (user.role || 'Basic').toLowerCase();
+        const main = getRoleColor(role);
+        return {
+            main: main,
+            bg: main + '11',
+            border: main + '33',
+            isPremium: role.includes('ultimate') || role.includes('pro')
+        };
+    };
+
+    // === 전역 객체 바인딩 (모달 시스템 등에서 조회용) ===
+    window.getMemberTheme = getMemberTheme;
+
     function init() {
         console.log("App initializing with Firebase compatibility...");
 
@@ -2100,7 +2122,7 @@
 
     // === 관리자용 전역 함수 바인딩 ===
     window.showMemberDetail = (userId) => {
-        console.log("showMemberDetail called for:", userId);
+        window.currentEditingMemberId = userId;
         // [V4.1.3] 모든 중복 모달(잔상) 무조건 최우선 제거하여 투명하게 겹치는 문제 원천 차단
         document.querySelectorAll('#member-detail-modal').forEach(m => m.remove());
 
@@ -2111,26 +2133,20 @@
             const theme = window.getMemberTheme(user);
             const roleColor = theme.main;
 
-            // 모든 중복 모달(잔상) 일괄 제거
-            document.querySelectorAll('#member-detail-modal').forEach(m => m.remove());
-
-            console.log("Rendering modal for:", user.name);
-
             const modalHtml = `
             <div id="member-detail-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 99999; display: flex; justify-content: center; align-items: center; padding: 10px; backdrop-filter: blur(40px);">
                 <div class="modal-content premium-card fade-in" style="width: 100%; max-width: 600px; height: 90vh; display: flex; flex-direction: column; overflow: hidden; background: #070b14; border: 1px solid rgba(255,255,255,0.3); border-radius: 28px; box-shadow: 0 0 100px rgba(0,0,0,1);">
                     
-                    <div style="padding: 24px 24px 16px; background: ${theme.isPremium ? `linear-gradient(180deg, rgba(240, 105, 88, 0.2) 0%, ${theme.bg} 100%)` : `linear-gradient(180deg, rgba(123, 194, 183, 0.1) 0%, transparent 100%)`}; flex-shrink: 0; border-bottom: 1px solid ${theme.border};">
+                    <div style="padding: 24px 24px 16px; background: ${theme.isPremium ? `linear-gradient(180deg, ${roleColor}22 0%, ${theme.bg} 100%)` : `linear-gradient(180deg, rgba(123, 194, 183, 0.1) 0%, transparent 100%)`}; flex-shrink: 0; border-bottom: 1px solid ${theme.border};">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
                             <div style="display: flex; gap: 16px; align-items: center;">
                                 <div style="width: 64px; height: 64px; border-radius: 18px; background: ${theme.bg}; border: 1px solid ${theme.border}; display: flex; justify-content: center; align-items: center; font-size: 2.2rem; color: ${theme.main}; box-shadow: ${theme.isPremium ? '0 0 20px rgba(240, 105, 88, 0.3)' : 'none'};">
                                     <i class="fas ${user.avatar || 'fa-user-ninja'}"></i>
                                 </div>
                                 <div>
-                                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
-                                        <h2 id="modal-member-name" style="margin: 0; font-size: 1.5rem; color: #fff; letter-spacing: -0.5px; white-space: nowrap;">${user.name} (${user.id})</h2>
+                                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; width: 100%;">
+                                        <h2 id="modal-member-name" style="margin: 0; font-size: clamp(1.1rem, 4vw, 1.5rem); color: #fff; letter-spacing: -0.5px; white-space: normal; line-height: 1.2;">${user.name} <span style="font-size: 0.85rem; color: #64748b;">(${user.id})</span></h2>
                                         <span style="background: ${roleColor}; color: ${role.includes('semi') || role.includes('pro') || theme.isPremium ? '#fff' : '#000'}; padding: 3px 10px; border-radius: 8px; font-size: 0.7rem; font-weight: 900; text-transform: uppercase; white-space: nowrap;">${user.role || 'Basic'}</span>
-                                        <span style="color: #64748b; font-size: 0.6rem; font-weight: 800; white-space: nowrap; margin-left: auto;">${APP_VERSION}</span>
                                     </div>
                                     <p style="margin: 0; font-size: 0.85rem; color: #94a3b8;">ID: <span style="color: ${theme.main}; font-weight: 700;">${user.id}</span> | 가입: ${user.joinDate || '-'}</p>
                                 </div>
@@ -2158,7 +2174,7 @@
                                             <div style="width: 48px; height: 48px; border-radius: 50%; background: ${bInfo.bgColor}; margin: 0 auto 6px; display: flex; justify-content: center; align-items: center; font-size: 1.4rem; color: ${bInfo.color}; box-shadow: ${bInfo.shadow}; border: 1px solid rgba(255,255,255,0.1);">
                                                 <i class="fas ${bInfo.icon}"></i>
                                             </div>
-                                            <span style="font-size: 0.7rem; color: var(--text-gray); font-weight: bold;">${bInfo.label}</span>
+                                            <span style="font-size: 0.7rem; color: #94a3b8; font-weight: bold;">${bInfo.label}</span>
                                         </div>
                                         `;
             }).join('') : '<p style="color: #64748b; font-size: 0.8rem; margin: 0;">아직 획득한 뱃지가 없습니다.</p>'}
@@ -2303,6 +2319,39 @@
                                     <textarea id="edit-memo" style="width: 100%; height: 60px; padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: #1e293b; color: #fff; resize: none;">${user.memo || ''}</textarea>
                                 </div>
 
+                                <h4 style="color: #00d2ff; font-size: 0.9rem; margin: 0 0 12px; display: flex; justify-content: space-between; align-items: center;">
+                                    <span><i class="fas fa-history"></i> 수강 및 가입 이력 수정</span>
+                                    <button onclick="window.addEditHistoryRow()" style="background: rgba(0, 210, 255, 0.1); border: 1px solid #00d2ff; color: #00d2ff; padding: 2px 8px; border-radius: 6px; font-size: 0.7rem; cursor: pointer;"><i class="fas fa-plus"></i> 이력 추가</button>
+                                </h4>
+                                <div id="edit-history-list" style="background: rgba(255,255,255,0.02); border-radius: 16px; border: 1px solid rgba(255,255,255,0.04); padding: 12px; display: grid; gap: 10px; margin-bottom: 24px;">
+                                    ${(user.history && user.history.length > 0) ?
+                    user.history.map((h, i) => `
+                                        <div class="edit-history-row" style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); position: relative;">
+                                            <button onclick="this.parentElement.remove()" style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: #ef4444; cursor: pointer; font-size: 0.8rem;"><i class="fas fa-times"></i></button>
+                                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                                                <label style="color: #64748b; font-size: 0.7rem;">등급
+                                                    <select class="edit-hist-role" style="width: 100%; padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: #0f172a; color: #fff; margin-top: 2px;">
+                                                        <option value="Basic" ${h.role === 'Basic' ? 'selected' : ''}>Basic</option>
+                                                        <option value="Semi" ${h.role === 'Semi' ? 'selected' : ''}>Semi</option>
+                                                        <option value="Pro" ${h.role === 'Pro' ? 'selected' : ''}>Pro</option>
+                                                        <option value="Ultimate" ${h.role === 'Ultimate' ? 'selected' : ''}>Ultimate</option>
+                                                    </select>
+                                                </label>
+                                                <label style="color: #64748b; font-size: 0.7rem;">기간(개월) <input type="number" class="edit-hist-duration" value="${h.duration || '1'}" style="width: 100%; padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: #0f172a; color: #fff; margin-top: 2px;"></label>
+                                            </div>
+                                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                                                <label style="color: #64748b; font-size: 0.7rem;">시작일 <input type="text" class="edit-hist-start" value="${h.startDate || ''}" placeholder="YYYY.MM.DD" style="width: 100%; padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: #0f172a; color: #fff; margin-top: 2px;"></label>
+                                                <label style="color: #64748b; font-size: 0.7rem;">종료일 <input type="text" class="edit-hist-end" value="${h.endDate || ''}" placeholder="YYYY.MM.DD" style="width: 100%; padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: #0f172a; color: #fff; margin-top: 2px;"></label>
+                                            </div>
+                                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                                <label style="color: #64748b; font-size: 0.7rem;">그룹 <input type="text" class="edit-hist-group" value="${h.group || ''}" style="width: 100%; padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: #0f172a; color: #fff; margin-top: 2px;"></label>
+                                                <label style="color: #64748b; font-size: 0.7rem;">메모 <input type="text" class="edit-hist-memo" value="${h.memo || ''}" style="width: 100%; padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: #0f172a; color: #fff; margin-top: 2px;"></label>
+                                            </div>
+                                        </div>
+                                        `).join('') : '<div style="padding: 10px; text-align: center; color: #64748b; font-size: 0.75rem;">등록된 이력이 없습니다.</div>'
+                }
+                                </div>
+
                                 <h4 style="color: #7bc2b7; font-size: 0.9rem; margin: 0 0 12px;"><i class="fas fa-running"></i> 최신 체력 검정 데이터 (동기화됨)</h4>
                                 <div style="background: rgba(123, 194, 183, 0.05); padding: 18px; border-radius: 20px; border: 1px solid rgba(123, 194, 183, 0.15); margin-bottom: 24px;">
                                     <p style="color: #94a3b8; font-size: 0.75rem; margin-bottom: 12px;"><i class="fas fa-info-circle"></i> 이곳의 점수를 수정하면 개인 능력치 차트에 즉시 반영됩니다.</p>
@@ -2323,9 +2372,9 @@
 
                         <div id="tab-content-fitness" style="display: none;">
                             <div id="fitness-view-mode">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
                                     <h4 style="color: #7bc2b7; font-size: 0.9rem; margin: 0; display: flex; align-items: center; gap: 6px;"><i class="fas fa-chart-line"></i> 시즌별 분석 데이터</h4>
-                                    <div style="display: flex; gap: 10px;">
+                                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                                         <select id="fitness-season-select" onchange="window.changeFitnessSeason(this.value, '${user.id}')" style="background: #1e293b; color: #fff; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 6px 12px; font-size: 0.85rem; outline: none; cursor: pointer;">
                                             ${(user.fitnessTests && user.fitnessTests.length > 0) ? user.fitnessTests.map((ft, idx) => `<option value="${idx}">${ft.label} (${ft.date})</option>`).join('') : '<option value="-1">기록 없음</option>'}
                                         </select>
@@ -2467,6 +2516,40 @@
         }
     };
 
+    window.addEditHistoryRow = () => {
+        const list = document.getElementById('edit-history-list');
+        if (!list) return;
+
+        const row = document.createElement('div');
+        row.className = 'edit-history-row';
+        row.style = "background: rgba(0,0,0,0.2); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); position: relative; margin-top: 10px;";
+        row.innerHTML = `
+            <button onclick="this.parentElement.remove()" style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: #ef4444; cursor: pointer; font-size: 0.8rem;"><i class="fas fa-times"></i></button>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                <label style="color: #64748b; font-size: 0.7rem;">등급
+                    <select class="edit-hist-role" style="width: 100%; padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: #0f172a; color: #fff; margin-top: 2px;">
+                        <option value="Basic">Basic</option>
+                        <option value="Semi">Semi</option>
+                        <option value="Pro">Pro</option>
+                        <option value="Ultimate">Ultimate</option>
+                    </select>
+                </label>
+                <label style="color: #64748b; font-size: 0.7rem;">기간(개월) <input type="number" class="edit-hist-duration" value="1" style="width: 100%; padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: #0f172a; color: #fff; margin-top: 2px;"></label>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                <label style="color: #64748b; font-size: 0.7rem;">시작일 <input type="text" class="edit-hist-start" value="${new Date().toISOString().split('T')[0].replace(/-/g, '.')}" placeholder="YYYY.MM.DD" style="width: 100%; padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: #0f172a; color: #fff; margin-top: 2px;"></label>
+                <label style="color: #64748b; font-size: 0.7rem;">종료일 <input type="text" class="edit-hist-end" value="" placeholder="YYYY.MM.DD" style="width: 100%; padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: #0f172a; color: #fff; margin-top: 2px;"></label>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <label style="color: #64748b; font-size: 0.7rem;">그룹 <input type="text" class="edit-hist-group" value="" style="width: 100%; padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: #0f172a; color: #fff; margin-top: 2px;"></label>
+                <label style="color: #64748b; font-size: 0.7rem;">메모 <input type="text" class="edit-hist-memo" value="" style="width: 100%; padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: #0f172a; color: #fff; margin-top: 2px;"></label>
+            </div>
+        `;
+        list.appendChild(row);
+        const emptyMsg = list.querySelector('div[style*="text-align: center"]');
+        if (emptyMsg) emptyMsg.remove();
+    };
+
     // === [ 멤버십 날짜 계산 유틸리티 ] ===
     function recalculateMembershipEnd(user) {
         if (!user.membershipStart || !user.duration) return;
@@ -2551,6 +2634,8 @@
             btnSave.style.justifyContent = 'center';
             btnSave.style.alignItems = 'center';
             btnSave.style.gap = '5px';
+            const user = state.users.find(u => u.id == window.currentEditingMemberId);
+            if (user) btnSave.style.backgroundColor = getRoleColor(user.role);
             btnCancel.style.display = 'block';
         } else {
             viewMode.style.display = 'block';
@@ -2610,21 +2695,19 @@
             };
         }
 
-        // 수강 이력(history) 수집
-        const histLength = parseInt(document.getElementById('edit-hist-length')?.value || '1');
+        // 수강 이력(history) 수집 (v4.4.2 개선)
         const newHistory = [];
-        for (let i = 0; i < histLength; i++) {
+        document.querySelectorAll('.edit-history-row').forEach(row => {
             newHistory.push({
-                role: document.getElementById(`edit-hist-role-${i}`)?.value || '',
-                duration: document.getElementById(`edit-hist-dur-${i}`)?.value || '',
-                startDate: document.getElementById(`edit-hist-start-${i}`)?.value.replace(/-/g, '.') || '',
-                endDate: document.getElementById(`edit-hist-end-${i}`)?.value.replace(/-/g, '.') || '',
-                group: document.getElementById(`edit-hist-group-${i}`)?.value || '',
-                frequency: document.getElementById(`edit-hist-freq-${i}`)?.value || '',
-                memo: document.getElementById(`edit-hist-memo-${i}`)?.value || '',
-                fee: state.users[userIdx].history?.[i]?.fee || '' // 기존 fee는 유지
+                role: row.querySelector('.edit-hist-role').value,
+                duration: row.querySelector('.edit-hist-duration').value,
+                startDate: row.querySelector('.edit-hist-start').value.trim().replace(/-/g, '.'),
+                endDate: row.querySelector('.edit-hist-end').value.trim().replace(/-/g, '.'),
+                group: row.querySelector('.edit-hist-group').value.trim(),
+                memo: row.querySelector('.edit-hist-memo').value.trim()
             });
-        }
+        });
+        user.history = newHistory;
 
         if (!newName || !newId) return alert("이름과 아이디(고유번호)는 필수 입력입니다.");
 
@@ -3171,7 +3254,8 @@
 
         sortedUsers.forEach(u => {
             if (u.membershipEnd) {
-                const end = new Date(u.membershipEnd);
+                const endStr = u.membershipEnd.replace(/\./g, '/');
+                const end = new Date(endStr);
                 end.setHours(0, 0, 0, 0);
                 const diffTime = end - today;
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -3189,7 +3273,9 @@
         // 전체 유저 중 만료된 유저 수 계산 (expiringUsers 부분집합이 아닌 전체 기준)
         const expiredCount = sortedUsers.filter(u => {
             if (u.id === 'admin' || !u.membershipEnd) return false;
-            const end = new Date(u.membershipEnd.replace(/-/g, '/')); // 모바일 호환성
+            const endStr = u.membershipEnd.replace(/\./g, '/');
+            const end = new Date(endStr);
+            end.setHours(0, 0, 0, 0);
             return end < today;
         }).length;
 
@@ -3414,17 +3500,17 @@
                 <div class="card premium-card" style="background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); padding: 30px; border-radius: 28px; margin-bottom: 35px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); position: relative; overflow: hidden;">
                     <div style="position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, var(--primary), #1a6aa3);"></div>
                     
-                    <div style="display: grid; grid-template-columns: 160px 1fr; gap: 15px; margin-bottom: 20px;">
-                        <div style="position: relative;">
-                            <select id="admin-notice-category" style="width: 100%; background: rgba(30, 41, 59, 0.8); color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 14px 15px; border-radius: 14px; font-weight: 700; outline: none; cursor: pointer; appearance: none; font-size: 0.95rem;">
+                    <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 15px; width: 100%;">
+                        <div style="position: relative; flex: 1; min-width: 140px; max-width: 160px;">
+                            <select id="admin-notice-category" style="width: 100%; background: rgba(30, 41, 59, 1); color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 12px 15px; border-radius: 14px; font-weight: 700; outline: none; cursor: pointer; appearance: none; font-size: 0.9rem;">
                                 <option value="공지">📢 [공지]</option>
                                 <option value="안내">💡 [안내]</option>
                                 <option value="수업스케치">📸 [수업스케치]</option>
                                 <option value="감독의 글">⚽ [감독의 글]</option>
                             </select>
-                            <i class="fas fa-chevron-down" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: var(--primary); pointer-events: none; font-size: 0.8rem;"></i>
+                            <i class="fas fa-chevron-down" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: var(--primary); pointer-events: none; font-size: 0.7rem;"></i>
                         </div>
-                        <input type="text" id="admin-notice-title" placeholder="매력적인 공지 제목을 적어주세요" style="background: rgba(30, 41, 59, 0.8); color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 14px 20px; border-radius: 14px; outline: none; font-size: 1rem; font-weight: 600; transition: 0.3s;" onfocus="this.style.borderColor='var(--primary)'; this.style.boxShadow='0 0 15px rgba(0,210,255,0.1)';" onblur="this.style.borderColor='rgba(255,255,255,0.1)'; this.style.boxShadow='none';">
+                        <input type="text" id="admin-notice-title" placeholder="매력적인 공지 제목을 적어주세요" style="flex: 2; min-width: 200px; background: rgba(30, 41, 59, 1); color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 12px 20px; border-radius: 14px; outline: none; font-size: 0.95rem; font-weight: 600; transition: 0.3s; box-sizing: border-box;" onfocus="this.style.borderColor='var(--primary)';" onblur="this.style.borderColor='rgba(255,255,255,0.15)';" onfocus="this.style.borderColor='var(--primary)'; this.style.boxShadow='0 0 15px rgba(0,210,255,0.1)';" onblur="this.style.borderColor='rgba(255,255,255,0.1)'; this.style.boxShadow='none';">
                     </div>
 
                     <div style="margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
@@ -3435,7 +3521,7 @@
                         <input type="file" id="admin-notice-file" accept="image/*,video/*" style="display: none;" onchange="document.getElementById('admin-notice-file-name').innerText = this.files[0]?.name || '선택된 파일 없음'">
                     </div>
 
-                    <textarea id="admin-notice-body" placeholder="공지할 내용을 입력하세요.&#10;정성스러운 글은 부모님과 아이들에게 큰 힘이 됩니다." style="width: 100%; height: 260px; background: rgba(15, 23, 42, 0.8); color: #cbd5e1; border: 1px solid rgba(255,255,255,0.1); padding: 25px; border-radius: 20px; outline: none; font-size: 1.05rem; line-height: 1.8; margin-bottom: 25px; resize: none; transition: 0.3s;" onfocus="this.style.borderColor='var(--primary)';" onblur="this.style.borderColor='rgba(255,255,255,0.1)';"></textarea>
+                    <textarea id="admin-notice-body" placeholder="공지할 내용을 입력하세요.&#10;정성스러운 글은 부모님과 아이들에게 큰 힘이 됩니다." style="width: 100%; height: 260px; background: rgba(15, 23, 42, 0.9); color: #cbd5e1; border: 1px solid rgba(255,255,255,0.15); padding: 25px; border-radius: 20px; outline: none; font-size: 1.05rem; line-height: 1.8; margin-bottom: 25px; resize: none; transition: 0.3s; position: relative; z-index: 10;" onfocus="this.style.borderColor='var(--primary)';" onblur="this.style.borderColor='rgba(255,255,255,0.15)';"></textarea>
 
                     <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); padding: 15px 20px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.03); flex-wrap: wrap; gap: 15px;">
                         <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; color: #f06958; font-weight: 900; font-size: 0.9rem; user-select: none;">
@@ -3541,7 +3627,7 @@
             const totalBadges = u.badges ? u.badges.length : 0;
             const isSelected = window.adminBadgeTargetId === u.id;
             return `
-                <div class="card" onclick="window.selectAdminBadgeMember('${u.id}')" style="min-width: 140px; background: ${isSelected ? 'rgba(123,194,183,0.1)' : 'rgba(20,25,35,0.8)'}; border: 1px solid ${isSelected ? 'var(--primary)' : 'rgba(255,255,255,0.05)'}; padding: 10px; border-radius: 12px; cursor: pointer; display: flex; flex-direction: column; gap: 5px; transition: all 0.2s; position: relative;">
+                <div class="card" onclick="window.selectAdminBadgeMember('${u.id}')" style="min-width: 140px; background: ${isSelected ? getRoleColor(u.role) + '22' : 'rgba(20,25,35,0.8)'}; border: 1px solid ${isSelected ? getRoleColor(u.role) : 'rgba(255,255,255,0.05)'}; padding: 10px; border-radius: 12px; cursor: pointer; display: flex; flex-direction: column; gap: 5px; transition: all 0.2s; position: relative;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                         <span style="color: #fff; font-weight: bold; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px;">${u.name}</span>
                         <span style="background: rgba(242, 203, 79, 0.15); color: #f2cb4f; padding: 2px 6px; border-radius: 8px; font-size: 0.65rem; font-weight: bold;"><i class="fas fa-medal"></i> ${totalBadges}</span>
@@ -3561,15 +3647,16 @@
             if (selectedUser) {
                 const userBadges = selectedUser.badges || [];
 
+                const memberColor = getRoleColor(selectedUser.role);
                 selectedUserHtml = `
                     <div style="background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
                         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
-                            <div style="width: 50px; height: 50px; background: var(--glass-bg); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; color: var(--primary);">
+                            <div style="width: 50px; height: 50px; background: rgba(255,255,255,0.03); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; color: ${memberColor}; border: 1px solid ${memberColor}44;">
                                 <i class="fas ${selectedUser.avatar || 'fa-user'}"></i>
                             </div>
                             <div>
                                 <h4 style="color: #fff; margin: 0 0 5px 0; font-size: 1.1rem;">${selectedUser.name} <span style="font-size: 0.8rem; color: var(--text-gray);">(${selectedUser.id})</span></h4>
-                                <span style="color: var(--primary); font-size: 0.8rem;">현재 뱃지: ${userBadges.length}개</span>
+                                <span style="color: ${memberColor}; font-size: 0.8rem; font-weight: 700;">${selectedUser.role || 'Basic'} 멤버십 | 현재 뱃지: ${userBadges.length}개</span>
                             </div>
                         </div>
 
