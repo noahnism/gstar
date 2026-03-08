@@ -2476,7 +2476,7 @@
                                 </div>
 
                                 <button onclick="window.saveFitnessData('${user.id}')" style="width: 100%; padding: 14px; border-radius: 12px; border: none; background: linear-gradient(135deg, #7bc2b7, #1a6aa3); color: #fff; font-weight: 800; font-size: 1.05rem; cursor: pointer; margin-bottom: 12px; box-shadow: 0 4px 15px rgba(0, 210, 255, 0.3);">시즌 데이터 저장</button>
-                                <button id="btn-delete-fitness" style="display: none; width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #ef4444; background: rgba(239, 68, 68, 0.05); color: #ef4444; font-weight: 700; cursor: pointer; margin-bottom: 12px;"><i class="fas fa-trash-alt"></i> 이 시즌 기록 삭제</button>
+                                <button id="btn-delete-fitness" onclick="window.adminDeleteFitnessData('${user.id}')" style="display: none; width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #ef4444; background: rgba(239, 68, 68, 0.05); color: #ef4444; font-weight: 700; cursor: pointer; margin-bottom: 12px;"><i class="fas fa-trash-alt"></i> 이 시즌 기록 삭제</button>
                                 <button onclick="window.toggleFitnessEditMode()" style="width: 100%; padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: transparent; color: #64748b; font-weight: 600; cursor: pointer;">취소</button>
                             </div> <!-- fitness-edit-mode -->
                         </div> <!-- tab-content-fitness -->
@@ -3106,6 +3106,54 @@
     };
 
 
+
+    window.adminDeleteFitnessData = async (userId) => {
+        const seasonEl = document.getElementById('edit-fitness-season');
+        const idxStr = seasonEl ? seasonEl.value : 'new';
+        if (idxStr === 'new') return;
+
+        const idx = parseInt(idxStr);
+        const user = state.users.find(u => u.id === userId);
+
+        if (!user || isNaN(idx) || !user.fitnessTests || !user.fitnessTests[idx]) {
+            return alert('삭제할 기록을 찾을 수 없습니다.');
+        }
+
+        if (!confirm(`시즌 [${user.fitnessTests[idx].label}] 기록을 정말 삭제하시겠습니까?\n삭제된 기록은 복구할 수 없습니다.`)) return;
+
+        // 삭제 처리
+        user.fitnessTests.splice(idx, 1);
+
+        // 새로운 대표 스탯 설정 (최신 기록이 있으면 그것으로, 없으면 초기화)
+        if (user.fitnessTests.length > 0) {
+            user.stats = [...user.fitnessTests[user.fitnessTests.length - 1].scores];
+        } else {
+            user.stats = [3, 3, 3, 3, 3];
+        }
+
+        // 로컬 저장
+        localStorage.setItem('soccer_users', JSON.stringify(state.users));
+
+        // 서버 동기화
+        if (db) {
+            try {
+                await db.collection("users").doc(userId).update({
+                    fitnessTests: user.fitnessTests,
+                    stats: user.stats
+                });
+                console.log("Fitness record deleted from Firebase");
+            } catch (err) {
+                console.error("Firebase Sync Error:", err);
+            }
+        }
+
+        alert('기록이 삭제되었습니다.');
+
+        // 탭 갱신 및 에디트 모드 종료
+        if (window.toggleFitnessEditMode) window.toggleFitnessEditMode();
+        // 상세 정보 다시 렌더링
+        window.showMemberDetail(userId);
+    };
 
     window.adminDeleteMember = (userId) => {
         if (!confirm(`회원(${userId}) 정보를 정말 삭제하시겠습니까?\n삭제된 정보는 복구할 수 없습니다.`)) return;
@@ -3944,6 +3992,13 @@
         if (!confirm('정말 해당 일정을 삭제하시겠습니까?')) return;
         state.schedules = state.schedules.filter(s => s.id !== id);
         try { localStorage.setItem('soccer_schedules', JSON.stringify(state.schedules)); } catch (e) { }
+
+        if (db) {
+            db.collection("schedules").doc(id.toString()).delete()
+                .then(() => console.log("Schedule deleted from Firebase"))
+                .catch(e => console.error("Schedule Delete Error:", e));
+        }
+
         renderAdminTab('admin-schedule');
     };
 
