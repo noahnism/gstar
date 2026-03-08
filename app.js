@@ -2352,9 +2352,8 @@
                 }
                                 </div>
 
-                                </div>
-                            </div>
-                        </div>
+                                </div> <!-- member-edit-mode -->
+                            </div> <!-- tab-content-info -->
 
                         <div id="tab-content-fitness" style="display: none;">
                             <div id="fitness-view-mode">
@@ -2481,10 +2480,9 @@
                                 <button onclick="window.saveFitnessData('${user.id}')" style="width: 100%; padding: 14px; border-radius: 12px; border: none; background: linear-gradient(135deg, #7bc2b7, #1a6aa3); color: #fff; font-weight: 800; font-size: 1.05rem; cursor: pointer; margin-bottom: 12px; box-shadow: 0 4px 15px rgba(0, 210, 255, 0.3);">시즌 데이터 저장</button>
                                 <button id="btn-delete-fitness" style="display: none; width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #ef4444; background: rgba(239, 68, 68, 0.05); color: #ef4444; font-weight: 700; cursor: pointer; margin-bottom: 12px;"><i class="fas fa-trash-alt"></i> 이 시즌 기록 삭제</button>
                                 <button onclick="window.toggleFitnessEditMode()" style="width: 100%; padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: transparent; color: #64748b; font-weight: 600; cursor: pointer;">취소</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                            </div> <!-- fitness-edit-mode -->
+                        </div> <!-- tab-content-fitness -->
+                    </div> <!-- member-detail-scroll -->
                 
                 <div style="padding: 20px 24px; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); display: flex; gap: 12px; border-top: 1px solid rgba(255,255,255,0.05); border-radius: 0 0 32px 32px; position: relative; z-index: 50;" id="member-action-btns">
                     <button onclick="window.toggleEditMember()" id="btn-toggle-edit" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 14px; border: 1px solid #7bc2b7; background: rgba(123, 194, 183, 0.05); color: #7bc2b7; font-weight: 700; cursor: pointer; transition: 0.3s;"><i class="fas fa-user-edit"></i> 회원정보 수정</button>
@@ -2492,9 +2490,9 @@
                     
                     <button onclick="window.saveMemberDetail('${user.id}')" id="btn-save" style="display: none; flex: 2; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 14px; border: none; background: #7bc2b7; color: #000; font-weight: 800; cursor: pointer; transition: 0.3s;"><i class="fas fa-check-circle"></i> 변경내용 저장하기</button>
                     <button onclick="window.toggleEditMember()" id="btn-cancel" style="display: none; flex: 1; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #94a3b8; font-weight: 700; cursor: pointer;">취소</button>
-                </div>
-                </div>
-            </div>
+                </div> <!-- member-action-btns -->
+            </div> <!-- modal-content -->
+        </div> <!-- member-detail-modal -->
             `;
             document.body.insertAdjacentHTML('beforeend', modalHtml);
             console.log("Modal inserted into DOM");
@@ -2906,6 +2904,12 @@
 
             if (btnDelete) btnDelete.style.display = 'block';
             document.getElementById('fit-pdf-status').innerText = ft.pdfUrl ? `* 기존 PDF 파일이 등록되어 있습니다. 변경하려면 새 파일을 선택하세요.` : `* 선택하지 않으면 등록되지 않습니다.`;
+
+            // [v4.4.2.1] 기존 기록 수정 시 입력 필드로 자동 스크롤
+            setTimeout(() => {
+                const scrollTarget = document.querySelector('#fitness-records-table') || document.getElementById('fit-pdf-status');
+                if (scrollTarget) scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
         }
     };
 
@@ -3044,6 +3048,8 @@
 
             // 모달 관리 및 탭 갱신
             if (window.toggleFitnessEditMode) window.toggleFitnessEditMode();
+
+            // [v4.4.2.1] 저장 후 해당 시즌으로 스크롤 및 뷰 갱신
 
             const ftLen = user.fitnessTests ? user.fitnessTests.length : 0;
             if (ftLen > 0) {
@@ -3458,7 +3464,7 @@
                             </select>
                             <i class="fas fa-chevron-down" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: var(--primary); pointer-events: none; font-size: 0.7rem;"></i>
                         </div>
-                        <input type="text" id="admin-notice-title" placeholder="매력적인 공지 제목을 적어주세요" style="flex: 2; min-width: 200px; background: rgba(30, 41, 59, 1); color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 12px 20px; border-radius: 14px; outline: none; font-size: 0.95rem; font-weight: 600; transition: 0.3s; box-sizing: border-box;" onfocus="this.style.borderColor='var(--primary)';" onblur="this.style.borderColor='rgba(255,255,255,0.15)';" onfocus="this.style.borderColor='var(--primary)'; this.style.boxShadow='0 0 15px rgba(0,210,255,0.1)';" onblur="this.style.borderColor='rgba(255,255,255,0.1)'; this.style.boxShadow='none';">
+                        <input type="text" id="admin-notice-title" placeholder="공지 제목을 입력하세요." style="flex: 2; min-width: 200px; background: rgba(15, 23, 42, 0.6); color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 10px 18px; border-radius: 12px; outline: none; font-size: 0.85rem; font-weight: 600; transition: 0.3s; box-sizing: border-box;" onfocus="this.style.borderColor='var(--primary)';" onblur="this.style.borderColor='rgba(255,255,255,0.1)';" onfocus="this.style.borderColor='var(--primary)'; this.style.boxShadow='0 0 10px rgba(0,210,255,0.05)';" onblur="this.style.borderColor='rgba(255,255,255,0.1)'; this.style.boxShadow='none';">
                     </div>
 
                     <div style="margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
