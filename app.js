@@ -10,7 +10,7 @@
         measurementId: "G-RG6G5VT085"
     };
 
-    const APP_VERSION = "v4.3.0 (Build 0308)";
+    const APP_VERSION = "v4.3.1 (Build 0308)";
     console.log("%c 지트캠 Soccer Academy " + APP_VERSION + " 로드됨 ", "background: #7bc2b7; color: #000; font-weight: bold;");
     const CURRENT_THEME = {
         primary: "#7bc2b7",
@@ -2891,10 +2891,17 @@
                 try {
                     const storageRef = firebase.storage().ref();
                     const fileRef = storageRef.child(`fitness_reports/${currentUserId}/${Date.now()}_${file.name}`);
-                    const snapshot = await fileRef.put(file);
+
+                    // [V4.3.1] Storage 업로드에도 타임아웃 적용 (5초)
+                    const uploadPromise = fileRef.put(file);
+                    const storageTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error("파일 업로드 시간 초과")), 5000));
+
+                    const snapshot = await Promise.race([uploadPromise, storageTimeout]);
                     newData.pdfUrl = await snapshot.ref.getDownloadURL();
+                    console.log("File Upload Success");
                 } catch (error) {
                     console.error("File Upload Error:", error);
+                    // 파일 업로드 실패해도 기록 저장은 계속 진행
                 }
             }
 
@@ -3387,17 +3394,17 @@
 
                     <textarea id="admin-notice-body" placeholder="공지할 내용을 입력하세요.&#10;정성스러운 글은 부모님과 아이들에게 큰 힘이 됩니다." style="width: 100%; height: 260px; background: rgba(15, 23, 42, 0.8); color: #cbd5e1; border: 1px solid rgba(255,255,255,0.1); padding: 25px; border-radius: 20px; outline: none; font-size: 1.05rem; line-height: 1.8; margin-bottom: 25px; resize: none; transition: 0.3s;" onfocus="this.style.borderColor='var(--primary)';" onblur="this.style.borderColor='rgba(255,255,255,0.1)';"></textarea>
 
-                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); padding: 20px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.03);">
-                        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; color: #f06958; font-weight: 900; font-size: 1rem; user-select: none;">
-                            <div style="position: relative; width: 24px; height: 24px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); padding: 15px 20px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.03); flex-wrap: wrap; gap: 15px;">
+                        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; color: #f06958; font-weight: 900; font-size: 0.9rem; user-select: none;">
+                            <div style="position: relative; width: 20px; height: 20px;">
                                 <input type="checkbox" id="admin-notice-priority" style="position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer;">
                                 <div style="width: 100%; height: 100%; background: rgba(240, 105, 88, 0.1); border: 2px solid #f06958; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: 0.2s;">
-                                    <i class="fas fa-check" style="font-size: 0.8rem; color: #fff; transform: scale(0); transition: 0.2s;"></i>
+                                    <i class="fas fa-check" style="font-size: 0.7rem; color: #fff; transform: scale(0); transition: 0.2s;"></i>
                                 </div>
                             </div>
-                            <i class="fas fa-star" style="filter: drop-shadow(0 0 5px rgba(240,105,88,0.5));"></i> 필독 게시물 (최상단 고정)
+                            <i class="fas fa-star" style="filter: drop-shadow(0 0 5px rgba(240,105,88,0.5));"></i> 필독 게시물
                         </label>
-                        <button id="btn-admin-submit-notice" onclick="window.adminSubmitNotice()" style="background: linear-gradient(135deg, var(--primary), #00d2ff); color: #000; border: none; padding: 18px 55px; border-radius: 18px; font-weight: 900; font-size: 1.1rem; cursor: pointer; transition: 0.3s; box-shadow: 0 8px 25px rgba(0, 210, 255, 0.4); display: flex; align-items: center; gap: 10px;" onmouseover="this.style.transform='translateY(-3px); box-shadow: 0 12px 30px rgba(0, 210, 255, 0.5)';" onmouseout="this.style.transform='translateY(0); box-shadow: 0 8px 25px rgba(0, 210, 255, 0.4)';">
+                        <button id="btn-admin-submit-notice" onclick="window.adminSubmitNotice()" style="background: linear-gradient(135deg, var(--primary), #00d2ff); color: #000; border: none; padding: 12px 30px; border-radius: 14px; font-weight: 900; font-size: 0.95rem; cursor: pointer; transition: 0.3s; box-shadow: 0 5px 15px rgba(0, 210, 255, 0.3); display: flex; align-items: center; gap: 8px;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
                             <i class="fas fa-paper-plane"></i> 공지 올리기
                         </button>
                     </div>
@@ -3476,21 +3483,15 @@
         `;
 
         // 좌우 레이아웃 구조 (왼쪽: 회원 검색 결과, 오른쪽: 선택된 회원의 뱃지 부여 화면)
-        const query = window.adminBadgeSearchQuery.toLowerCase();
-        const isChoseongQuery = /^[ㄱ-ㅎ]+$/.test(query);
-
-        let targetUsers = state.users.filter(u => u.id !== 'admin');
-        if (query) {
-            targetUsers = targetUsers.filter(u => {
-                const name = (u.name || "").toLowerCase();
-                const id = String(u.id).toLowerCase();
-                if (isChoseongQuery) {
-                    return getChoseong(name).includes(query);
-                }
-                return name.includes(query) || id.includes(query);
-            });
-        } else {
-            targetUsers = targetUsers.slice(0, 15); // 검색어 없을 땐 일부 렌더링
+        let targetUsers = [];
+        if (window.adminBadgeSearchQuery) {
+            const query = window.adminBadgeSearchQuery.toLowerCase();
+            const isChoseongQuery = /^[ㄱ-ㅎ]+$/.test(query);
+            targetUsers = state.users.filter(u => u.id !== 'admin' && (
+                ((u.name || "").toLowerCase().includes(query)) ||
+                (String(u.id).toLowerCase().includes(query)) ||
+                (isChoseongQuery && getChoseong(u.name || "").includes(query))
+            ));
         }
 
         let searchListHtml = targetUsers.map(u => {
@@ -3509,9 +3510,10 @@
             `;
         }).join('');
 
-        if (targetUsers.length === 0) searchListHtml = '<p style="color: var(--text-gray); font-size: 0.9rem; text-align: center; padding: 20px;">검색 결과가 없습니다.</p>';
+        if (window.adminBadgeSearchQuery && targetUsers.length === 0) searchListHtml = '<p style="color: var(--text-gray); font-size: 0.9rem; text-align: center; padding: 20px;">검색 결과가 없습니다.</p>';
+        else if (!window.adminBadgeSearchQuery) searchListHtml = '<div style="text-align: center; padding: 30px 10px; color: var(--text-gray); border: 1px dashed rgba(255,255,255,0.05); border-radius: 12px;"><i class="fas fa-search" style="font-size: 1.5rem; margin-bottom: 10px; opacity: 0.3;"></i><br/><span style="font-size: 0.8rem;">이름이나 회원번호를 검색하세요.</span></div>';
 
-        let selectedUserHtml = `<div style="text-align: center; padding: 40px 20px; color: var(--text-gray);"><i class="fas fa-user-check" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.3;"></i><br/>좌측 명단에서 회원을 선택하세요.</div>`;
+        let selectedUserHtml = `<div style="text-align: center; padding: 40px 20px; color: var(--text-gray);"><i class="fas fa-user-check" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.3;"></i><br/>검색된 명단에서 회원을 선택하세요.</div>`;
 
         if (window.adminBadgeTargetId) {
             const selectedUser = state.users.find(u => u.id === window.adminBadgeTargetId);
@@ -3566,11 +3568,16 @@
         html += `
                 <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px; align-items: start;">
                     <!-- 좌측: 유저 리스트 -->
-                        <div style="position: relative; margin-bottom: 15px;">
-                            <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-gray); pointer-events: none;"></i>
-                            <input type="text" id="admin-badge-search" value="${window.adminBadgeSearchQuery}" oninput="window.adminBadgeSearchQuery=this.value; renderAdminTab('admin-badges')" placeholder="이름/번호 실시간 검색" style="width: 100%; background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.1); padding: 12px 12px 12px 38px; border-radius: 10px; color: white; outline: none; font-size: 0.85rem; transition: 0.3s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <div style="display: flex; gap: 8px; margin-bottom: 5px;">
+                            <div style="position: relative; flex: 1;">
+                                <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-gray); pointer-events: none;"></i>
+                                <input type="text" id="admin-badge-search-input" value="${window.adminBadgeSearchQuery}" onkeyup="if(event.key === 'Enter') { window.adminBadgeSearchQuery=this.value; renderAdminTab('admin-badges'); }" placeholder="이름/번호 검색" style="width: 100%; background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.1); padding: 12px 12px 12px 38px; border-radius: 10px; color: white; outline: none; font-size: 0.85rem; transition: 0.3s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+                            </div>
+                            <button onclick="window.adminBadgeSearchQuery=document.getElementById('admin-badge-search-input').value; renderAdminTab('admin-badges')" style="background: var(--primary); color: #000; border: none; padding: 0 15px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 0.85rem;">검색</button>
                         </div>
-                        <div style="overflow-y: auto; flex: 1; padding-right: 5px; scrollbar-width: thin;">
+                        ${window.adminBadgeSearchQuery ? `<div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 0.75rem; color: var(--primary);">"${window.adminBadgeSearchQuery}" 검색 결과</span><button onclick="window.adminBadgeTargetId=null; window.adminBadgeSearchQuery=''; renderAdminTab('admin-badges')" style="background: none; border: none; color: #ff3b30; font-size: 0.75rem; cursor: pointer; padding: 0;">초기화</button></div>` : ''}
+                        <div style="overflow-y: auto; flex: 1; min-height: 480px; max-height: 500px; padding-right: 5px; scrollbar-width: thin; border-top: 1px solid rgba(255,255,255,0.03); padding-top: 10px;">
                             ${searchListHtml}
                         </div>
                     </div>
@@ -3592,18 +3599,20 @@
                 <div class="card" style="background: rgba(20, 25, 35, 0.8); border: 1px solid var(--border-glass); padding: 20px; border-radius: 12px; margin-bottom: 25px;">
                     <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 15px;">새로운 훈련 또는 경기 일정을 추가합니다.</p>
                     <div style="display: flex; flex-direction: column; gap: 12px;">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <input type="date" id="admin-sched-date" style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 12px; color: #fff; outline: none; color-scheme: dark;">
-                            <div style="display: flex; align-items: center; gap: 5px;">
-                                <input type="time" id="admin-sched-start" style="flex: 1; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 12px; color: #fff; outline: none; color-scheme: dark;">
+                        <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+                            <div style="flex: 1; min-width: 150px;">
+                                <input type="date" id="admin-sched-date" style="width: 100%; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; color: #fff; outline: none; color-scheme: dark; font-size: 0.9rem;">
+                            </div>
+                            <div style="flex: 1.5; min-width: 200px; display: flex; align-items: center; gap: 5px;">
+                                <input type="time" id="admin-sched-start" style="flex: 1; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; color: #fff; outline: none; color-scheme: dark; font-size: 0.9rem;">
                                 <span style="color: #64748b;">~</span>
-                                <input type="time" id="admin-sched-end" style="flex: 1; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 12px; color: #fff; outline: none; color-scheme: dark;">
+                                <input type="time" id="admin-sched-end" style="flex: 1; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; color: #fff; outline: none; color-scheme: dark; font-size: 0.9rem;">
                             </div>
                         </div>
                         <input type="text" id="admin-sched-title" placeholder="일정 제목 (예: A반 드리블 훈련)" style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 12px; color: #fff; outline: none;">
                         <input type="text" id="admin-sched-loc" placeholder="장소 (예: 1호 메인 구장)" style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 12px; color: #fff; outline: none;">
                         <textarea id="admin-sched-desc" placeholder="상세 내용 코멘트" style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 12px; color: #fff; outline: none; height: 80px; resize: none;"></textarea>
-                        <button onclick="window.adminSubmitSchedule()" class="btn-primary" style="padding: 15px; font-weight: 700; border-radius: 10px;">일정 등록하기</button>
+                        <button onclick="window.adminSubmitSchedule()" class="btn-primary" style="padding: 12px; font-weight: 800; border-radius: 12px; font-size: 1rem; box-shadow: 0 5px 15px rgba(0,210,255,0.2); transition: 0.3s;">일정 등록하기</button>
                     </div>
                 </div>
                 
