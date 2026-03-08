@@ -135,11 +135,18 @@
         users: usersData,
         posts: postsData,
         schedules: schedulesData,
-        columns: [
-            { id: 1001, isHot: true, label: '추천 칼럼', labelIcon: 'fa-star', title: '프로 선수들의 식단 관리 노하우', desc: '시합 전 최상의 컨디션을 유지하기 위해 어떤 음식을 먹어야 할까요? 전문 뉴트리셔니스트의 인터뷰를 확인하세요.', thumb: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=800&q=80', time: '5분 소요' },
-            { id: 1002, isHot: false, label: '스킬 가이드', labelIcon: 'fa-futbol', title: '볼 컨트롤의 기본: 퍼스트 터치', desc: '수비수를 따돌리는 가장 첫 번째 스킬, 완벽한 첫 터치를 위한 3가지 연습 방법 소개.', thumb: 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=800&q=80', time: '3분 소요' },
-            { id: 1003, isHot: false, label: '축구 AI 뉴스', labelIcon: 'fa-robot', title: '[오늘의 소식] 유럽 리그 최신 이적 루머 통계 분석', desc: 'AI가 수집한 해외 최상위 리그별 주요 선수들의 이적장 데이터를 바탕으로 지트캠프 회원들에게 가장 필요한 뉴스를 요약해 드립니다.', thumb: 'https://images.unsplash.com/photo-1504450758481-7338ba7524a7?auto=format&fit=crop&w=800&q=80', time: '1분 소요' }
-        ],
+        columns: (() => {
+            try {
+                const saved = localStorage.getItem('soccer_columns');
+                return saved ? JSON.parse(saved) : [
+                    { id: 1001, isHot: true, label: '추천 칼럼', labelIcon: 'fa-star', title: '프로 선수들의 식단 관리 노하우', desc: '시합 전 최상의 컨디션을 유지하기 위해 어떤 음식을 먹어야 할까요? 전문 뉴트리셔니스트의 인터뷰를 확인하세요.', thumb: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=800&q=80', time: '5분 소요' },
+                    { id: 1002, isHot: false, label: '스킬 가이드', labelIcon: 'fa-futbol', title: '볼 컨트롤의 기본: 퍼스트 터치', desc: '수비수를 따돌리는 가장 첫 번째 스킬, 완벽한 첫 터치를 위한 3가지 연습 방법 소개.', thumb: 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=800&q=80', time: '3분 소요' },
+                    { id: 1003, isHot: false, label: '축구 AI 뉴스', labelIcon: 'fa-robot', title: '[오늘의 소식] 유럽 리그 최신 이적 루머 통계 분석', desc: 'AI가 수집한 해외 최상위 리그별 주요 선수들의 이적장 데이터를 바탕으로 지트캠프 회원들에게 가장 필요한 뉴스를 요약해 드립니다.', thumb: 'https://images.unsplash.com/photo-1504450758481-7338ba7524a7?auto=format&fit=crop&w=800&q=80', time: '1분 소요' }
+                ];
+            } catch (e) {
+                return [];
+            }
+        })(),
         notifications: [],
         messages: [], // 테스트용: 채팅 데이터
         following: ['1', '2'], // 기본 팔로잉 명단
@@ -3191,6 +3198,9 @@
             case 'admin-schedule':
                 html = renderAdminScheduleTab();
                 break;
+            case 'admin-columns':
+                html = renderAdminColumnsTab();
+                break;
         }
 
         contentDiv.innerHTML = html;
@@ -4052,6 +4062,100 @@
             renderAdminTab(btn.dataset.target);
         });
     });
+
+    const renderAdminColumnsTab = () => {
+        let html = `
+            <div class="fade-in">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                    <h3 style="color: var(--text-white); margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 12px;">
+                        <span style="width: 40px; height: 40px; background: rgba(0,210,255,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-info-circle" style="color: var(--primary);"></i>
+                        </span>
+                        매거진 & 정보 관리
+                    </h3>
+                </div>
+
+                <div class="card premium-card" style="background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(255,255,255,0.08); padding: 25px; border-radius: 20px; margin-bottom: 30px;">
+                    <h4 style="color: var(--primary); font-size: 1rem; margin-bottom: 20px;">새 정보 등록</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <input type="text" id="admin-col-label" placeholder="라벨 (예: 추천 칼럼, 스킬 가이드)" style="background: rgba(0,0,0,0.3); color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 10px; outline: none;">
+                        <input type="text" id="admin-col-time" placeholder="소요 시간 (예: 5분 소요)" style="background: rgba(0,0,0,0.3); color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 10px; outline: none;">
+                    </div>
+                    <input type="text" id="admin-col-title" placeholder="제목을 입력하세요" style="width: 100%; background: rgba(0,0,0,0.3); color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 10px; outline: none; margin-bottom: 15px;">
+                    <textarea id="admin-col-desc" placeholder="내용 설명을 입력하세요" style="width: 100%; height: 100px; background: rgba(0,0,0,0.3); color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 10px; outline: none; margin-bottom: 15px; resize: none;"></textarea>
+                    <input type="text" id="admin-col-thumb" placeholder="이미지 URL (Unsplash 등)" style="width: 100%; background: rgba(0,0,0,0.3); color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 10px; outline: none; margin-bottom: 20px;">
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label style="color: #fff; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 0.9rem;">
+                            <input type="checkbox" id="admin-col-hot"> 🔥 추천 칼럼(Hot)으로 설정
+                        </label>
+                        <button onclick="window.adminSubmitColumn()" style="background: var(--primary); color: #000; border: none; padding: 10px 25px; border-radius: 10px; font-weight: bold; cursor: pointer;">정보 업로드</button>
+                    </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <h4 style="color: #fff; font-size: 1rem; margin-bottom: 5px;">현재 등록된 정보 목록</h4>
+                    ${state.columns.map(col => `
+                        <div class="card" style="background: rgba(20, 25, 35, 0.6); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; gap: 15px; align-items: center;">
+                                <img src="${col.thumb}" style="width: 50px; height: 50px; border-radius: 8px; object-fit: cover;">
+                                <div>
+                                    <div style="font-size: 0.75rem; color: var(--primary);">${col.label}</div>
+                                    <div style="font-weight: bold; color: #fff;">${col.title}</div>
+                                </div>
+                            </div>
+                            <button onclick="window.adminDeleteColumn(${col.id})" style="background: rgba(255,0,0,0.1); color: #ff3b30; border: 1px solid rgba(255,0,0,0.2); padding: 5px 12px; border-radius: 8px; cursor: pointer; font-size: 0.8rem;">삭제</button>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+        return html;
+    };
+
+    window.adminSubmitColumn = () => {
+        const label = document.getElementById('admin-col-label').value.trim();
+        const time = document.getElementById('admin-col-time').value.trim();
+        const title = document.getElementById('admin-col-title').value.trim();
+        const desc = document.getElementById('admin-col-desc').value.trim();
+        const thumb = document.getElementById('admin-col-thumb').value.trim();
+        const isHot = document.getElementById('admin-col-hot').checked;
+
+        if (!title || !desc) return alert('제목과 내용을 입력해주세요.');
+
+        const newCol = {
+            id: Date.now(),
+            label: label || '일반 정보',
+            labelIcon: isHot ? 'fa-star' : 'fa-info-circle',
+            title,
+            desc,
+            thumb: thumb || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=800&q=80',
+            time: time || '1분 소요',
+            isHot
+        };
+
+        state.columns.unshift(newCol);
+        localStorage.setItem('soccer_columns', JSON.stringify(state.columns));
+
+        if (db) {
+            db.collection("columns").doc(newCol.id.toString()).set(newCol).catch(console.error);
+        }
+
+        renderAdminTab('admin-columns');
+        alert('정보 글이 등록되었습니다.');
+    };
+
+    window.adminDeleteColumn = (id) => {
+        if (!confirm('정말 삭제하시겠습니까?')) return;
+        state.columns = state.columns.filter(c => c.id !== id);
+        localStorage.setItem('soccer_columns', JSON.stringify(state.columns));
+
+        if (db) {
+            db.collection("columns").doc(id.toString()).delete().catch(console.error);
+        }
+
+        renderAdminTab('admin-columns');
+    };
 
     // 시작
     bindNavEvents();
