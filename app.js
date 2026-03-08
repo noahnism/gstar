@@ -3719,6 +3719,17 @@
                                 <input type="time" id="admin-sched-end" style="flex: 1; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; color: #fff; outline: none; color-scheme: dark; font-size: 0.9rem; min-width: 0; box-sizing: border-box;">
                             </div>
                         </div>
+                        <div style="display: flex; gap: 10px; align-items: center; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 8px; border: 1px solid var(--border-glass);">
+                            <label style="color: #cbd5e1; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                                <input type="checkbox" id="admin-sched-repeat" onclick="document.getElementById('admin-sched-repeat-end-wrapper').style.display = this.checked ? 'block' : 'none'" style="cursor: pointer; width: 16px; height: 16px; accent-color: var(--primary);"> 매주 반복 등록
+                            </label>
+                            <div id="admin-sched-repeat-end-wrapper" style="display: none; flex: 1; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 10px; margin-left: 5px;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="color: #64748b; font-size: 0.75rem;">종료일:</span>
+                                    <input type="date" id="admin-sched-repeat-end" style="flex: 1; background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 4px 8px; color: #fff; font-size: 0.8rem; color-scheme: dark; outline: none;">
+                                </div>
+                            </div>
+                        </div>
                         <input type="text" id="admin-sched-title" placeholder="일정 제목 (예: A반 드리블 훈련)" style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 12px; color: #fff; outline: none;">
                         <input type="text" id="admin-sched-loc" placeholder="장소 (예: 1호 메인 구장)" style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 12px; color: #fff; outline: none;">
                         <textarea id="admin-sched-desc" placeholder="상세 내용 코멘트" style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 12px; color: #fff; outline: none; height: 80px; resize: none;"></textarea>
@@ -3838,26 +3849,46 @@
         const title = document.getElementById('admin-sched-title').value;
         const loc = document.getElementById('admin-sched-loc').value;
         const desc = document.getElementById('admin-sched-desc').value;
+        const repeat = document.getElementById('admin-sched-repeat').checked;
+        const repeatEnd = document.getElementById('admin-sched-repeat-end').value;
 
         if (!d || !start || !end || !title || !loc) return alert('필수 정보(날짜, 시간, 제목, 장소)를 입력해주세요.');
+        if (repeat && !repeatEnd) return alert('반복 등록 시 종료일을 선택해주세요.');
 
-        const newSched = {
-            id: Date.now(),
-            date: d,
-            time: `${start} - ${end}`,
-            title: title,
-            location: loc,
-            description: desc
-        };
+        const datesToCreate = [];
+        const startDate = new Date(d);
 
-        // Firebase 저장 (모든 유저에게 일정 즉시 반영)
-        if (db) {
-            db.collection("schedules").doc(newSched.id.toString()).set(newSched).catch(e => console.error(e));
+        if (repeat) {
+            const endDate = new Date(repeatEnd);
+            if (endDate < startDate) return alert('종료일은 시작일 이후여야 합니다.');
+
+            let current = new Date(startDate);
+            while (current <= endDate) {
+                datesToCreate.push(current.toISOString().split('T')[0]);
+                current.setDate(current.getDate() + 7);
+            }
+        } else {
+            datesToCreate.push(d);
         }
 
-        state.schedules.push(newSched);
+        datesToCreate.forEach(dateStr => {
+            const newSched = {
+                id: Date.now() + Math.floor(Math.random() * 1000), // 대량 등록 시 ID 중복 방지
+                date: dateStr,
+                time: `${start} - ${end}`,
+                title: title,
+                location: loc,
+                description: desc
+            };
+
+            if (db) {
+                db.collection("schedules").doc(newSched.id.toString()).set(newSched).catch(e => console.error(e));
+            }
+            state.schedules.push(newSched);
+        });
+
         try { localStorage.setItem('soccer_schedules', JSON.stringify(state.schedules)); } catch (e) { }
-        alert('신규 일정이 등록되었습니다.');
+        alert(`${datesToCreate.length}개의 일정이 등록되었습니다.`);
         renderAdminTab('admin-schedule');
     };
 
