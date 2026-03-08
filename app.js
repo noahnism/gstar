@@ -684,8 +684,8 @@
                                             ${isFuture ? 'Upcoming' : 'Completed'}
                                         </span>
                                     </div>
-                                    <div class="info">
-                                        <h4 style="font-size: 1.15rem; color: var(--text-white); font-weight: 800; margin-bottom: 12px; letter-spacing: -0.5px;">${s.title}</h4>
+                                     <div class="info">
+                                        <h4 style="font-size: 1.05rem; color: var(--text-white); font-weight: 800; margin-bottom: 12px; letter-spacing: -0.5px; line-height: 1.4;">${s.title}</h4>
                                         <div style="display: flex; flex-wrap: wrap; gap: 15px;">
                                             <span style="color:#cbd5e1; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;"><i class="fas fa-clock" style="color:var(--primary);"></i> ${s.time}</span>
                                             <span style="color:#cbd5e1; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;"><i class="fas fa-map-marker-alt" style="color:var(--primary);"></i> ${s.location}</span>
@@ -731,7 +731,7 @@
                                         <span style="font-size: 0.75rem; color: var(--primary); font-weight: 800; background: rgba(0,210,255,0.1); padding: 4px 10px; border-radius: 10px; border: 1px solid rgba(0,210,255,0.2);"><i class="fas fa-clock" style="margin-right:5px;"></i>${s.time}</span>
                                         <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;"><i class="fas fa-map-marker-alt" style="margin-right: 5px; color: var(--primary);"></i>${s.location}</span>
                                     </div>
-                                    <h4 style="font-size: 1.15rem; color: var(--text-white); margin-bottom: 10px; font-weight: 800; letter-spacing: -0.5px;">${s.title}</h4>
+                                     <h4 style="font-size: 1.05rem; color: var(--text-white); margin-bottom: 10px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.4;">${s.title}</h4>
                                     ${s.description ? `<p style="font-size: 0.85rem; color: #94a3b8; line-height: 1.6; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; margin-top: 8px;">${s.description}</p>` : ''}
                                     ${isFuture ? '<div style="position: absolute; top:0; right:0; width: 4px; height: 100%; background: var(--primary);"></div>' : ''}
                                 </div>
@@ -930,12 +930,12 @@
                 });
 
                 html = `
-                    <div class="social-header fade-in" style="display:flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
-                        <h3 style="font-size: 1.4rem; color: var(--text-white);">트렌딩 소셜 피드</h3>
-                        <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px;">
-                            <span style="background: rgba(0,210,255,0.15); color: var(--primary); padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; white-space: nowrap; border: 1px solid rgba(0,210,255,0.3);">#지스타</span>
-                            <span style="background: rgba(255,255,255,0.1); color: var(--text-gray); padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; white-space: nowrap;">#지스타트레이닝캠프</span>
-                            <span style="background: rgba(255,255,255,0.1); color: var(--text-gray); padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; white-space: nowrap;">#축구캠프</span>
+                    <div class="social-header fade-in" style="display:flex; flex-direction: column; gap: 10px; margin-bottom: 25px;">
+                        <h3 style="font-size: 1.25rem; color: var(--text-white); font-weight: 800; letter-spacing: -0.5px;">트렌딩 소셜 피드</h3>
+                        <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; -webkit-overflow-scrolling: touch;">
+                            <span style="background: rgba(0,210,255,0.15); color: var(--primary); padding: 6px 14px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; white-space: nowrap; border: 1px solid rgba(0,210,255,0.3);">#지스타</span>
+                            <span style="background: rgba(255,255,255,0.1); color: var(--text-gray); padding: 6px 14px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; white-space: nowrap;">#지스타트레이닝캠프</span>
+                            <span style="background: rgba(255,255,255,0.1); color: var(--text-gray); padding: 6px 14px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; white-space: nowrap;">#축구캠프</span>
                         </div>
                     </div>
                     <div class="fade-in" style="display: flex; flex-direction: column; gap: 20px; padding-bottom: 30px;">
@@ -2255,7 +2255,7 @@
                                 <div style="background: rgba(255,255,255,0.02); padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.04); margin-bottom: 24px; display: grid; gap: 12px;">
                                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                                         <label style="color: #64748b; font-size: 0.75rem;">등급
-                                            <select id="edit-role" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1e293b; color: #fff; margin-top: 4px;">
+                                            <select id="edit-role" onchange="window.triggerMemberDateRecalc()" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1e293b; color: #fff; margin-top: 4px;">
                                                 <option value="Basic" ${role === 'basic' ? 'selected' : ''}>Basic</option>
                                                 <option value="Semi" ${role === 'semi' ? 'selected' : ''}>Semi</option>
                                                 <option value="Pro" ${role === 'pro' ? 'selected' : ''}>Pro</option>
@@ -2266,8 +2266,8 @@
                                         <label style="color: #64748b; font-size: 0.75rem;">소속 그룹 <input type="text" id="edit-group" value="${user.group || ''}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1e293b; color: #fff; margin-top: 4px;"></label>
                                     </div>
                                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                                        <label style="color: #64748b; font-size: 0.75rem;">최초 가입일 <input type="text" id="edit-joindate" value="${user.joinDate || ''}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1e293b; color: #fff; margin-top: 4px;"></label>
-                                        <label style="color: #64748b; font-size: 0.75rem;">멤버십 만료일 <input type="text" id="edit-enddate" value="${user.membershipEnd || ''}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1e293b; color: #fff; margin-top: 4px;"></label>
+                                        <label style="color: #64748b; font-size: 0.75rem;">최초 가입일 (현 멤버십 시작) <input type="text" id="edit-joindate" oninput="window.triggerMemberDateRecalc()" value="${user.joinDate || ''}" placeholder="YYYY.MM.DD" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1e293b; color: #fff; margin-top: 4px;"></label>
+                                        <label style="color: #64748b; font-size: 0.75rem;">멤버십 만료일 <input type="text" id="edit-enddate" value="${user.membershipEnd || ''}" placeholder="자동 계산" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #0f172a; color: #7bc2b7; font-weight: 700; margin-top: 4px;"></label>
                                     </div>
                                 </div>
 
@@ -3714,10 +3714,13 @@
                                 <input type="date" id="admin-sched-date" style="width: 100%; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; color: #fff; outline: none; color-scheme: dark; font-size: 0.9rem; box-sizing: border-box;">
                             </div>
                             <div style="flex: 1.5; min-width: 180px; max-width: 100%; display: flex; align-items: center; gap: 5px;">
-                                <input type="time" id="admin-sched-start" style="flex: 1; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; color: #fff; outline: none; color-scheme: dark; font-size: 0.9rem; min-width: 0; box-sizing: border-box;">
+                                <input type="time" id="admin-sched-start" oninput="window.updateScheduleTimePreview()" style="flex: 1; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; color: #fff; outline: none; color-scheme: dark; font-size: 0.9rem; min-width: 0; box-sizing: border-box;">
                                 <span style="color: #64748b; flex-shrink: 0;">~</span>
-                                <input type="time" id="admin-sched-end" style="flex: 1; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; color: #fff; outline: none; color-scheme: dark; font-size: 0.9rem; min-width: 0; box-sizing: border-box;">
+                                <input type="time" id="admin-sched-end" oninput="window.updateScheduleTimePreview()" style="flex: 1; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; color: #fff; outline: none; color-scheme: dark; font-size: 0.9rem; min-width: 0; box-sizing: border-box;">
                             </div>
+                        </div>
+                        <div id="admin-sched-time-preview" style="font-size: 0.8rem; color: #7bc2b7; font-weight: 700; padding: 4px 8px; background: rgba(123, 194, 183, 0.05); border-radius: 6px; display: none; align-items: center; gap: 6px;">
+                            <i class="fas fa-clock"></i> <span id="admin-sched-time-text"></span>
                         </div>
                         <div style="display: flex; gap: 10px; align-items: center; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 8px; border: 1px solid var(--border-glass);">
                             <label style="color: #cbd5e1; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 6px;">
@@ -3890,6 +3893,41 @@
         try { localStorage.setItem('soccer_schedules', JSON.stringify(state.schedules)); } catch (e) { }
         alert(`${datesToCreate.length}개의 일정이 등록되었습니다.`);
         renderAdminTab('admin-schedule');
+    };
+
+    window.updateScheduleTimePreview = () => {
+        const start = document.getElementById('admin-sched-start').value;
+        const end = document.getElementById('admin-sched-end').value;
+        const preview = document.getElementById('admin-sched-time-preview');
+        const text = document.getElementById('admin-sched-time-text');
+
+        if (start && end) {
+            const formatTime = (t) => {
+                const [h, m] = t.split(':');
+                const hour = parseInt(h);
+                const ampm = hour >= 12 ? '오후' : '오전';
+                const h12 = hour % 12 || 12;
+                return `${ampm} ${h12}시 ${m}분`;
+            };
+            text.textContent = `${formatTime(start)} ~ ${formatTime(end)}`;
+            preview.style.display = 'flex';
+        } else {
+            preview.style.display = 'none';
+        }
+    };
+
+    window.triggerMemberDateRecalc = () => {
+        const joinDate = document.getElementById('edit-joindate').value.trim();
+        const role = document.getElementById('edit-role').value;
+        const endField = document.getElementById('edit-enddate');
+
+        if (joinDate && role) {
+            const tempUser = { membershipStart: joinDate, role: role };
+            recalculateMembershipEnd(tempUser);
+            if (tempUser.membershipEnd) {
+                endField.value = tempUser.membershipEnd;
+            }
+        }
     };
 
     window.adminDeleteSchedule = (id) => {
