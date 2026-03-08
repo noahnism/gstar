@@ -2151,7 +2151,10 @@
                                     <p style="margin: 0; font-size: 0.85rem; color: #94a3b8;">ID: <span style="color: ${theme.main}; font-weight: 700;">${user.id}</span> | 가입: ${user.joinDate || '-'}</p>
                                 </div>
                             </div>
-                            <button onclick="document.getElementById('member-detail-modal').remove()" style="background: rgba(255,255,255,0.05); border: none; width: 36px; height: 36px; border-radius: 50%; color: #94a3b8; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'"><i class="fas fa-times"></i></button>
+                            <div style="display: flex; gap: 8px;">
+                                <button onclick="window.handleLogout()" style="background: rgba(255,255,255,0.05); border: none; width: 36px; height: 36px; border-radius: 50%; color: #94a3b8; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: 0.2s;" title="로그아웃"><i class="fas fa-sign-out-alt"></i></button>
+                                <button onclick="document.getElementById('member-detail-modal').remove()" style="background: rgba(255,255,255,0.05); border: none; width: 36px; height: 36px; border-radius: 50%; color: #94a3b8; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'"><i class="fas fa-times"></i></button>
+                            </div>
                         </div>
                         <div style="display: flex; gap: 24px;">
                             <button id="tab-btn-info" onclick="window.switchMemberDetailTab('info')" style="padding: 12px 4px; background: none; border: none; border-bottom: 3px solid ${theme.main}; color: ${theme.main}; font-weight: 800; cursor: pointer; font-size: 0.95rem; transition: 0.3s; letter-spacing: -0.3px;">기본 및 상세정보</button>

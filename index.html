@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>G-STAR TRAINING CAMP - 프리미엄 멤버십</title>
-    <link rel="stylesheet" href="style.css?v=4.4.2">
+    <link rel="stylesheet" href="style.css?v=4.4.2.1">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link
         href="https://fonts.googleapis.com/css2?family=Pretendard:wght@100;400;700&family=Outfit:wght@400;700&display=swap"
@@ -146,7 +146,7 @@
             <!-- 관리자 대시보드 화면 -->
             <section id="admin-view" class="view hidden">
                 <header class="app-header fade-in"
-                    style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 2px solid var(--primary);">
+                    style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; flex-shrink: 0; border-bottom: 2px solid var(--primary);">
                     <h1 class="brand-font"
                         style="font-size: 1.4rem; color: var(--secondary); text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);">
                         <i class="fas fa-shield-alt" style="margin-right: 8px;"></i>ADMIN CORE
@@ -160,7 +160,7 @@
 
                 <!-- 관리자 GNB -->
                 <nav class="admin-nav"
-                    style="display: flex; justify-content: space-around; background: rgba(15, 23, 42, 0.8); border-bottom: 1px solid var(--border-glass); padding: 10px 0;">
+                    style="display: flex; justify-content: space-around; background: rgba(15, 23, 42, 0.8); border-bottom: 1px solid var(--border-glass); padding: 10px 0; flex-shrink: 0;">
                     <button class="admin-nav-btn active" data-target="admin-users"
                         style="background:none; border:none; color: var(--primary); font-size: 0.9rem; font-weight: bold; padding: 10px; cursor:pointer;">회원
                         관리</button>
@@ -175,7 +175,7 @@
                         관리</button>
                 </nav>
 
-                <div id="admin-tab-content" style="padding: 20px; overflow-y: auto; height: calc(100vh - 140px);">
+                <div id="admin-tab-content" style="padding: 20px; overflow-y: auto; flex: 1;">
                     <!-- 관리자 탭 콘텐츠가 여기에 동적으로 로드됨 -->
                 </div>
             </section>
@@ -227,7 +227,7 @@
     <!-- Excel Parsing Library (SheetJS) -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-    <script src="app.js?v=4.4.2"></script>
+    <script src="app.js?v=4.4.2.1"></script>
 </body>
 
 </html>
