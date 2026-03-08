@@ -14,9 +14,11 @@
     console.log("%c 지트캠 Soccer Academy " + APP_VERSION + " 로드됨 ", "background: #7bc2b7; color: #000; font-weight: bold;");
     const CURRENT_THEME = {
         primary: "#7bc2b7",
-        basicRed: "#f06958",
-        premiumRed: "#9b111e", // 깊은 루비 레드
-        gold: "#d4af37",
+        basic: "#7bc2b7",   // Mint
+        semi: "#a855f7",    // Purple
+        pro: "#f06958",     // Coral Red
+        ultimate: "#d4af37", // Gold
+        admin: "#94a3b8",
         black: "#0a0a0a"
     };
 
@@ -171,10 +173,11 @@
     // === 초기화 로직 ===
     const getRoleColor = (role) => {
         const r = String(role || 'Basic').toLowerCase();
-        if (r.includes('ultimate') || r.includes('vip')) return "#00d2ff"; // Blue
-        if (r.includes('pro') || r.includes('player')) return "#7bc2b7"; // Mint
-        if (r.includes('semi')) return "#f2cb4f"; // Yellow
-        return "#f06958"; // Red (Basic)
+        if (r.includes('ultimate') || r.includes('vip')) return CURRENT_THEME.ultimate;
+        if (r.includes('pro') || r.includes('player')) return CURRENT_THEME.pro;
+        if (r.includes('semi')) return CURRENT_THEME.semi;
+        if (r.includes('admin')) return CURRENT_THEME.admin;
+        return CURRENT_THEME.basic;
     };
 
     const getMemberTheme = (user) => {
@@ -182,8 +185,9 @@
         const main = getRoleColor(role);
         return {
             main: main,
-            bg: main + '11',
-            border: main + '33',
+            bg: main + '1a',    // 10% opacity
+            border: main + '4d', // 30% opacity
+            text: main,
             isPremium: role.includes('ultimate') || role.includes('pro')
         };
     };
@@ -2022,33 +2026,6 @@
         renderAdminTab('admin-users');
     };
 
-    window.getMemberTheme = (user) => {
-        const role = (user.role || 'Basic').toLowerCase();
-        let colors = {
-            main: "#7bc2b7",
-            bg: "rgba(123, 194, 183, 0.1)",
-            border: "rgba(123, 194, 183, 0.3)",
-            text: "#7bc2b7"
-        };
-
-        if (role.includes('ultimate')) {
-            colors = { main: "#f2cb4f", bg: "rgba(242, 203, 79, 0.1)", border: "rgba(242, 203, 79, 0.3)", text: "#f2cb4f" };
-        } else if (role.includes('pro')) {
-            colors = { main: "#00d2ff", bg: "rgba(0, 210, 255, 0.1)", border: "rgba(0, 210, 255, 0.3)", text: "#00d2ff" };
-        } else if (role.includes('semi')) {
-            colors = { main: "#a855f7", bg: "rgba(168, 85, 247, 0.1)", border: "rgba(168, 85, 247, 0.3)", text: "#a855f7" };
-        } else if (role.includes('basic')) {
-            // 프리미엄 레드 테마 (명암비와 고급스러움 강조)
-            colors = {
-                main: "#f06958",
-                bg: "rgba(240, 105, 88, 0.15)",
-                border: "rgba(240, 105, 88, 0.4)",
-                text: "#f06958",
-                isPremium: true
-            };
-        }
-        return colors;
-    };
 
     window.analyzeFitnessFile = (event) => {
         const file = event.target.checked ? null : event.target.files[0];
