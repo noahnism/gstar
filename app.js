@@ -10,7 +10,7 @@
         measurementId: "G-RG6G5VT085"
     };
 
-    const APP_VERSION = "v4.4.2 (Build 0308)";
+    const APP_VERSION = "v4.4.2.1 (Build 0308)";
     console.log("%c 지트캠 Soccer Academy " + APP_VERSION + " 로드됨 ", "background: #7bc2b7; color: #000; font-weight: bold;");
     const CURRENT_THEME = {
         primary: "#7bc2b7",
@@ -2352,20 +2352,6 @@
                 }
                                 </div>
 
-                                <h4 style="color: #7bc2b7; font-size: 0.9rem; margin: 0 0 12px;"><i class="fas fa-running"></i> 최신 체력 검정 데이터 (동기화됨)</h4>
-                                <div style="background: rgba(123, 194, 183, 0.05); padding: 18px; border-radius: 20px; border: 1px solid rgba(123, 194, 183, 0.15); margin-bottom: 24px;">
-                                    <p style="color: #94a3b8; font-size: 0.75rem; margin-bottom: 12px;"><i class="fas fa-info-circle"></i> 이곳의 점수를 수정하면 개인 능력치 차트에 즉시 반영됩니다.</p>
-                                    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 15px;">
-                                        <label style="color: #64748b; font-size: 0.7rem; text-align: center;">스피드<input type="number" id="edit-ft-score-0" value="${user.fitnessTests?.[user.fitnessTests.length - 1]?.scores?.[0] || user.stats?.[0] || 0}" step="0.1" max="5" min="0" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: #0f172a; color: #4ade80; text-align: center; margin-top: 4px; font-weight: bold;"></label>
-                                        <label style="color: #64748b; font-size: 0.7rem; text-align: center;">드리블<input type="number" id="edit-ft-score-1" value="${user.fitnessTests?.[user.fitnessTests.length - 1]?.scores?.[1] || user.stats?.[1] || 0}" step="0.1" max="5" min="0" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: #0f172a; color: #4ade80; text-align: center; margin-top: 4px; font-weight: bold;"></label>
-                                        <label style="color: #64748b; font-size: 0.7rem; text-align: center;">공감각<input type="number" id="edit-ft-score-2" value="${user.fitnessTests?.[user.fitnessTests.length - 1]?.scores?.[2] || user.stats?.[2] || 0}" step="0.1" max="5" min="0" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: #0f172a; color: #4ade80; text-align: center; margin-top: 4px; font-weight: bold;"></label>
-                                        <label style="color: #64748b; font-size: 0.7rem; text-align: center;">근력<input type="number" id="edit-ft-score-3" value="${user.fitnessTests?.[user.fitnessTests.length - 1]?.scores?.[3] || user.stats?.[3] || 0}" step="0.1" max="5" min="0" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: #0f172a; color: #4ade80; text-align: center; margin-top: 4px; font-weight: bold;"></label>
-                                        <label style="color: #64748b; font-size: 0.7rem; text-align: center;">밸런스<input type="number" id="edit-ft-score-4" value="${user.fitnessTests?.[user.fitnessTests.length - 1]?.scores?.[4] || user.stats?.[4] || 0}" step="0.1" max="5" min="0" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: #0f172a; color: #4ade80; text-align: center; margin-top: 4px; font-weight: bold;"></label>
-                                    </div>
-                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                                        <label style="color: #64748b; font-size: 0.75rem;">측정 날짜 <input type="date" id="edit-ft-date" value="${user.fitnessTests?.[user.fitnessTests.length - 1]?.date ? user.fitnessTests[user.fitnessTests.length - 1].date.replace(/\./g, '-') : ''}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #0f172a; color: #fff; margin-top: 4px; color-scheme: dark;"></label>
-                                        <label style="color: #64748b; font-size: 0.75rem;">테스트 레이블 <input type="text" id="edit-ft-label" value="${user.fitnessTests?.[user.fitnessTests.length - 1]?.label || ''}" placeholder="예: 3월 정기 테스트" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #0f172a; color: #fff; margin-top: 4px;"></label>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -2378,7 +2364,8 @@
                                         <select id="fitness-season-select" onchange="window.changeFitnessSeason(this.value, '${user.id}')" style="background: #1e293b; color: #fff; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 6px 12px; font-size: 0.85rem; outline: none; cursor: pointer;">
                                             ${(user.fitnessTests && user.fitnessTests.length > 0) ? user.fitnessTests.map((ft, idx) => `<option value="${idx}">${ft.label} (${ft.date})</option>`).join('') : '<option value="-1">기록 없음</option>'}
                                         </select>
-                                        <button onclick="window.toggleFitnessEditMode()" style="background: rgba(123, 194, 183, 0.1); border: 1px solid #7bc2b7; color: #7bc2b7; border-radius: 10px; padding: 6px 12px; cursor: pointer; font-size: 0.85rem; transition: 0.3s; font-weight: 600;"><i class="fas fa-plus"></i> 추가/수정</button>
+                                        <button onclick="const sel = document.getElementById('fitness-season-select').value; if(sel === '-1') return; window.loadFitnessForm(sel, '${user.id}'); window.toggleFitnessEditMode();" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 10px; padding: 6px 12px; cursor: pointer; font-size: 0.85rem;"><i class="fas fa-edit"></i> 수정</button>
+                                        <button onclick="window.loadFitnessForm('new', '${user.id}'); window.toggleFitnessEditMode();" style="background: rgba(123, 194, 183, 0.1); border: 1px solid #7bc2b7; color: #7bc2b7; border-radius: 10px; padding: 6px 12px; cursor: pointer; font-size: 0.85rem; transition: 0.3s; font-weight: 600;"><i class="fas fa-plus"></i> 새 기록 추가</button>
                                     </div>
                                 </div>
 
@@ -2492,6 +2479,7 @@
                                 </div>
 
                                 <button onclick="window.saveFitnessData('${user.id}')" style="width: 100%; padding: 14px; border-radius: 12px; border: none; background: linear-gradient(135deg, #7bc2b7, #1a6aa3); color: #fff; font-weight: 800; font-size: 1.05rem; cursor: pointer; margin-bottom: 12px; box-shadow: 0 4px 15px rgba(0, 210, 255, 0.3);">시즌 데이터 저장</button>
+                                <button id="btn-delete-fitness" style="display: none; width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #ef4444; background: rgba(239, 68, 68, 0.05); color: #ef4444; font-weight: 700; cursor: pointer; margin-bottom: 12px;"><i class="fas fa-trash-alt"></i> 이 시즌 기록 삭제</button>
                                 <button onclick="window.toggleFitnessEditMode()" style="width: 100%; padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: transparent; color: #64748b; font-weight: 600; cursor: pointer;">취소</button>
                             </div>
                         </div>
@@ -2671,29 +2659,10 @@
         const newPhone = document.getElementById('edit-phone').value.trim();
         const newMemo = document.getElementById('edit-memo').value;
 
-        // 스탯 수집
-        // 스탯 수집 (최근 체력 검정 점수와 동기화)
-        const s1 = parseFloat(document.getElementById('edit-ft-score-0')?.value || '0');
-        const s2 = parseFloat(document.getElementById('edit-ft-score-1')?.value || '0');
-        const s3 = parseFloat(document.getElementById('edit-ft-score-2')?.value || '0');
-        const s4 = parseFloat(document.getElementById('edit-ft-score-3')?.value || '0');
-        const s5 = parseFloat(document.getElementById('edit-ft-score-4')?.value || '0');
-        const newStats = [s1, s2, s3, s4, s5];
-
-        // 체력 검정 데이터 업데이트 로직 추가
-        const newFitnessTests = userIdx !== -1 ? [...(state.users[userIdx].fitnessTests || [])] : [];
-        if (newFitnessTests.length > 0) {
-            const lastIdx = newFitnessTests.length - 1;
-            const ftDate = document.getElementById('edit-ft-date')?.value.replace(/-/g, '.') || newFitnessTests[lastIdx].date;
-            const ftLabel = document.getElementById('edit-ft-label')?.value || newFitnessTests[lastIdx].label;
-
-            newFitnessTests[lastIdx] = {
-                ...newFitnessTests[lastIdx],
-                scores: newStats,
-                date: ftDate,
-                label: ftLabel
-            };
-        }
+        // v4.4.2.1: 더 이상 일반 수정 모드에서 체력 점수를 업데이트하지 않음
+        // (체력 점수 수정 섹션이 제거됨)
+        const newStats = state.users[userIdx].stats || [0, 0, 0, 0, 0];
+        const newFitnessTests = state.users[userIdx].fitnessTests || [];
 
         // 수강 이력(history) 수집 (v4.4.2 개선)
         const newHistory = [];
@@ -2779,6 +2748,10 @@
             fitBtn.style.borderBottom = '2px solid transparent';
             infoContent.style.display = 'block';
             fitContent.style.display = 'none';
+
+            // [v4.4.2.1] 정보 탭일 때 하단 액션 버튼 보이기
+            const actionBtns = document.getElementById('member-action-btns');
+            if (actionBtns) actionBtns.style.display = 'flex';
         } else {
             fitBtn.style.color = '#7bc2b7';
             fitBtn.style.borderBottom = '2px solid #7bc2b7';
@@ -2786,6 +2759,10 @@
             infoBtn.style.borderBottom = '2px solid transparent';
             infoContent.style.display = 'none';
             fitContent.style.display = 'block';
+
+            // [v4.4.2.1] 체력 탭일 때 하단 액션 버튼 숨기기 (내부 버튼 사용)
+            const actionBtns = document.getElementById('member-action-btns');
+            if (actionBtns) actionBtns.style.display = 'none';
 
             // 탭 전환 시 차트 및 데이터 로드
             const selectEl = document.getElementById('fitness-season-select');
@@ -2892,19 +2869,18 @@
         const user = state.users.find(u => u.id === userId);
         const btnDelete = document.getElementById('btn-delete-fitness');
         const seasonInput = document.getElementById('edit-fitness-season');
+        const saveBtn = document.querySelector('#fitness-edit-mode button[onclick*="saveFitnessData"]');
 
         if (seasonInput) seasonInput.value = selectedVal;
 
         if (selectedVal === 'new') {
             document.getElementById('fit-date').value = new Date().toISOString().split('T')[0];
             document.getElementById('fit-label').value = `시즌 ${(user?.fitnessTests?.length || 0) + 1} 체력 테스트`;
-
-            ['speed', 'dribble', 'agility', 'power', 'balance'].forEach(k => document.getElementById(`fit-score-${k}`).value = '');
-            ['sprint10m', 'sprint20m', 'dribble10m', 'dribble20m', 'cone10m', 'shuttlerun', 'flexibility', 'situp', 'longjump', 'verticaljump', 'trunklift', 'squat', 'pushup', 'balanceL', 'balanceR'].forEach(k => {
-                const el = document.getElementById(`fit-rec-${k}`);
-                if (el) el.value = '';
-            });
             if (btnDelete) btnDelete.style.display = 'none';
+            if (saveBtn) saveBtn.textContent = '시즌 데이터 저장';
+
+            // 초기화
+            document.querySelectorAll('#fitness-edit-mode input[id^="fit-rec-"], #fitness-edit-mode input[id^="fit-score-"]').forEach(i => i.value = '');
             document.getElementById('fit-pdf-status').innerText = '* 선택하지 않으면 등록되지 않습니다.';
         } else {
             const idx = parseInt(selectedVal);
@@ -3092,34 +3068,6 @@
     };
 
 
-    window.deleteFitnessData = (currentUserId) => {
-        const selectedVal = document.getElementById('edit-fitness-season').value;
-        if (selectedVal === 'new') return;
-
-        if (!confirm("해당 시즌의 체력 검정 데이터를 정말 삭제하시겠습니까?")) return;
-
-        const userIdx = state.users.findIndex(u => u.id === currentUserId);
-        if (userIdx === -1) return;
-        const user = state.users[userIdx];
-        const idx = parseInt(selectedVal);
-
-        if (!isNaN(idx) && user.fitnessTests) {
-            user.fitnessTests.splice(idx, 1);
-
-            localStorage.setItem('soccer_users', JSON.stringify(state.users));
-            if (db) {
-                db.collection("users").doc(currentUserId).update({ fitnessTests: user.fitnessTests }).catch(e => console.error(e));
-            }
-            alert("시즌 데이터가 삭제되었습니다.");
-
-            document.getElementById('member-detail-modal').remove();
-            renderAdminTab('admin-users');
-            window.showMemberDetail(currentUserId);
-            setTimeout(() => {
-                window.switchMemberDetailTab('fitness');
-            }, 80);
-        }
-    };
 
     window.adminDeleteMember = (userId) => {
         if (!confirm(`회원(${userId}) 정보를 정말 삭제하시겠습니까?\n삭제된 정보는 복구할 수 없습니다.`)) return;
