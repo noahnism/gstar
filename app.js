@@ -10,7 +10,7 @@
         measurementId: "G-RG6G5VT085"
     };
 
-    const APP_VERSION = "v4.1.4 (Build 0308)";
+    const APP_VERSION = "v4.1.5 (Build 0308)";
     console.log("%c 지트캠 Soccer Academy " + APP_VERSION + " 로드됨 ", "background: #7bc2b7; color: #000; font-weight: bold;");
     const CURRENT_THEME = {
         primary: "#7bc2b7",
@@ -2408,6 +2408,22 @@
         }
     };
 
+    // === [ 멤버십 날짜 계산 유틸리티 ] ===
+    function recalculateMembershipEnd(user) {
+        if (!user.membershipStart || !user.duration) return;
+        try {
+            const start = new Date(user.membershipStart.replace(/\./g, '/'));
+            const durationMonths = parseInt(user.duration);
+            if (isNaN(start.getTime()) || isNaN(durationMonths)) return;
+
+            const end = new Date(start);
+            end.setMonth(end.getMonth() + durationMonths);
+            user.membershipEnd = end.toISOString().split('T')[0].replace(/-/g, '.');
+        } catch (e) {
+            console.error("Date calculation error:", e);
+        }
+    }
+
     window.toggleEditMember = () => {
         const viewMode = document.getElementById('member-view-mode');
         const editMode = document.getElementById('member-edit-mode');
@@ -2704,161 +2720,163 @@
     };
 
     window.saveFitnessData = async (currentUserId) => {
-        console.log("Saving fitness data for ID:", currentUserId);
-        const userIdx = state.users.findIndex(u => u.id == currentUserId);
-        if (userIdx === -1) return;
-        const user = state.users[userIdx];
+        const saveBtn = event?.target;
+        const originalText = saveBtn ? saveBtn.innerText : "저장";
 
-        const seasonEl = document.getElementById('edit-fitness-season');
-        const selectedVal = seasonEl ? seasonEl.value : 'new';
+        try {
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.innerText = "저장 중...";
+            }
+            console.log("Saving fitness data for ID:", currentUserId);
+            const userIdx = state.users.findIndex(u => u.id == currentUserId);
+            if (userIdx === -1) return;
+            const user = state.users[userIdx];
 
-        const dateEl = document.getElementById('fit-date');
-        const dateStr = dateEl ? dateEl.value.replace(/-/g, '.') : new Date().toISOString().split('T')[0].replace(/-/g, '.');
+            const seasonEl = document.getElementById('edit-fitness-season');
+            const selectedVal = seasonEl ? seasonEl.value : 'new';
 
-        const labelEl = document.getElementById('fit-label');
-        const labelStr = (labelEl ? labelEl.value.trim() : '') || '시즌 체력 테스트';
+            const dateEl = document.getElementById('fit-date');
+            const dateStr = dateEl ? dateEl.value.replace(/-/g, '.') : new Date().toISOString().split('T')[0].replace(/-/g, '.');
 
-        const parseNum = (id) => {
-            const el = document.getElementById(id);
-            if (!el) return null;
-            const val = el.value.trim();
-            if (val === '') return null;
-            const num = Number(val);
-            return isNaN(num) ? null : num;
-        };
+            const labelEl = document.getElementById('fit-label');
+            const labelStr = (labelEl ? labelEl.value.trim() : '') || '시즌 체력 테스트';
 
-        const scores = [
-            parseNum('fit-score-speed') || 0,
-            parseNum('fit-score-dribble') || 0,
-            parseNum('fit-score-agility') || 0,
-            parseNum('fit-score-power') || 0,
-            parseNum('fit-score-balance') || 0
-        ];
+            const parseNum = (id) => {
+                const el = document.getElementById(id);
+                if (!el) return null;
+                const val = el.value.trim();
+                if (val === '') return null;
+                const num = Number(val);
+                return isNaN(num) ? null : num;
+            };
 
-        const records = {
-            sprint10m: parseNum('fit-rec-sprint10m'),
-            sprint20m: parseNum('fit-rec-sprint20m'),
-            dribble10m: parseNum('fit-rec-dribble10m'),
-            dribble20m: parseNum('fit-rec-dribble20m'),
-            cone10m: parseNum('fit-rec-cone10m'),
-            shuttlerun: parseNum('fit-rec-shuttlerun'),
-            flexibility: parseNum('fit-rec-flexibility'),
-            situp: parseNum('fit-rec-situp'),
-            longjump: parseNum('fit-rec-longjump'),
-            verticaljump: parseNum('fit-rec-verticaljump'),
-            trunklift: parseNum('fit-rec-trunklift'),
-            squat: parseNum('fit-rec-squat'),
-            pushup: parseNum('fit-rec-pushup'),
-            balanceL: parseNum('fit-rec-balanceL'),
-            balanceR: parseNum('fit-rec-balanceR')
-        };
+            const scores = [
+                parseNum('fit-score-speed') || 0,
+                parseNum('fit-score-dribble') || 0,
+                parseNum('fit-score-agility') || 0,
+                parseNum('fit-score-power') || 0,
+                parseNum('fit-score-balance') || 0
+            ];
 
-        let newPdfUrl = null;
-        if (selectedVal !== 'new' && !isNaN(parseInt(selectedVal)) && user.fitnessTests[parseInt(selectedVal)].pdfUrl) {
-            newPdfUrl = user.fitnessTests[parseInt(selectedVal)].pdfUrl; // 기존 파일 유지
-        }
+            const records = {
+                sprint10m: parseNum('fit-rec-sprint10m'),
+                sprint20m: parseNum('fit-rec-sprint20m'),
+                dribble10m: parseNum('fit-rec-dribble10m'),
+                dribble20m: parseNum('fit-rec-dribble20m'),
+                cone10m: parseNum('fit-rec-cone10m'),
+                shuttlerun: parseNum('fit-rec-shuttlerun'),
+                flexibility: parseNum('fit-rec-flexibility'),
+                situp: parseNum('fit-rec-situp'),
+                longjump: parseNum('fit-rec-longjump'),
+                verticaljump: parseNum('fit-rec-verticaljump'),
+                trunklift: parseNum('fit-rec-trunklift'),
+                squat: parseNum('fit-rec-squat'),
+                pushup: parseNum('fit-rec-pushup'),
+                balanceL: parseNum('fit-rec-balanceL'),
+                balanceR: parseNum('fit-rec-balanceR')
+            };
 
-        const newData = {
-            date: dateStr,
-            label: labelStr,
-            scores: scores,
-            records: records,
-            pdfUrl: newPdfUrl
-        };
+            let newPdfUrl = null;
+            if (selectedVal !== 'new' && !isNaN(parseInt(selectedVal)) && user.fitnessTests[parseInt(selectedVal)].pdfUrl) {
+                newPdfUrl = user.fitnessTests[parseInt(selectedVal)].pdfUrl; // 기존 파일 유지
+            }
 
-        // --- [핵심] 최신 체력 검정 스탯을 메인 유저 스탯에 동기화 ---
-        user.stats = [...scores];
+            const newData = {
+                date: dateStr,
+                label: labelStr,
+                scores: scores,
+                records: records,
+                pdfUrl: newPdfUrl
+            };
 
-        const fileInput = document.getElementById('fit-pdf-file');
-        const file = fileInput ? fileInput.files[0] : null;
+            // --- [핵심] 최신 체력 검정 스탯을 메인 유저 스탯에 동기화 ---
+            user.stats = [...scores];
 
-        // 파일 업로드 처리
-        if (file && window.firebase) {
-            try {
-                // UI 블락 (로딩)
-                document.getElementById('member-detail-modal').style.pointerEvents = 'none';
-                // 투명도 조절 제거 (더 선명하게 유지)
+            const fileInput = document.getElementById('fit-pdf-file');
+            const file = fileInput ? fileInput.files[0] : null;
 
-                const storageRef = firebase.storage().ref();
-                const fileRef = storageRef.child(`fitness_reports/${currentUserId}/${Date.now()}_${file.name}`);
-                const snapshot = await fileRef.put(file);
-                newData.pdfUrl = await snapshot.ref.getDownloadURL();
-            } catch (error) {
-                console.error("File Upload Error:", error);
-                alert("파일 업로드 중 오류가 발생했습니다. 기록만 먼저 저장합니다.");
-            } finally {
-                document.getElementById('member-detail-modal').style.pointerEvents = 'auto';
+            // 파일 업로드 처리
+            if (file && window.firebase) {
+                try {
+                    // UI 블락 (로딩)
+                    document.getElementById('member-detail-modal').style.pointerEvents = 'none';
+                    // 투명도 조절 제거 (더 선명하게 유지)
+
+                    const storageRef = firebase.storage().ref();
+                    const fileRef = storageRef.child(`fitness_reports/${currentUserId}/${Date.now()}_${file.name}`);
+                    const snapshot = await fileRef.put(file);
+                    newData.pdfUrl = await snapshot.ref.getDownloadURL();
+                } catch (error) {
+                    console.error("File Upload Error:", error);
+                    alert("파일 업로드 중 오류가 발생했습니다. 기록만 먼저 저장합니다.");
+                } finally {
+                    finalizeAndSave(user, currentUserId, selectedVal);
+                }
+            } else {
                 finalizeAndSave(user, currentUserId, selectedVal);
             }
-        } else {
-            try {
-                finalizeAndSave(user, currentUserId, selectedVal);
-            } catch (e) {
-                console.error("Critical Save Error:", e);
-                alert("데이터 저장 로직 실행 중 오류가 발생했습니다: " + e.message);
-                document.getElementById('member-detail-modal').style.pointerEvents = 'auto';
-                document.getElementById('member-detail-modal').style.opacity = '1';
-            }
-        }
 
-        function finalizeAndSave(user, currentUserId, selectedVal) {
-            try {
-                console.log("Finalizing save for:", currentUserId, "SelectedVal:", selectedVal);
-                if (!user.fitnessTests) user.fitnessTests = [];
+            function finalizeAndSave(user, currentUserId, selectedVal) {
+                try {
+                    console.log("Finalizing save (In-place) for:", currentUserId);
+                    if (!user.fitnessTests) user.fitnessTests = [];
 
-                if (selectedVal === 'new') {
-                    user.fitnessTests.push(newData);
-                } else {
-                    const idx = parseInt(selectedVal);
-                    if (!isNaN(idx)) {
-                        user.fitnessTests[idx] = newData;
+                    if (selectedVal === 'new') {
+                        user.fitnessTests.push(newData);
+                    } else {
+                        const idx = parseInt(selectedVal);
+                        if (!isNaN(idx)) {
+                            user.fitnessTests[idx] = newData;
+                        }
+                    }
+
+                    // LocalStorage & Firebase 동시 업데이트
+                    localStorage.setItem('soccer_users', JSON.stringify(state.users));
+                    if (db) {
+                        db.collection("users").doc(currentUserId.toString()).update({
+                            fitnessTests: user.fitnessTests,
+                            stats: user.stats
+                        }).catch(e => console.error("Firebase Sync Error:", e));
+                    }
+
+                    alert("체력 검정 데이터가 성공적으로 반영되었습니다.");
+
+                    // [In-place Update] 모달을 닫지 않고 내부 데이터만 갱신
+                    if (window.renderAdminTab) window.renderAdminTab('admin-users');
+
+                    // 뷰 모드로 전환 및 데이터 로드
+                    if (window.toggleFitnessEditMode) window.toggleFitnessEditMode();
+
+                    const ftLen = user.fitnessTests ? user.fitnessTests.length : 0;
+                    if (ftLen > 0) {
+                        const newIdx = selectedVal === 'new' ? (ftLen - 1).toString() : selectedVal;
+                        const selectEl = document.getElementById('fitness-season-select');
+                        if (selectEl) {
+                            selectEl.value = newIdx;
+                            if (window.changeFitnessSeason) window.changeFitnessSeason(newIdx, currentUserId);
+                        }
+                    }
+                } catch (err) {
+                    console.error("Critical error in finalizeAndSave:", err);
+                    alert("처리 중 예기치 못한 오류가 발생했습니다.");
+                } finally {
+                    if (saveBtn) {
+                        saveBtn.disabled = false;
+                        saveBtn.innerText = originalText;
                     }
                 }
-
-                // LocalStorage & Firebase 동시 업데이트 보장
-                localStorage.setItem('soccer_users', JSON.stringify(state.users));
-                if (db) {
-                    db.collection("users").doc(currentUserId.toString()).update({
-                        fitnessTests: user.fitnessTests,
-                        stats: user.stats
-                    }).catch(e => {
-                        console.error("Firebase Update Logic Error:", e);
-                        alert("서버 저장에 실패했지만 로컬에는 저장되었습니다.");
-                    });
-                }
-
-                alert("체력 검정 데이터가 성공적으로 반영되었습니다.");
-
-                // 모달 제거 및 UI 갱신 (전역 스코프 명시)
-                document.querySelectorAll('#member-detail-modal').forEach(m => m.remove());
-                if (window.renderAdminTab) window.renderAdminTab('admin-users');
-
-                // 상세 모달 다시 열기 (딜레이 부여)
-                setTimeout(() => {
-                    if (window.showMemberDetail) window.showMemberDetail(currentUserId);
-                    setTimeout(() => {
-                        if (window.switchMemberDetailTab) window.switchMemberDetailTab('fitness');
-
-                        const ftLen = user.fitnessTests ? user.fitnessTests.length : 0;
-                        if (ftLen > 0) {
-                            const newIdx = selectedVal === 'new' ? (ftLen - 1).toString() : selectedVal;
-                            const selectEl = document.getElementById('fitness-season-select');
-                            if (selectEl) {
-                                selectEl.value = newIdx;
-                                if (window.changeFitnessSeason) window.changeFitnessSeason(newIdx, currentUserId);
-                            }
-                        }
-                    }, 150);
-                }, 100);
-            } catch (err) {
-                console.error("Critical error in finalizeAndSave:", err);
-                alert("처리 중 예기치 못한 오류가 발생했습니다. 화면을 새로고침 해주세요.");
-            } finally {
-                const modal = document.getElementById('member-detail-modal');
-                if (modal) modal.style.pointerEvents = 'auto';
+            }
+        } catch (err) {
+            console.error("Critical Save Flow Error:", err);
+            alert("저장 과정에서 오류가 발생했습니다.");
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerText = originalText;
             }
         }
     };
+
 
     window.deleteFitnessData = (currentUserId) => {
         const selectedVal = document.getElementById('edit-fitness-season').value;
@@ -3097,7 +3115,7 @@
         let html = `
             <div class="fade-in">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-                    <h3 style="color: var(--text-white); font-size: 1.1rem; margin: 0;">지트캠 회원 관리 (CRM) <span style="background: #ffcc00; color: #000; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 800; margin-left: 8px;">v4.1.4</span></h3>
+                    <h3 style="color: var(--text-white); font-size: 1.1rem; margin: 0;">지트캠 회원 관리 (CRM) <span style="background: #ffcc00; color: #000; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 800; margin-left: 8px;">v4.1.5</span></h3>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                         <button onclick="window.syncLocalToFirebase()" title="로컬 데이터를 서버(DB)로 강제 전송합니다" style="background: rgba(255,165,0,0.1); border: 1px solid #ffa500; color: #ffa500; font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; cursor: pointer;">
                             <i class="fas fa-sync-alt"></i> DB 강제 동기화
