@@ -10,7 +10,7 @@
         measurementId: "G-RG6G5VT085"
     };
 
-    const APP_VERSION = "v4.4.2.1 (Build 0308)";
+    const APP_VERSION = "v4.4.2.2 (Build 0308)";
     console.log("%c 지트캠 Soccer Academy " + APP_VERSION + " 로드됨 ", "background: #7bc2b7; color: #000; font-weight: bold;");
     const CURRENT_THEME = {
         primary: "#7bc2b7",
@@ -2137,28 +2137,35 @@
             <div id="member-detail-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 99999; display: flex; justify-content: center; align-items: center; padding: 10px; backdrop-filter: blur(40px);">
                 <div class="modal-content premium-card fade-in" style="width: 100%; max-width: 600px; height: 90vh; display: flex; flex-direction: column; overflow: hidden; background: #070b14; border: 1px solid rgba(255,255,255,0.3); border-radius: 28px; box-shadow: 0 0 100px rgba(0,0,0,1);">
                     
-                    <div style="padding: 24px 24px 16px; background: ${theme.isPremium ? `linear-gradient(180deg, ${roleColor}22 0%, ${theme.bg} 100%)` : `linear-gradient(180deg, rgba(123, 194, 183, 0.1) 0%, transparent 100%)`}; flex-shrink: 0; border-bottom: 1px solid ${theme.border};">
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
-                            <div style="display: flex; gap: 16px; align-items: center;">
-                                <div style="width: 64px; height: 64px; border-radius: 18px; background: ${theme.bg}; border: 1px solid ${theme.border}; display: flex; justify-content: center; align-items: center; font-size: 2.2rem; color: ${theme.main}; box-shadow: ${theme.isPremium ? '0 0 20px rgba(240, 105, 88, 0.3)' : 'none'};">
-                                    <i class="fas ${user.avatar || 'fa-user-ninja'}"></i>
-                                </div>
-                                <div>
-                                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; width: 100%;">
-                                        <h2 id="modal-member-name" style="margin: 0; font-size: clamp(1.1rem, 4vw, 1.5rem); color: #fff; letter-spacing: -0.5px; white-space: normal; line-height: 1.2;">${user.name} <span style="font-size: 0.85rem; color: #64748b;">(${user.id})</span></h2>
-                                        <span style="background: ${roleColor}; color: ${role.includes('semi') || role.includes('pro') || theme.isPremium ? '#fff' : '#000'}; padding: 3px 10px; border-radius: 8px; font-size: 0.7rem; font-weight: 900; text-transform: uppercase; white-space: nowrap;">${user.role || 'Basic'}</span>
-                                    </div>
-                                    <p style="margin: 0; font-size: 0.85rem; color: #94a3b8;">ID: <span style="color: ${theme.main}; font-weight: 700;">${user.id}</span> | 가입: ${user.joinDate || '-'}</p>
-                                </div>
-                            </div>
+                    <div style="padding: 16px 20px; background: ${theme.isPremium ? `linear-gradient(180deg, ${roleColor}22 0%, ${theme.bg} 100%)` : `linear-gradient(180deg, rgba(123, 194, 183, 0.1) 0%, transparent 100%)`}; flex-shrink: 0; border-bottom: 2px solid ${theme.border};">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <button onclick="document.getElementById('member-detail-modal').remove()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 6px 14px; border-radius: 12px; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                                <i class="fas fa-chevron-left"></i> 뒤로가기
+                            </button>
                             <div style="display: flex; gap: 8px;">
-                                <button onclick="window.handleLogout()" style="background: rgba(255,255,255,0.05); border: none; width: 36px; height: 36px; border-radius: 50%; color: #94a3b8; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: 0.2s;" title="로그아웃"><i class="fas fa-sign-out-alt"></i></button>
-                                <button onclick="document.getElementById('member-detail-modal').remove()" style="background: rgba(255,255,255,0.05); border: none; width: 36px; height: 36px; border-radius: 50%; color: #94a3b8; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'"><i class="fas fa-times"></i></button>
+                                <button onclick="window.handleLogout()" style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #ef4444; padding: 6px 14px; border-radius: 12px; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s;">
+                                    <i class="fas fa-sign-out-alt"></i> 로그아웃
+                                </button>
+                                <button onclick="document.getElementById('member-detail-modal').remove()" style="background: rgba(255,255,255,0.1); border: none; width: 32px; height: 32px; border-radius: 50%; color: #fff; cursor: pointer; display: flex; justify-content: center; align-items: center;"><i class="fas fa-times"></i></button>
                             </div>
                         </div>
-                        <div style="display: flex; gap: 24px;">
-                            <button id="tab-btn-info" onclick="window.switchMemberDetailTab('info')" style="padding: 12px 4px; background: none; border: none; border-bottom: 3px solid ${theme.main}; color: ${theme.main}; font-weight: 800; cursor: pointer; font-size: 0.95rem; transition: 0.3s; letter-spacing: -0.3px;">기본 및 상세정보</button>
-                            <button id="tab-btn-fitness" onclick="window.switchMemberDetailTab('fitness')" style="padding: 12px 4px; background: none; border: none; border-bottom: 3px solid transparent; color: #64748b; font-weight: 700; cursor: pointer; font-size: 0.95rem; transition: 0.3s;">체력 검정 결과</button>
+                        
+                        <div style="display: flex; gap: 16px; align-items: center; margin-bottom: 16px;">
+                            <div style="width: 54px; height: 54px; border-radius: 16px; background: ${theme.bg}; border: 1px solid ${theme.border}; display: flex; justify-content: center; align-items: center; font-size: 1.8rem; color: ${theme.main}; box-shadow: ${theme.isPremium ? '0 0 20px rgba(240, 105, 88, 0.3)' : 'none'}; flex-shrink: 0;">
+                                <i class="fas ${user.avatar || 'fa-user-ninja'}"></i>
+                            </div>
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px; flex-wrap: wrap;">
+                                    <h2 id="modal-member-name" style="margin: 0; font-size: 1.2rem; color: #fff; letter-spacing: -0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%;">${user.name}</h2>
+                                    <span style="background: ${roleColor}; color: ${role.includes('semi') || role.includes('pro') || theme.isPremium ? '#fff' : '#000'}; padding: 2px 8px; border-radius: 6px; font-size: 0.65rem; font-weight: 900; text-transform: uppercase;">${user.role || 'Basic'}</span>
+                                </div>
+                                <p style="margin: 0; font-size: 0.75rem; color: #94a3b8;">ID: <span style="color: ${theme.main}; font-weight: 800;">${user.id}</span> | <span style="color: #64748b;">v${APP_VERSION.split(' ')[0]}</span></p>
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 20px;">
+                            <button id="tab-btn-info" onclick="window.switchMemberDetailTab('info')" style="padding: 8px 4px; background: none; border: none; border-bottom: 3px solid ${theme.main}; color: ${theme.main}; font-weight: 800; cursor: pointer; font-size: 0.9rem; transition: 0.3s;">기본정보</button>
+                            <button id="tab-btn-fitness" onclick="window.switchMemberDetailTab('fitness')" style="padding: 8px 4px; background: none; border: none; border-bottom: 3px solid transparent; color: #64748b; font-weight: 700; cursor: pointer; font-size: 0.9rem; transition: 0.3s;">체력검정</button>
                         </div>
                     </div>
 
@@ -2360,14 +2367,18 @@
 
                         <div id="tab-content-fitness" style="display: none;">
                             <div id="fitness-view-mode">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
-                                    <h4 style="color: #7bc2b7; font-size: 0.9rem; margin: 0; display: flex; align-items: center; gap: 6px;"><i class="fas fa-chart-line"></i> 시즌별 분석 데이터</h4>
-                                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                        <select id="fitness-season-select" onchange="window.changeFitnessSeason(this.value, '${user.id}')" style="background: #1e293b; color: #fff; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 6px 12px; font-size: 0.85rem; outline: none; cursor: pointer;">
-                                            ${(user.fitnessTests && user.fitnessTests.length > 0) ? user.fitnessTests.map((ft, idx) => `<option value="${idx}">${ft.label} (${ft.date})</option>`).join('') : '<option value="-1">기록 없음</option>'}
-                                        </select>
-                                        <button onclick="const sel = document.getElementById('fitness-season-select').value; if(sel === '-1') return; window.loadFitnessForm(sel, '${user.id}'); window.toggleFitnessEditMode();" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 10px; padding: 6px 12px; cursor: pointer; font-size: 0.85rem;"><i class="fas fa-edit"></i> 수정</button>
-                                        <button onclick="window.loadFitnessForm('new', '${user.id}'); window.toggleFitnessEditMode();" style="background: rgba(123, 194, 183, 0.1); border: 1px solid #7bc2b7; color: #7bc2b7; border-radius: 10px; padding: 6px 12px; cursor: pointer; font-size: 0.85rem; transition: 0.3s; font-weight: 600;"><i class="fas fa-plus"></i> 새 기록 추가</button>
+                                 <div style="margin-bottom: 24px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                        <h4 style="color: #7bc2b7; font-size: 0.9rem; margin: 0; display: flex; align-items: center; gap: 6px;"><i class="fas fa-chart-line"></i> 시즌별 분석 데이터</h4>
+                                        <button onclick="window.loadFitnessForm('new', '${user.id}'); window.toggleFitnessEditMode();" style="background: rgba(123, 194, 183, 0.1); border: 1px solid #7bc2b7; color: #7bc2b7; border-radius: 10px; padding: 6px 12px; cursor: pointer; font-size: 0.8rem; font-weight: 700;"><i class="fas fa-plus"></i> 새 기록 추가</button>
+                                    </div>
+                                    <div style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: none;" id="fitness-season-icons">
+                                        ${(user.fitnessTests && user.fitnessTests.length > 0) ? user.fitnessTests.map((ft, idx) => `
+                                            <div onclick="window.changeFitnessSeason('${idx}', '${user.id}')" class="season-icon-btn ${idx === user.fitnessTests.length - 1 ? 'active' : ''}" data-idx="${idx}" style="min-width: 80px; padding: 12px 8px; border-radius: 16px; background: ${idx === user.fitnessTests.length - 1 ? 'linear-gradient(135deg, #7bc2b7, #2c7a7b)' : 'rgba(255,255,255,0.03)'}; border: 1px solid ${idx === user.fitnessTests.length - 1 ? '#7bc2b7' : 'rgba(255,255,255,0.05)'}; cursor: pointer; text-align: center; transition: 0.3s; flex-shrink: 0;">
+                                                <div style="font-size: 1.2rem; margin-bottom: 4px; color: ${idx === user.fitnessTests.length - 1 ? '#fff' : '#64748b'};"><i class="fas fa-calendar-check"></i></div>
+                                                <div style="font-size: 0.7rem; font-weight: 800; color: ${idx === user.fitnessTests.length - 1 ? '#fff' : '#94a3b8'}; whitespace: nowrap;">${ft.label.includes('시즌') ? ft.label : '시즌 ' + (idx + 1)}</div>
+                                            </div>
+                                        `).join('') : '<div style="color: #64748b; font-size: 0.8rem; padding: 10px;">기록이 없습니다.</div>'}
                                     </div>
                                 </div>
 
@@ -2541,15 +2552,28 @@
 
     // === [ 멤버십 날짜 계산 유틸리티 ] ===
     function recalculateMembershipEnd(user) {
-        if (!user.membershipStart || !user.duration) return;
+        if (!user.membershipStart) return;
         try {
             const start = new Date(user.membershipStart.replace(/\./g, '/'));
-            const durationMonths = parseInt(user.duration);
-            if (isNaN(start.getTime()) || isNaN(durationMonths)) return;
+            if (isNaN(start.getTime())) return;
+
+            let monthsToAdd = parseInt(user.duration);
+            if (isNaN(monthsToAdd)) {
+                // 기간이 숫자로 없을 경우 role에 따라 기본값 설정
+                const role = (user.role || 'Basic').toLowerCase();
+                if (role.includes('semi')) monthsToAdd = 3;
+                else if (role.includes('pro') || role.includes('player')) monthsToAdd = 6;
+                else if (role.includes('ultimate') || role.includes('vip')) monthsToAdd = 12;
+                else monthsToAdd = 1;
+            }
 
             const end = new Date(start);
-            end.setMonth(end.getMonth() + durationMonths);
-            user.membershipEnd = end.toISOString().split('T')[0].replace(/-/g, '.');
+            end.setMonth(end.getMonth() + monthsToAdd);
+
+            const yr = end.getFullYear();
+            const mo = String(end.getMonth() + 1).padStart(2, '0');
+            const da = String(end.getDate()).padStart(2, '0');
+            user.membershipEnd = `${yr}.${mo}.${da}`;
         } catch (e) {
             console.error("Date calculation error:", e);
         }
@@ -2788,6 +2812,22 @@
 
         const ft = user.fitnessTests[idx];
 
+        // 아이콘 버튼 활성 상태 업데이트
+        document.querySelectorAll('.season-icon-btn').forEach(btn => {
+            const bIdx = parseInt(btn.dataset.idx);
+            if (bIdx === idx) {
+                btn.style.background = 'linear-gradient(135deg, #7bc2b7, #2c7a7b)';
+                btn.style.borderColor = '#7bc2b7';
+                btn.querySelector('div:first-child').style.color = '#fff';
+                btn.querySelector('div:last-child').style.color = '#fff';
+            } else {
+                btn.style.background = 'rgba(255,255,255,0.03)';
+                btn.style.borderColor = 'rgba(255,255,255,0.05)';
+                btn.querySelector('div:first-child').style.color = '#64748b';
+                btn.querySelector('div:last-child').style.color = '#94a3b8';
+            }
+        });
+
         // 1. 세부 측정 기록 카드 렌더링
         const grid = document.getElementById('fitness-metrics-grid');
         if (grid) {
@@ -2818,7 +2858,11 @@
                         <span style="color: #fff; font-size: 0.9rem; font-weight: 700;">${records[m.key] || '-'} <small style="font-size: 0.6rem; color: #64748b;">${m.unit}</small></span>
                     </div>
                 </div>
-            `).join('');
+            `).join('') + `
+                <div style="grid-column: span 2; display: flex; gap: 10px; margin-top: 10px;">
+                    <button onclick="window.loadFitnessForm('${idx}', '${userId}'); window.toggleFitnessEditMode();" style="flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 10px; border-radius: 12px; cursor: pointer; font-size: 0.85rem; font-weight: 700;"><i class="fas fa-edit"></i> 현재 기록 수정</button>
+                </div>
+            `;
         }
         // 2. PDF 리포트 리스트 렌더링
         const pdfArea = document.getElementById('fitness-pdf-area');
@@ -3107,7 +3151,7 @@
         const joinDate = new Date().toLocaleDateString();
         const role = parseInt(duration) >= 6 ? 'Pro' : (parseInt(duration) >= 3 ? 'Semi' : 'Basic');
 
-        const tempUser = { membershipStart: joinDate, duration: duration };
+        const tempUser = { membershipStart: joinDate, duration: duration, role: role };
         recalculateMembershipEnd(tempUser);
 
         const newUser = {
@@ -3759,229 +3803,246 @@
             user.role = newLevel;
             recalculateMembershipEnd(user);
             saveAdminState();
-            alert(`${user.name} 님의 멤버십을 [${newLevel}]로 변경했습니다.\n만료일: ${user.membershipEnd}`);
-            renderAdminTab('admin-users'); // 리렌더링
-        }
-    };
+            function recalculateMembershipEnd(user) {
+                if (!user.membershipStart || !user.role) return;
 
-    function recalculateMembershipEnd(user) {
-        if (!user.membershipStart || !user.role) return;
+                const start = new Date(user.membershipStart);
+                let monthsToAdd = 1; // Basic
+                if (user.role === 'Semi') monthsToAdd = 3;
+                else if (user.role === 'Pro' || user.role === 'player') monthsToAdd = 6;
+                else if (user.role === 'Ultimate' || user.role === 'vip') monthsToAdd = 12;
 
-        const start = new Date(user.membershipStart);
-        let monthsToAdd = 1; // Basic
-        if (user.role === 'Semi') monthsToAdd = 3;
-        else if (user.role === 'Pro' || user.role === 'player') monthsToAdd = 6;
-        else if (user.role === 'Ultimate' || user.role === 'vip') monthsToAdd = 12;
+                start.setMonth(start.getMonth() + monthsToAdd);
 
-        start.setMonth(start.getMonth() + monthsToAdd);
-
-        const yr = start.getFullYear();
-        const mo = String(start.getMonth() + 1).padStart(2, '0');
-        const da = String(start.getDate()).padStart(2, '0');
-        user.membershipEnd = `${yr}-${mo}-${da}`;
-    }
-
-    function saveAdminState() {
-        try {
-            localStorage.setItem('soccer_users', JSON.stringify(state.users));
-        } catch (e) { }
-    }
-
-    // --- 뱃지 관리 시스템 로직 ---
-    window.selectAdminBadgeMember = (userId) => {
-        window.adminBadgeTargetId = userId;
-        renderAdminTab('admin-badges');
-    };
-
-    window.adminAddBadge = (userId, badgeId) => {
-        const user = state.users.find(u => u.id === userId);
-        if (!user) return;
-
-        if (!user.badges) user.badges = [];
-        if (!user.badges.includes(badgeId)) {
-            user.badges.push(badgeId);
-            saveAdminState();
-
-            // Firebase 동기화
-            if (db) {
-                db.collection("users").doc(userId).update({ badges: user.badges })
-                    .catch(e => console.error("Badge Update Error:", e));
+                const yr = start.getFullYear();
+                const mo = String(start.getMonth() + 1).padStart(2, '0');
+                const da = String(start.getDate()).padStart(2, '0');
+                user.membershipEnd = `${yr}-${mo}-${da}`;
             }
-            renderAdminTab('admin-badges');
-        }
-    };
 
-    window.adminRemoveBadge = (userId, badgeId) => {
-        const user = state.users.find(u => u.id === userId);
-        if (!user || !user.badges) return;
-
-        if (confirm(`진짜로 이 뱃지를 회수하시겠습니까?`)) {
-            user.badges = user.badges.filter(b => b !== badgeId);
-            saveAdminState();
-
-            // Firebase 동기화
-            if (db) {
-                db.collection("users").doc(userId).update({ badges: user.badges })
-                    .catch(e => console.error("Badge Delete Error:", e));
-            }
-            renderAdminTab('admin-badges');
-        }
-    };
-
-    window.adminSubmitSchedule = () => {
-        const d = document.getElementById('admin-sched-date').value;
-        const start = document.getElementById('admin-sched-start').value;
-        const end = document.getElementById('admin-sched-end').value;
-        const title = document.getElementById('admin-sched-title').value;
-        const loc = document.getElementById('admin-sched-loc').value;
-        const desc = document.getElementById('admin-sched-desc').value;
-
-        if (!d || !start || !end || !title || !loc) return alert('필수 정보(날짜, 시간, 제목, 장소)를 입력해주세요.');
-
-        const newSched = {
-            id: Date.now(),
-            date: d,
-            time: `${start} - ${end}`,
-            title: title,
-            location: loc,
-            description: desc
-        };
-
-        // Firebase 저장 (모든 유저에게 일정 즉시 반영)
-        if (db) {
-            db.collection("schedules").doc(newSched.id.toString()).set(newSched).catch(e => console.error(e));
-        }
-
-        state.schedules.push(newSched);
-        try { localStorage.setItem('soccer_schedules', JSON.stringify(state.schedules)); } catch (e) { }
-        alert('신규 일정이 등록되었습니다.');
-        renderAdminTab('admin-schedule');
-    };
-
-    window.adminDeleteSchedule = (id) => {
-        if (!confirm('정말 해당 일정을 삭제하시겠습니까?')) return;
-        state.schedules = state.schedules.filter(s => s.id !== id);
-        try { localStorage.setItem('soccer_schedules', JSON.stringify(state.schedules)); } catch (e) { }
-        renderAdminTab('admin-schedule');
-    };
-
-    window.adminSubmitNotice = () => {
-        const c = document.getElementById('admin-notice-category').value;
-        const t = document.getElementById('admin-notice-title').value;
-        const b = document.getElementById('admin-notice-body').value;
-        const p = document.getElementById('admin-notice-priority').checked;
-        const f = document.getElementById('admin-notice-file').files[0];
-
-        if (!t || !b) return alert('제목과 내용을 모두 입력해주세요.');
-
-        const btn = document.getElementById('btn-admin-submit-notice');
-        btn.textContent = '업로드 중...';
-        btn.disabled = true;
-
-        const processSubmission = (mediaUrl = null) => {
-            const newNotice = {
-                id: Date.now(),
-                authorId: 'admin',
-                authorName: 'G-STAR 운영진',
-                avatar: 'fa-shield-alt',
-                type: 'notice', // 타입 유지 (소셜 탭 호환)
-                category: c,
-                title: t,
-                date: new Date().toLocaleDateString(),
-                time: '방금 전',
-                content: b,
-                isPriority: p,
-                media: mediaUrl, // 첨부파일 URL
-                likes: 0,
-                comments: []
+            window.adminUpdateMembershipStart = (userId, newDate) => {
+                const user = state.users.find(u => u.id === userId);
+                if (user) {
+                    user.membershipStart = newDate;
+                    recalculateMembershipEnd(user);
+                    saveAdminState();
+                    renderAdminTab('admin-users'); // 리렌더링
+                }
             };
 
-            // 상태 업데이트 및 소셜 피드 최상단 삽입 (isPriority에 따른 별도 정렬은 렌더링 시 처리)
-            state.posts.unshift(newNotice);
+            window.adminUpdateMembership = (userId, newLevel) => {
+                const user = state.users.find(u => u.id === userId);
+                if (user) {
+                    user.role = newLevel;
+                    recalculateMembershipEnd(user);
+                    saveAdminState();
+                    alert(`${user.name} 님의 멤버십을 [${newLevel}]로 변경했습니다.\n만료일: ${user.membershipEnd}`);
+                    renderAdminTab('admin-users'); // 리렌더링
+                }
+            };
 
-            // Firebase 연동 (전역 동기화)
-            if (db) {
-                db.collection("posts").doc(newNotice.id.toString()).set(newNotice).then(() => {
-                    console.log("Notice posted to Firebase");
-                }).catch(e => console.error(e));
+
+            function saveAdminState() {
+                try {
+                    localStorage.setItem('soccer_users', JSON.stringify(state.users));
+                } catch (e) { }
             }
 
-            try {
-                localStorage.setItem('soccer_posts', JSON.stringify(state.posts));
-            } catch (e) { }
+            // --- 뱃지 관리 시스템 로직 ---
+            window.selectAdminBadgeMember = (userId) => {
+                window.adminBadgeTargetId = userId;
+                renderAdminTab('admin-badges');
+            };
 
-            alert('새 공지사항이 성공적으로 게시되었습니다.');
+            window.adminAddBadge = (userId, badgeId) => {
+                const user = state.users.find(u => u.id === userId);
+                if (!user) return;
 
-            // 폼 초기화
-            document.getElementById('admin-notice-title').value = '';
-            document.getElementById('admin-notice-body').value = '';
-            document.getElementById('admin-notice-priority').checked = false;
-            document.getElementById('admin-notice-file').value = '';
-            document.getElementById('admin-notice-file-name').textContent = '선택된 파일 없음';
-            btn.textContent = '게시하기';
-            btn.disabled = false;
+                if (!user.badges) user.badges = [];
+                if (!user.badges.includes(badgeId)) {
+                    user.badges.push(badgeId);
+                    saveAdminState();
 
-            renderAdminTab('admin-notices'); // 탭 리렌더링으로 목록 갱신
-        };
-
-        // 파일 첨부 시 Firebase Storage 처리
-        if (f && window.storage) {
-            const fileName = `notices/${Date.now()}_${f.name}`;
-            const storageRef = window.storage.ref(fileName);
-            storageRef.put(f).then(snapshot => {
-                return snapshot.ref.getDownloadURL();
-            }).then(downloadURL => {
-                processSubmission(downloadURL);
-            }).catch(e => {
-                console.warn('Storage Error:', e);
-                // 업로드 실패 시 로컬 더미 처리
-                const reader = new FileReader();
-                reader.onload = (e) => processSubmission(e.target.result);
-                reader.readAsDataURL(f);
-            });
-        } else if (f) {
-            // Storage 인스턴스가 없을 때 로컬 fallback 처리
-            const reader = new FileReader();
-            reader.onload = (e) => processSubmission(e.target.result);
-            reader.readAsDataURL(f);
-        } else {
-            processSubmission(null);
-        }
-    };
-
-    window.adminDeleteNotice = (id) => {
-        if (!confirm('정말 이 공지사항/게시물을 삭제하시겠습니까?')) return;
-
-        state.posts = state.posts.filter(p => p.id !== id);
-        try { localStorage.setItem('soccer_posts', JSON.stringify(state.posts)); } catch (e) { }
-
-        if (db) {
-            db.collection("posts").doc(id.toString()).delete().catch(e => console.error(e));
-        }
-
-        renderAdminTab('admin-notices');
-    };
-
-    // 하단 내비게이션 탭 이벤트 핸들러
-    function bindNavEvents() {
-        document.querySelectorAll('.nav-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const tab = btn.dataset.tab;
-                if (tab) {
-                    renderTab(tab);
+                    // Firebase 동기화
+                    if (db) {
+                        db.collection("users").doc(userId).update({ badges: user.badges })
+                            .catch(e => console.error("Badge Update Error:", e));
+                    }
+                    renderAdminTab('admin-badges');
                 }
+            };
+
+            window.adminRemoveBadge = (userId, badgeId) => {
+                const user = state.users.find(u => u.id === userId);
+                if (!user || !user.badges) return;
+
+                if (confirm(`진짜로 이 뱃지를 회수하시겠습니까?`)) {
+                    user.badges = user.badges.filter(b => b !== badgeId);
+                    saveAdminState();
+
+                    // Firebase 동기화
+                    if (db) {
+                        db.collection("users").doc(userId).update({ badges: user.badges })
+                            .catch(e => console.error("Badge Delete Error:", e));
+                    }
+                    renderAdminTab('admin-badges');
+                }
+            };
+
+            window.adminSubmitSchedule = () => {
+                const d = document.getElementById('admin-sched-date').value;
+                const start = document.getElementById('admin-sched-start').value;
+                const end = document.getElementById('admin-sched-end').value;
+                const title = document.getElementById('admin-sched-title').value;
+                const loc = document.getElementById('admin-sched-loc').value;
+                const desc = document.getElementById('admin-sched-desc').value;
+
+                if (!d || !start || !end || !title || !loc) return alert('필수 정보(날짜, 시간, 제목, 장소)를 입력해주세요.');
+
+                const newSched = {
+                    id: Date.now(),
+                    date: d,
+                    time: `${start} - ${end}`,
+                    title: title,
+                    location: loc,
+                    description: desc
+                };
+
+                // Firebase 저장 (모든 유저에게 일정 즉시 반영)
+                if (db) {
+                    db.collection("schedules").doc(newSched.id.toString()).set(newSched).catch(e => console.error(e));
+                }
+
+                state.schedules.push(newSched);
+                try { localStorage.setItem('soccer_schedules', JSON.stringify(state.schedules)); } catch (e) { }
+                alert('신규 일정이 등록되었습니다.');
+                renderAdminTab('admin-schedule');
+            };
+
+            window.adminDeleteSchedule = (id) => {
+                if (!confirm('정말 해당 일정을 삭제하시겠습니까?')) return;
+                state.schedules = state.schedules.filter(s => s.id !== id);
+                try { localStorage.setItem('soccer_schedules', JSON.stringify(state.schedules)); } catch (e) { }
+                renderAdminTab('admin-schedule');
+            };
+
+            window.adminSubmitNotice = () => {
+                const c = document.getElementById('admin-notice-category').value;
+                const t = document.getElementById('admin-notice-title').value;
+                const b = document.getElementById('admin-notice-body').value;
+                const p = document.getElementById('admin-notice-priority').checked;
+                const f = document.getElementById('admin-notice-file').files[0];
+
+                if (!t || !b) return alert('제목과 내용을 모두 입력해주세요.');
+
+                const btn = document.getElementById('btn-admin-submit-notice');
+                btn.textContent = '업로드 중...';
+                btn.disabled = true;
+
+                const processSubmission = (mediaUrl = null) => {
+                    const newNotice = {
+                        id: Date.now(),
+                        authorId: 'admin',
+                        authorName: 'G-STAR 운영진',
+                        avatar: 'fa-shield-alt',
+                        type: 'notice', // 타입 유지 (소셜 탭 호환)
+                        category: c,
+                        title: t,
+                        date: new Date().toLocaleDateString(),
+                        time: '방금 전',
+                        content: b,
+                        isPriority: p,
+                        media: mediaUrl, // 첨부파일 URL
+                        likes: 0,
+                        comments: []
+                    };
+
+                    // 상태 업데이트 및 소셜 피드 최상단 삽입 (isPriority에 따른 별도 정렬은 렌더링 시 처리)
+                    state.posts.unshift(newNotice);
+
+                    // Firebase 연동 (전역 동기화)
+                    if (db) {
+                        db.collection("posts").doc(newNotice.id.toString()).set(newNotice).then(() => {
+                            console.log("Notice posted to Firebase");
+                        }).catch(e => console.error(e));
+                    }
+
+                    try {
+                        localStorage.setItem('soccer_posts', JSON.stringify(state.posts));
+                    } catch (e) { }
+
+                    alert('새 공지사항이 성공적으로 게시되었습니다.');
+
+                    // 폼 초기화
+                    document.getElementById('admin-notice-title').value = '';
+                    document.getElementById('admin-notice-body').value = '';
+                    document.getElementById('admin-notice-priority').checked = false;
+                    document.getElementById('admin-notice-file').value = '';
+                    document.getElementById('admin-notice-file-name').textContent = '선택된 파일 없음';
+                    btn.textContent = '게시하기';
+                    btn.disabled = false;
+
+                    renderAdminTab('admin-notices'); // 탭 리렌더링으로 목록 갱신
+                };
+
+                // 파일 첨부 시 Firebase Storage 처리
+                if (f && window.storage) {
+                    const fileName = `notices/${Date.now()}_${f.name}`;
+                    const storageRef = window.storage.ref(fileName);
+                    storageRef.put(f).then(snapshot => {
+                        return snapshot.ref.getDownloadURL();
+                    }).then(downloadURL => {
+                        processSubmission(downloadURL);
+                    }).catch(e => {
+                        console.warn('Storage Error:', e);
+                        // 업로드 실패 시 로컬 더미 처리
+                        const reader = new FileReader();
+                        reader.onload = (e) => processSubmission(e.target.result);
+                        reader.readAsDataURL(f);
+                    });
+                } else if (f) {
+                    // Storage 인스턴스가 없을 때 로컬 fallback 처리
+                    const reader = new FileReader();
+                    reader.onload = (e) => processSubmission(e.target.result);
+                    reader.readAsDataURL(f);
+                } else {
+                    processSubmission(null);
+                }
+            };
+
+            window.adminDeleteNotice = (id) => {
+                if (!confirm('정말 이 공지사항/게시물을 삭제하시겠습니까?')) return;
+
+                state.posts = state.posts.filter(p => p.id !== id);
+                try { localStorage.setItem('soccer_posts', JSON.stringify(state.posts)); } catch (e) { }
+
+                if (db) {
+                    db.collection("posts").doc(id.toString()).delete().catch(e => console.error(e));
+                }
+
+                renderAdminTab('admin-notices');
+            };
+
+            // 하단 내비게이션 탭 이벤트 핸들러
+            function bindNavEvents() {
+                document.querySelectorAll('.nav-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const tab = btn.dataset.tab;
+                        if (tab) {
+                            renderTab(tab);
+                        }
+                    });
+                });
+            }
+
+            // 내비게이션 및 관리자 GNB 이벤트
+            document.querySelectorAll('.admin-nav-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    renderAdminTab(btn.dataset.target);
+                });
             });
-        });
-    }
 
-    // 내비게이션 및 관리자 GNB 이벤트
-    document.querySelectorAll('.admin-nav-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            renderAdminTab(btn.dataset.target);
-        });
-    });
-
-    // 시작
-    bindNavEvents();
-    init();
-})();
+            // 시작
+            bindNavEvents();
+            init();
+        }) ();
