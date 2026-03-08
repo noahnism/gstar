@@ -10,7 +10,7 @@
         measurementId: "G-RG6G5VT085"
     };
 
-    const APP_VERSION = "v4.1.5 (Build 0308)";
+    const APP_VERSION = "v4.2.1 (Build 0308)";
     console.log("%c 지트캠 Soccer Academy " + APP_VERSION + " 로드됨 ", "background: #7bc2b7; color: #000; font-weight: bold;");
     const CURRENT_THEME = {
         primary: "#7bc2b7",
@@ -42,6 +42,18 @@
             console.error("Firebase Init Error:", err);
         }
     }
+
+    // --- [Utility: Korean Choseong Extraction] ---
+    const getChoseong = (str) => {
+        const choseongs = ["ㄱ", "ㄲ", "ㄴ", "ㄷ", "ㄸ", "ㄹ", "ㅁ", "ㅂ", "ㅃ", "ㅅ", "ㅆ", "ㅇ", "ㅈ", "ㅉ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"];
+        let result = "";
+        for (let i = 0; i < str.length; i++) {
+            const charCode = str.charCodeAt(i) - 44032;
+            if (charCode >= 0 && charCode <= 11171) result += choseongs[Math.floor(charCode / 588)];
+            else result += str.charAt(i);
+        }
+        return result;
+    };
 
     // === 상수 및 상태 관리 ===
     function getInitialUsers() {
@@ -3321,46 +3333,66 @@
         let html = `
             <div class="fade-in">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                    <h3 style="color: var(--text-white); margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 10px;"><i class="fas fa-bullhorn" style="color: var(--primary);"></i> 공지사항 관리 및 작성</h3>
+                    <h3 style="color: var(--text-white); margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 12px;">
+                        <span style="width: 40px; height: 40px; background: rgba(0,210,255,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-bullhorn" style="color: var(--primary);"></i>
+                        </span>
+                        공지사항 작성 및 관리
+                    </h3>
                 </div>
 
-                <div class="card premium-card" style="background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9)); border: 1px solid rgba(255,255,255,0.1); padding: 24px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.4);">
-                    <div style="display: grid; grid-template-columns: 150px 1fr; gap: 12px; margin-bottom: 16px;">
-                        <select id="admin-notice-category" style="background: #1e293b; color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; font-weight: 700; outline: none; cursor: pointer; appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%237bc2b7%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22/%3E%3C/svg%3E'); background-repeat: no-repeat; background-position: right 12px center; background-size: 12px auto; padding-right: 30px;">
-                            <option value="공지">[공지]</option>
-                            <option value="안내">[안내]</option>
-                            <option value="수업스케치">[수업스케치]</option>
-                            <option value="감독의 글">[감독의 글]</option>
-                        </select>
-                        <input type="text" id="admin-notice-title" placeholder="공지사항 제목을 입력하세요" style="background: #1e293b; color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 12px 18px; border-radius: 12px; outline: none; font-size: 1rem; font-weight: 500;">
+                <div class="card premium-card" style="background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); padding: 30px; border-radius: 28px; margin-bottom: 35px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); position: relative; overflow: hidden;">
+                    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, var(--primary), #1a6aa3);"></div>
+                    
+                    <div style="display: grid; grid-template-columns: 160px 1fr; gap: 15px; margin-bottom: 20px;">
+                        <div style="position: relative;">
+                            <select id="admin-notice-category" style="width: 100%; background: rgba(30, 41, 59, 0.8); color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 14px 15px; border-radius: 14px; font-weight: 700; outline: none; cursor: pointer; appearance: none; font-size: 0.95rem;">
+                                <option value="공지">📢 [공지]</option>
+                                <option value="안내">💡 [안내]</option>
+                                <option value="수업스케치">📸 [수업스케치]</option>
+                                <option value="감독의 글">⚽ [감독의 글]</option>
+                            </select>
+                            <i class="fas fa-chevron-down" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: var(--primary); pointer-events: none; font-size: 0.8rem;"></i>
+                        </div>
+                        <input type="text" id="admin-notice-title" placeholder="매력적인 공지 제목을 적어주세요" style="background: rgba(30, 41, 59, 0.8); color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 14px 20px; border-radius: 14px; outline: none; font-size: 1rem; font-weight: 600; transition: 0.3s;" onfocus="this.style.borderColor='var(--primary)'; this.style.boxShadow='0 0 15px rgba(0,210,255,0.1)';" onblur="this.style.borderColor='rgba(255,255,255,0.1)'; this.style.boxShadow='none';">
                     </div>
 
                     <div style="margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
-                        <button onclick="document.getElementById('admin-notice-file').click()" style="background: rgba(123, 194, 183, 0.1); color: var(--primary); border: 1px solid rgba(123, 194, 183, 0.3); padding: 10px 22px; border-radius: 12px; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; font-weight: 700; transition: 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
-                            <i class="fas fa-camera"></i> 사진/영상 라이브러리
+                        <button onclick="document.getElementById('admin-notice-file').click()" style="background: linear-gradient(135deg, rgba(123, 194, 183, 0.15), rgba(123, 194, 183, 0.05)); color: var(--primary); border: 1px solid rgba(123, 194, 183, 0.3); padding: 12px 24px; border-radius: 14px; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; gap: 10px; font-weight: 800; transition: 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.2);" onmouseover="this.style.background='rgba(123,194,183,0.2)'" onmouseout="this.style.background='linear-gradient(135deg, rgba(123, 194, 183, 0.15), rgba(123, 194, 183, 0.05))'">
+                            <i class="fas fa-paperclip" style="font-size: 1rem;"></i> 미디어 첨부 (사진/영상)
                         </button>
-                        <span id="admin-notice-file-name" style="font-size: 0.85rem; color: #94a3b8; font-style: italic;">선택된 파일 없음</span>
+                        <div id="admin-notice-file-name" style="font-size: 0.85rem; color: #64748b; font-weight: 500; background: rgba(0,0,0,0.2); padding: 8px 15px; border-radius: 10px; border: 1px dashed rgba(255,255,255,0.05);">선택된 파일 없음</div>
                         <input type="file" id="admin-notice-file" accept="image/*,video/*" style="display: none;" onchange="document.getElementById('admin-notice-file-name').innerText = this.files[0]?.name || '선택된 파일 없음'">
                     </div>
 
-                    <textarea id="admin-notice-body" placeholder="공지할 내용을 자유롭게 작성하세요. 줄바꿈이 그대로 반영됩니다." style="width: 100%; height: 220px; background: #0f172a; color: #cbd5e1; border: 1px solid rgba(255,255,255,0.1); padding: 20px; border-radius: 18px; outline: none; font-size: 1rem; line-height: 1.7; margin-bottom: 24px; resize: none;"></textarea>
+                    <textarea id="admin-notice-body" placeholder="공지할 내용을 입력하세요.&#10;정성스러운 글은 부모님과 아이들에게 큰 힘이 됩니다." style="width: 100%; height: 260px; background: rgba(15, 23, 42, 0.8); color: #cbd5e1; border: 1px solid rgba(255,255,255,0.1); padding: 25px; border-radius: 20px; outline: none; font-size: 1.05rem; line-height: 1.8; margin-bottom: 25px; resize: none; transition: 0.3s;" onfocus="this.style.borderColor='var(--primary)';" onblur="this.style.borderColor='rgba(255,255,255,0.1)';"></textarea>
 
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
-                        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; color: #f06958; font-weight: 800; font-size: 0.95rem; user-select: none;">
-                            <input type="checkbox" id="admin-notice-priority" style="width: 20px; height: 20px; accent-color: #f06958;">
-                            <i class="fas fa-star"></i> 필독 게시물 (상단 고정 및 강조)
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); padding: 20px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.03);">
+                        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; color: #f06958; font-weight: 900; font-size: 1rem; user-select: none;">
+                            <div style="position: relative; width: 24px; height: 24px;">
+                                <input type="checkbox" id="admin-notice-priority" style="position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer;">
+                                <div style="width: 100%; height: 100%; background: rgba(240, 105, 88, 0.1); border: 2px solid #f06958; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: 0.2s;">
+                                    <i class="fas fa-check" style="font-size: 0.8rem; color: #fff; transform: scale(0); transition: 0.2s;"></i>
+                                </div>
+                            </div>
+                            <i class="fas fa-star" style="filter: drop-shadow(0 0 5px rgba(240,105,88,0.5));"></i> 필독 게시물 (최상단 고정)
                         </label>
-                        <button id="btn-admin-submit-notice" onclick="window.adminSubmitNotice()" style="background: linear-gradient(135deg, var(--primary), #1a6aa3); color: #000; border: none; padding: 16px 45px; border-radius: 15px; font-weight: 900; font-size: 1.05rem; cursor: pointer; transition: 0.3s; box-shadow: 0 5px 20px rgba(123, 194, 183, 0.4);" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">게시하기</button>
+                        <button id="btn-admin-submit-notice" onclick="window.adminSubmitNotice()" style="background: linear-gradient(135deg, var(--primary), #00d2ff); color: #000; border: none; padding: 18px 55px; border-radius: 18px; font-weight: 900; font-size: 1.1rem; cursor: pointer; transition: 0.3s; box-shadow: 0 8px 25px rgba(0, 210, 255, 0.4); display: flex; align-items: center; gap: 10px;" onmouseover="this.style.transform='translateY(-3px); box-shadow: 0 12px 30px rgba(0, 210, 255, 0.5)';" onmouseout="this.style.transform='translateY(0); box-shadow: 0 8px 25px rgba(0, 210, 255, 0.4)';">
+                            <i class="fas fa-paper-plane"></i> 공지 올리기
+                        </button>
                     </div>
                 </div>
 
-                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
-                    <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
-                    <h4 style="color: #64748b; margin: 0; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;">History & Logs</h4>
-                    <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
+                <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 25px;">
+                    <h4 style="color: #fff; margin: 0; font-size: 1rem; font-weight: 800; white-space: nowrap;">최근 보낸 공지 내역</h4>
+                    <div style="flex: 1; height: 1px; background: linear-gradient(90deg, rgba(255,255,255,0.1), transparent);"></div>
                 </div>
                 
-                <div style="display: flex; flex-direction: column; gap: 18px; max-height: 500px; overflow-y: auto; padding-right: 5px; scrollbar-width: thin;">
+                <div style="display: flex; flex-direction: column; gap: 20px; max-height: 550px; overflow-y: auto; padding-right: 10px; scrollbar-width: thin;">
+                    <style>
+                        #admin-notice-priority:checked + div { background: #f06958 !important; }
+                        #admin-notice-priority:checked + div i { transform: scale(1) !important; }
+                    </style>
         `;
 
         const adminPosts = (state.posts || []).filter(p => String(p.authorId) === 'admin' || p.type === 'notice');
@@ -3425,12 +3457,18 @@
 
         // 좌우 레이아웃 구조 (왼쪽: 회원 검색 결과, 오른쪽: 선택된 회원의 뱃지 부여 화면)
         const query = window.adminBadgeSearchQuery.toLowerCase();
+        const isChoseongQuery = /^[ㄱ-ㅎ]+$/.test(query);
+
         let targetUsers = state.users.filter(u => u.id !== 'admin');
         if (query) {
-            targetUsers = targetUsers.filter(u =>
-                (u.name && u.name.toLowerCase().includes(query)) ||
-                (u.id && String(u.id).toLowerCase().includes(query))
-            );
+            targetUsers = targetUsers.filter(u => {
+                const name = (u.name || "").toLowerCase();
+                const id = String(u.id).toLowerCase();
+                if (isChoseongQuery) {
+                    return getChoseong(name).includes(query);
+                }
+                return name.includes(query) || id.includes(query);
+            });
         } else {
             targetUsers = targetUsers.slice(0, 15); // 검색어 없을 땐 일부 렌더링
         }
