@@ -3803,246 +3803,211 @@
             user.role = newLevel;
             recalculateMembershipEnd(user);
             saveAdminState();
-            function recalculateMembershipEnd(user) {
-                if (!user.membershipStart || !user.role) return;
+            alert(`${user.name} 님의 멤버십을 [${newLevel}]로 변경했습니다.\n만료일: ${user.membershipEnd}`);
+            renderAdminTab('admin-users'); // 리렌더링
+        }
+    };
+    function saveAdminState() {
+        try {
+            localStorage.setItem('soccer_users', JSON.stringify(state.users));
+        } catch (e) { }
+    }
 
-                const start = new Date(user.membershipStart);
-                let monthsToAdd = 1; // Basic
-                if (user.role === 'Semi') monthsToAdd = 3;
-                else if (user.role === 'Pro' || user.role === 'player') monthsToAdd = 6;
-                else if (user.role === 'Ultimate' || user.role === 'vip') monthsToAdd = 12;
+    // --- 뱃지 관리 시스템 로직 ---
+    window.selectAdminBadgeMember = (userId) => {
+        window.adminBadgeTargetId = userId;
+        renderAdminTab('admin-badges');
+    };
 
-                start.setMonth(start.getMonth() + monthsToAdd);
+    window.adminAddBadge = (userId, badgeId) => {
+        const user = state.users.find(u => u.id === userId);
+        if (!user) return;
 
-                const yr = start.getFullYear();
-                const mo = String(start.getMonth() + 1).padStart(2, '0');
-                const da = String(start.getDate()).padStart(2, '0');
-                user.membershipEnd = `${yr}-${mo}-${da}`;
+        if (!user.badges) user.badges = [];
+        if (!user.badges.includes(badgeId)) {
+            user.badges.push(badgeId);
+            saveAdminState();
+
+            // Firebase 동기화
+            if (db) {
+                db.collection("users").doc(userId).update({ badges: user.badges })
+                    .catch(e => console.error("Badge Update Error:", e));
+            }
+            renderAdminTab('admin-badges');
+        }
+    };
+
+    window.adminRemoveBadge = (userId, badgeId) => {
+        const user = state.users.find(u => u.id === userId);
+        if (!user || !user.badges) return;
+
+        if (confirm(`진짜로 이 뱃지를 회수하시겠습니까?`)) {
+            user.badges = user.badges.filter(b => b !== badgeId);
+            saveAdminState();
+
+            // Firebase 동기화
+            if (db) {
+                db.collection("users").doc(userId).update({ badges: user.badges })
+                    .catch(e => console.error("Badge Delete Error:", e));
+            }
+            renderAdminTab('admin-badges');
+        }
+    };
+
+    window.adminSubmitSchedule = () => {
+        const d = document.getElementById('admin-sched-date').value;
+        const start = document.getElementById('admin-sched-start').value;
+        const end = document.getElementById('admin-sched-end').value;
+        const title = document.getElementById('admin-sched-title').value;
+        const loc = document.getElementById('admin-sched-loc').value;
+        const desc = document.getElementById('admin-sched-desc').value;
+
+        if (!d || !start || !end || !title || !loc) return alert('필수 정보(날짜, 시간, 제목, 장소)를 입력해주세요.');
+
+        const newSched = {
+            id: Date.now(),
+            date: d,
+            time: `${start} - ${end}`,
+            title: title,
+            location: loc,
+            description: desc
+        };
+
+        // Firebase 저장 (모든 유저에게 일정 즉시 반영)
+        if (db) {
+            db.collection("schedules").doc(newSched.id.toString()).set(newSched).catch(e => console.error(e));
+        }
+
+        state.schedules.push(newSched);
+        try { localStorage.setItem('soccer_schedules', JSON.stringify(state.schedules)); } catch (e) { }
+        alert('신규 일정이 등록되었습니다.');
+        renderAdminTab('admin-schedule');
+    };
+
+    window.adminDeleteSchedule = (id) => {
+        if (!confirm('정말 해당 일정을 삭제하시겠습니까?')) return;
+        state.schedules = state.schedules.filter(s => s.id !== id);
+        try { localStorage.setItem('soccer_schedules', JSON.stringify(state.schedules)); } catch (e) { }
+        renderAdminTab('admin-schedule');
+    };
+
+    window.adminSubmitNotice = () => {
+        const c = document.getElementById('admin-notice-category').value;
+        const t = document.getElementById('admin-notice-title').value;
+        const b = document.getElementById('admin-notice-body').value;
+        const p = document.getElementById('admin-notice-priority').checked;
+        const f = document.getElementById('admin-notice-file').files[0];
+
+        if (!t || !b) return alert('제목과 내용을 모두 입력해주세요.');
+
+        const btn = document.getElementById('btn-admin-submit-notice');
+        btn.textContent = '업로드 중...';
+        btn.disabled = true;
+
+        const processSubmission = (mediaUrl = null) => {
+            const newNotice = {
+                id: Date.now(),
+                authorId: 'admin',
+                authorName: 'G-STAR 운영진',
+                avatar: 'fa-shield-alt',
+                type: 'notice', // 타입 유지 (소셜 탭 호환)
+                category: c,
+                title: t,
+                date: new Date().toLocaleDateString(),
+                time: '방금 전',
+                content: b,
+                isPriority: p,
+                media: mediaUrl, // 첨부파일 URL
+                likes: 0,
+                comments: []
+            };
+
+            // 상태 업데이트 및 소셜 피드 최상단 삽입 (isPriority에 따른 별도 정렬은 렌더링 시 처리)
+            state.posts.unshift(newNotice);
+
+            // Firebase 연동 (전역 동기화)
+            if (db) {
+                db.collection("posts").doc(newNotice.id.toString()).set(newNotice).then(() => {
+                    console.log("Notice posted to Firebase");
+                }).catch(e => console.error(e));
             }
 
-            window.adminUpdateMembershipStart = (userId, newDate) => {
-                const user = state.users.find(u => u.id === userId);
-                if (user) {
-                    user.membershipStart = newDate;
-                    recalculateMembershipEnd(user);
-                    saveAdminState();
-                    renderAdminTab('admin-users'); // 리렌더링
-                }
-            };
+            try {
+                localStorage.setItem('soccer_posts', JSON.stringify(state.posts));
+            } catch (e) { }
 
-            window.adminUpdateMembership = (userId, newLevel) => {
-                const user = state.users.find(u => u.id === userId);
-                if (user) {
-                    user.role = newLevel;
-                    recalculateMembershipEnd(user);
-                    saveAdminState();
-                    alert(`${user.name} 님의 멤버십을 [${newLevel}]로 변경했습니다.\n만료일: ${user.membershipEnd}`);
-                    renderAdminTab('admin-users'); // 리렌더링
-                }
-            };
+            alert('새 공지사항이 성공적으로 게시되었습니다.');
 
+            // 폼 초기화
+            document.getElementById('admin-notice-title').value = '';
+            document.getElementById('admin-notice-body').value = '';
+            document.getElementById('admin-notice-priority').checked = false;
+            document.getElementById('admin-notice-file').value = '';
+            document.getElementById('admin-notice-file-name').textContent = '선택된 파일 없음';
+            btn.textContent = '게시하기';
+            btn.disabled = false;
 
-            function saveAdminState() {
-                try {
-                    localStorage.setItem('soccer_users', JSON.stringify(state.users));
-                } catch (e) { }
-            }
+            renderAdminTab('admin-notices'); // 탭 리렌더링으로 목록 갱신
+        };
 
-            // --- 뱃지 관리 시스템 로직 ---
-            window.selectAdminBadgeMember = (userId) => {
-                window.adminBadgeTargetId = userId;
-                renderAdminTab('admin-badges');
-            };
-
-            window.adminAddBadge = (userId, badgeId) => {
-                const user = state.users.find(u => u.id === userId);
-                if (!user) return;
-
-                if (!user.badges) user.badges = [];
-                if (!user.badges.includes(badgeId)) {
-                    user.badges.push(badgeId);
-                    saveAdminState();
-
-                    // Firebase 동기화
-                    if (db) {
-                        db.collection("users").doc(userId).update({ badges: user.badges })
-                            .catch(e => console.error("Badge Update Error:", e));
-                    }
-                    renderAdminTab('admin-badges');
-                }
-            };
-
-            window.adminRemoveBadge = (userId, badgeId) => {
-                const user = state.users.find(u => u.id === userId);
-                if (!user || !user.badges) return;
-
-                if (confirm(`진짜로 이 뱃지를 회수하시겠습니까?`)) {
-                    user.badges = user.badges.filter(b => b !== badgeId);
-                    saveAdminState();
-
-                    // Firebase 동기화
-                    if (db) {
-                        db.collection("users").doc(userId).update({ badges: user.badges })
-                            .catch(e => console.error("Badge Delete Error:", e));
-                    }
-                    renderAdminTab('admin-badges');
-                }
-            };
-
-            window.adminSubmitSchedule = () => {
-                const d = document.getElementById('admin-sched-date').value;
-                const start = document.getElementById('admin-sched-start').value;
-                const end = document.getElementById('admin-sched-end').value;
-                const title = document.getElementById('admin-sched-title').value;
-                const loc = document.getElementById('admin-sched-loc').value;
-                const desc = document.getElementById('admin-sched-desc').value;
-
-                if (!d || !start || !end || !title || !loc) return alert('필수 정보(날짜, 시간, 제목, 장소)를 입력해주세요.');
-
-                const newSched = {
-                    id: Date.now(),
-                    date: d,
-                    time: `${start} - ${end}`,
-                    title: title,
-                    location: loc,
-                    description: desc
-                };
-
-                // Firebase 저장 (모든 유저에게 일정 즉시 반영)
-                if (db) {
-                    db.collection("schedules").doc(newSched.id.toString()).set(newSched).catch(e => console.error(e));
-                }
-
-                state.schedules.push(newSched);
-                try { localStorage.setItem('soccer_schedules', JSON.stringify(state.schedules)); } catch (e) { }
-                alert('신규 일정이 등록되었습니다.');
-                renderAdminTab('admin-schedule');
-            };
-
-            window.adminDeleteSchedule = (id) => {
-                if (!confirm('정말 해당 일정을 삭제하시겠습니까?')) return;
-                state.schedules = state.schedules.filter(s => s.id !== id);
-                try { localStorage.setItem('soccer_schedules', JSON.stringify(state.schedules)); } catch (e) { }
-                renderAdminTab('admin-schedule');
-            };
-
-            window.adminSubmitNotice = () => {
-                const c = document.getElementById('admin-notice-category').value;
-                const t = document.getElementById('admin-notice-title').value;
-                const b = document.getElementById('admin-notice-body').value;
-                const p = document.getElementById('admin-notice-priority').checked;
-                const f = document.getElementById('admin-notice-file').files[0];
-
-                if (!t || !b) return alert('제목과 내용을 모두 입력해주세요.');
-
-                const btn = document.getElementById('btn-admin-submit-notice');
-                btn.textContent = '업로드 중...';
-                btn.disabled = true;
-
-                const processSubmission = (mediaUrl = null) => {
-                    const newNotice = {
-                        id: Date.now(),
-                        authorId: 'admin',
-                        authorName: 'G-STAR 운영진',
-                        avatar: 'fa-shield-alt',
-                        type: 'notice', // 타입 유지 (소셜 탭 호환)
-                        category: c,
-                        title: t,
-                        date: new Date().toLocaleDateString(),
-                        time: '방금 전',
-                        content: b,
-                        isPriority: p,
-                        media: mediaUrl, // 첨부파일 URL
-                        likes: 0,
-                        comments: []
-                    };
-
-                    // 상태 업데이트 및 소셜 피드 최상단 삽입 (isPriority에 따른 별도 정렬은 렌더링 시 처리)
-                    state.posts.unshift(newNotice);
-
-                    // Firebase 연동 (전역 동기화)
-                    if (db) {
-                        db.collection("posts").doc(newNotice.id.toString()).set(newNotice).then(() => {
-                            console.log("Notice posted to Firebase");
-                        }).catch(e => console.error(e));
-                    }
-
-                    try {
-                        localStorage.setItem('soccer_posts', JSON.stringify(state.posts));
-                    } catch (e) { }
-
-                    alert('새 공지사항이 성공적으로 게시되었습니다.');
-
-                    // 폼 초기화
-                    document.getElementById('admin-notice-title').value = '';
-                    document.getElementById('admin-notice-body').value = '';
-                    document.getElementById('admin-notice-priority').checked = false;
-                    document.getElementById('admin-notice-file').value = '';
-                    document.getElementById('admin-notice-file-name').textContent = '선택된 파일 없음';
-                    btn.textContent = '게시하기';
-                    btn.disabled = false;
-
-                    renderAdminTab('admin-notices'); // 탭 리렌더링으로 목록 갱신
-                };
-
-                // 파일 첨부 시 Firebase Storage 처리
-                if (f && window.storage) {
-                    const fileName = `notices/${Date.now()}_${f.name}`;
-                    const storageRef = window.storage.ref(fileName);
-                    storageRef.put(f).then(snapshot => {
-                        return snapshot.ref.getDownloadURL();
-                    }).then(downloadURL => {
-                        processSubmission(downloadURL);
-                    }).catch(e => {
-                        console.warn('Storage Error:', e);
-                        // 업로드 실패 시 로컬 더미 처리
-                        const reader = new FileReader();
-                        reader.onload = (e) => processSubmission(e.target.result);
-                        reader.readAsDataURL(f);
-                    });
-                } else if (f) {
-                    // Storage 인스턴스가 없을 때 로컬 fallback 처리
-                    const reader = new FileReader();
-                    reader.onload = (e) => processSubmission(e.target.result);
-                    reader.readAsDataURL(f);
-                } else {
-                    processSubmission(null);
-                }
-            };
-
-            window.adminDeleteNotice = (id) => {
-                if (!confirm('정말 이 공지사항/게시물을 삭제하시겠습니까?')) return;
-
-                state.posts = state.posts.filter(p => p.id !== id);
-                try { localStorage.setItem('soccer_posts', JSON.stringify(state.posts)); } catch (e) { }
-
-                if (db) {
-                    db.collection("posts").doc(id.toString()).delete().catch(e => console.error(e));
-                }
-
-                renderAdminTab('admin-notices');
-            };
-
-            // 하단 내비게이션 탭 이벤트 핸들러
-            function bindNavEvents() {
-                document.querySelectorAll('.nav-btn').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        const tab = btn.dataset.tab;
-                        if (tab) {
-                            renderTab(tab);
-                        }
-                    });
-                });
-            }
-
-            // 내비게이션 및 관리자 GNB 이벤트
-            document.querySelectorAll('.admin-nav-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    renderAdminTab(btn.dataset.target);
-                });
+        // 파일 첨부 시 Firebase Storage 처리
+        if (f && window.storage) {
+            const fileName = `notices/${Date.now()}_${f.name}`;
+            const storageRef = window.storage.ref(fileName);
+            storageRef.put(f).then(snapshot => {
+                return snapshot.ref.getDownloadURL();
+            }).then(downloadURL => {
+                processSubmission(downloadURL);
+            }).catch(e => {
+                console.warn('Storage Error:', e);
+                // 업로드 실패 시 로컬 더미 처리
+                const reader = new FileReader();
+                reader.onload = (e) => processSubmission(e.target.result);
+                reader.readAsDataURL(f);
             });
+        } else if (f) {
+            // Storage 인스턴스가 없을 때 로컬 fallback 처리
+            const reader = new FileReader();
+            reader.onload = (e) => processSubmission(e.target.result);
+            reader.readAsDataURL(f);
+        } else {
+            processSubmission(null);
+        }
+    };
 
-            // 시작
-            bindNavEvents();
-            init();
-        }) ();
+    window.adminDeleteNotice = (id) => {
+        if (!confirm('정말 이 공지사항/게시물을 삭제하시겠습니까?')) return;
+
+        state.posts = state.posts.filter(p => p.id !== id);
+        try { localStorage.setItem('soccer_posts', JSON.stringify(state.posts)); } catch (e) { }
+
+        if (db) {
+            db.collection("posts").doc(id.toString()).delete().catch(e => console.error(e));
+        }
+
+        renderAdminTab('admin-notices');
+    };
+
+    // 하단 내비게이션 탭 이벤트 핸들러
+    function bindNavEvents() {
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tab = btn.dataset.tab;
+                if (tab) {
+                    renderTab(tab);
+                }
+            });
+        });
+    }
+
+    // 내비게이션 및 관리자 GNB 이벤트
+    document.querySelectorAll('.admin-nav-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            renderAdminTab(btn.dataset.target);
+        });
+    });
+
+    // 시작
+    bindNavEvents();
+    init();
+})();
