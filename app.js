@@ -2677,7 +2677,8 @@
                 memo: row.querySelector('.edit-hist-memo').value.trim()
             });
         });
-        user.history = newHistory;
+
+
 
         if (!newName || !newId) return alert("이름과 아이디(고유번호)는 필수 입력입니다.");
 
