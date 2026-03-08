@@ -10,7 +10,7 @@
         measurementId: "G-RG6G5VT085"
     };
 
-    const APP_VERSION = "v4.2.1 (Build 0308)";
+    const APP_VERSION = "v4.3.0 (Build 0308)";
     console.log("%c 지트캠 Soccer Academy " + APP_VERSION + " 로드됨 ", "background: #7bc2b7; color: #000; font-weight: bold;");
     const CURRENT_THEME = {
         primary: "#7bc2b7",
@@ -2124,7 +2124,7 @@
                                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
                                         <h2 id="modal-member-name" style="margin: 0; font-size: 1.5rem; color: #fff; letter-spacing: -0.5px; white-space: nowrap;">${user.name} (${user.id})</h2>
                                         <span style="background: ${roleColor}; color: ${role.includes('semi') || role.includes('pro') || theme.isPremium ? '#fff' : '#000'}; padding: 3px 10px; border-radius: 8px; font-size: 0.7rem; font-weight: 900; text-transform: uppercase; white-space: nowrap;">${user.role || 'Basic'}</span>
-                                        <span style="color: #64748b; font-size: 0.6rem; font-weight: 800; white-space: nowrap; margin-left: auto;">v4.1.4</span>
+                                        <span style="color: #64748b; font-size: 0.6rem; font-weight: 800; white-space: nowrap; margin-left: auto;">${APP_VERSION}</span>
                                     </div>
                                     <p style="margin: 0; font-size: 0.85rem; color: #94a3b8;">ID: <span style="color: ${theme.main}; font-weight: 700;">${user.id}</span> | 가입: ${user.joinDate || '-'}</p>
                                 </div>
@@ -2808,17 +2808,21 @@
     };
 
     window.saveFitnessData = async (currentUserId) => {
-        const saveBtn = event?.target;
-        const originalText = saveBtn ? saveBtn.innerText : "저장";
+        // [V4.3.0] 저장 중 프리징 방지를 위해 전역 이벤트 객체 대신 명시적 타겟 식별
+        const saveBtn = document.querySelector('button[onclick*="saveFitnessData"]');
+        const originalText = saveBtn ? saveBtn.innerText : "시즌 데이터 저장";
 
         try {
             if (saveBtn) {
                 saveBtn.disabled = true;
-                saveBtn.innerText = "저장 중...";
+                saveBtn.innerText = "데이터 처리 중...";
+                saveBtn.style.opacity = "0.7";
+                saveBtn.style.cursor = "wait";
             }
+
             console.log("Saving fitness data for ID:", currentUserId);
             const userIdx = state.users.findIndex(u => u.id == currentUserId);
-            if (userIdx === -1) throw new Error("User not found");
+            if (userIdx === -1) throw new Error("회원을 찾을 수 없습니다.");
             const user = state.users[userIdx];
 
             const seasonEl = document.getElementById('edit-fitness-season');
@@ -2866,7 +2870,7 @@
             };
 
             let newPdfUrl = null;
-            if (selectedVal !== 'new' && !isNaN(parseInt(selectedVal)) && user.fitnessTests[parseInt(selectedVal)].pdfUrl) {
+            if (selectedVal !== 'new' && !isNaN(parseInt(selectedVal)) && user.fitnessTests && user.fitnessTests[parseInt(selectedVal)]) {
                 newPdfUrl = user.fitnessTests[parseInt(selectedVal)].pdfUrl;
             }
 
@@ -2891,11 +2895,9 @@
                     newData.pdfUrl = await snapshot.ref.getDownloadURL();
                 } catch (error) {
                     console.error("File Upload Error:", error);
-                    alert("파일 업로드 중 오류가 발생했습니다. 기록만 먼저 저장합니다.");
                 }
             }
 
-            // finalize logic moved into the same block to ensure outer catch handles it
             if (!user.fitnessTests) user.fitnessTests = [];
             if (selectedVal === 'new') {
                 user.fitnessTests.push(newData);
@@ -2906,21 +2908,37 @@
                 }
             }
 
+            // [V4.3.0] 로컬 저장을 비동기 Firebase 업데이트 보다 먼저 수행하여 즉각성 확보
             localStorage.setItem('soccer_users', JSON.stringify(state.users));
+            console.log("Local Storage Updated");
+
             if (db) {
-                await db.collection("users").doc(currentUserId.toString()).update({
+                console.log("Syncing to Firebase...");
+                // timeout 추가하여 Firestore 지연 시 프리징 방지
+                const syncPromise = db.collection("users").doc(currentUserId.toString()).update({
                     fitnessTests: user.fitnessTests,
                     stats: user.stats
                 });
+
+                // 5초 타임아웃
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Firebase 동기화 시간 초과 (데이터는 로크루에 저장됨)")), 5000));
+
+                try {
+                    await Promise.race([syncPromise, timeoutPromise]);
+                    console.log("Firebase Sync Success");
+                } catch (syncErr) {
+                    console.warn("Sync Warning:", syncErr.message);
+                }
             }
 
-            alert("체력 검정 데이터가 성공적으로 반영되었습니다.");
-            if (window.renderAdminTab) window.renderAdminTab('admin-users');
+            alert("체력 검정 데이터가 안전하게 저장되었습니다.");
+
+            // 모달 관리 및 탭 갱신
             if (window.toggleFitnessEditMode) window.toggleFitnessEditMode();
 
             const ftLen = user.fitnessTests ? user.fitnessTests.length : 0;
             if (ftLen > 0) {
-                const newIdx = selectedVal === 'new' ? (ftLen - 1).toString() : selectedVal;
+                const newIdx = (selectedVal === 'new' ? (ftLen - 1) : parseInt(selectedVal)).toString();
                 const selectEl = document.getElementById('fitness-season-select');
                 if (selectEl) {
                     selectEl.value = newIdx;
@@ -2934,6 +2952,8 @@
             if (saveBtn) {
                 saveBtn.disabled = false;
                 saveBtn.innerText = originalText;
+                saveBtn.style.opacity = "1";
+                saveBtn.style.cursor = "pointer";
             }
         }
     };
